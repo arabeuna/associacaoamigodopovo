@@ -49,12 +49,12 @@ Sistema completo de gestão para a Associação Amigo do Povo, desenvolvido em F
 
 ### Administrador
 - **Usuário**: `admin`
-- **Senha**: `admin123`
+- **Senha**: *[Definida no deployment]*
 - **Permissões**: Acesso total + Backup de planilhas
 
 ### Usuário Padrão
 - **Usuário**: `usuario`
-- **Senha**: `usuario123`
+- **Senha**: *[Definida no deployment]*
 - **Permissões**: Consulta e presença
 
 ## 🚀 Deploy
