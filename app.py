@@ -200,9 +200,14 @@ def listar_backups():
 def health():
     return jsonify({'status': 'ok', 'service': 'Associação Amigo do Povo'})
 
+# Teste simples
+@app.route('/test')
+def test():
+    return "Sistema funcionando! ✅"
+
 # Para produção
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("🚀 Iniciando Associação Amigo do Povo...")
     print(f"🌐 Sistema carregado: {len(academia.alunos_exemplo)} alunos")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)  # Debug temporário para ver erro
