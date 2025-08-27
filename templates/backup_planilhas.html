@@ -34,6 +34,40 @@
     <strong>Área Administrativa:</strong> Apenas administradores podem acessar esta funcionalidade.
 </div>
 
+<!-- Download de Cadastros -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>
+                    Backup de Cadastros Unificados
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Faça download de todos os cadastros de alunos em formato CSV, equivalente ao arquivo Cadastros_Unificados_GOOGLE_v2.xlsx
+                </p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-success btn-lg w-100" onclick="baixarCadastros()">
+                            <i class="fas fa-download me-2"></i>
+                            Baixar Cadastros Unificados
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-info btn-lg w-100" onclick="baixarTodasPlanilhas()">
+                            <i class="fas fa-file-archive me-2"></i>
+                            Baixar Todas as Planilhas (ZIP)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Gerar Planilhas -->
 <div class="row mb-5">
     <div class="col-12">
@@ -301,6 +335,40 @@ function carregarBackups() {
         document.getElementById('loadingBackups').innerHTML = 
             '<i class="fas fa-exclamation-triangle text-warning me-2"></i>Erro ao carregar backups';
     });
+}
+
+// Função para baixar cadastros unificados
+function baixarCadastros() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando...';
+    btn.disabled = true;
+    
+    window.location.href = '/baixar_cadastros';
+    
+    // Reativar botão após delay
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }, 3000);
+}
+
+// Função para baixar todas as planilhas em ZIP
+function baixarTodasPlanilhas() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Compactando...';
+    btn.disabled = true;
+    
+    window.location.href = '/gerar_todas_planilhas';
+    
+    // Reativar botão após delay
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }, 5000);
 }
 
 // Carregar backups ao carregar a página
