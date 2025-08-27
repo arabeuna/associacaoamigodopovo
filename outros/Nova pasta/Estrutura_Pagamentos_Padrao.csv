@@ -1,0 +1,9 @@
+Campo,Valor_Padrao,Formula_Verificacao,Observacao
+Status,Ativo,"=IF(ISBLANK(H2),""Ativo"",H2)",Para alunos sem status definido
+Situacao_Pagamento,Pendente,"=IF(ISBLANK(I2),""Pendente"",I2)",Mais seguro que assumir "Pago"
+Valor_Mensalidade,R$ 89.90,"=IF(ISBLANK(J2),""R$ 89,90"",J2)",Valor médio de mercado
+Data_Vencimento,=TODAY()+7,"=IF(ISBLANK(K2),TODAY()+7,K2)",7 dias a partir de hoje
+Plano,Mensal,"=IF(ISBLANK(L2),""Mensal"",L2)",Plano mais comum
+Data_Cadastro,=TODAY(),"=IF(ISBLANK(M2),TODAY(),M2)",Data atual se não souber
+Restricoes_Medicas,Nenhuma,"=IF(ISBLANK(N2),""Nenhuma"",N2)",Padrão seguro para saúde
+Como_Conheceu,Nao_Informado,"=IF(ISBLANK(O2),""Não Informado"",O2)",Para relatórios de marketing

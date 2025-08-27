@@ -1,0 +1,46 @@
+SCRIPT PARA PREENCHER DADOS FALTANTES - ACADEMIA AMIGO DO POVO
+
+=== EXECUTE ESTAS FÓRMULAS NA SUA PLANILHA ===
+
+1. COLUNA STATUS (H) - Se vazia, preencher "Ativo":
+   =IF(ISBLANK(H2),"Ativo",H2)
+
+2. COLUNA SITUAÇÃO PAGAMENTO (I) - Se vazia, preencher "Pendente":
+   =IF(ISBLANK(I2),"Pendente",I2)
+
+3. COLUNA VALOR MENSALIDADE (J) - Se vazia, preencher "R$ 89,90":
+   =IF(ISBLANK(J2),"R$ 89,90",J2)
+
+4. COLUNA DATA VENCIMENTO (K) - Se vazia, preencher hoje + 7 dias:
+   =IF(ISBLANK(K2),TODAY()+7,K2)
+
+5. COLUNA PLANO (L) - Se vazia, preencher "Mensal":
+   =IF(ISBLANK(L2),"Mensal",L2)
+
+6. COLUNA DATA CADASTRO (M) - Se vazia, preencher data atual:
+   =IF(ISBLANK(M2),TODAY(),M2)
+
+=== COMO USAR ===
+
+1. Cole cada fórmula em uma coluna auxiliar
+2. Arraste a fórmula para baixo até a última linha
+3. Copie os resultados (Ctrl+C)
+4. Cole Especial → Apenas Valores na coluna original
+5. Delete a coluna auxiliar
+
+=== RESULTADO ===
+
+✅ Nenhum campo obrigatório ficará vazio
+✅ Dashboard funcionará sem erros
+✅ Relatórios automáticos funcionarão
+✅ Sistema completo operacional
+
+=== VALORES SEGUROS ===
+
+- Status: "Ativo" (assume que aluno frequenta)
+- Pagamento: "Pendente" (não assume que está pago)
+- Valor: "R$ 89,90" (valor médio de mercado)
+- Vencimento: 7 dias (prazo para regularizar)
+- Plano: "Mensal" (mais comum)
+
+Com isso, mesmo alunos sem dados completos não causarão erros no sistema!

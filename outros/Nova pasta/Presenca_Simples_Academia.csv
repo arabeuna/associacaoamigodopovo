@@ -1,0 +1,44 @@
+Nome,Data,Horário,Observações
+João Silva Santos,26/08/2025,08:30,
+Maria Oliveira Costa,26/08/2025,09:15,
+Pedro Santos Lima,26/08/2025,10:00,
+Ana Paula Ferreira,26/08/2025,18:30,
+Fernanda Costa Alves,26/08/2025,19:15,
+João Silva Santos,25/08/2025,08:45,
+Carlos Henrique Silva,25/08/2025,09:30,
+Ana Paula Ferreira,25/08/2025,18:45,
+Juliana Pereira Santos,25/08/2025,19:00,
+Patricia Rodrigues Costa,25/08/2025,20:00,
+Maria Oliveira Costa,24/08/2025,09:00,
+Pedro Santos Lima,24/08/2025,10:15,
+Fernanda Costa Alves,24/08/2025,19:30,
+João Silva Santos,24/08/2025,08:30,
+Ana Paula Ferreira,24/08/2025,18:30,
+Carlos Henrique Silva,23/08/2025,09:45,
+Juliana Pereira Santos,23/08/2025,19:15,
+Patricia Rodrigues Costa,23/08/2025,20:15,
+Marcos Antonio Lima,23/08/2025,10:30,
+João Silva Santos,22/08/2025,08:15,
+Maria Oliveira Costa,22/08/2025,09:30,
+Ana Paula Ferreira,22/08/2025,18:15,
+Pedro Santos Lima,22/08/2025,10:45,
+Fernanda Costa Alves,22/08/2025,19:45,
+,,
+📊 CHECK-IN RÁPIDO,,
+Digite o nome:,,
+,=IF(ISBLANK(B28),"","✅ " & B28 & " - Check-in: " & NOW()),
+,,
+📈 ESTATÍSTICAS DE PRESENÇA,,
+Indicador,Valor,Período
+Presenças Hoje,=COUNTIF(B:B,TODAY()),Hoje
+Presenças Ontem,=COUNTIF(B:B,TODAY()-1),Ontem
+Presenças Esta Semana,=COUNTIFS(B:B,">="&TODAY()-7,B:B,"<="&TODAY()),Últimos 7 dias
+Presenças Este Mês,=COUNTIFS(B:B,">="&EOMONTH(TODAY(),-1)+1,B:B,"<="&EOMONTH(TODAY(),0)),Este mês
+,,
+🏆 FREQUÊNCIA POR ALUNO,,
+Nome,Total Presenças,Última Presença
+=UNIQUE(A2:A100),=COUNTIF($A$2:$A$100,A38),=MAXIFS($B$2:$B$100,$A$2:$A$100,A38)
+,,
+📅 PRESENÇA POR DIA,,
+Data,Presenças,Status
+=UNIQUE(B2:B100),=COUNTIF($B$2:$B$100,A43),"=IF(B43>=15,""✅ Excelente"",IF(B43>=10,""⚠️ Médio"",""❌ Baixo""))"

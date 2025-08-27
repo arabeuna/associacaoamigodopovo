@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Aluno - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-6 text-center mb-4">
+            <i class="fas fa-user-plus text-success"></i>
+            Cadastrar Novo Aluno
+        </h1>
+    </div>
+</div>
+
+<!-- Formulário de Cadastro -->
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    Dados do Novo Aluno
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="formCadastro">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="nome" class="form-label">
+                                <i class="fas fa-user me-2"></i>
+                                Nome Completo <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" required 
+                                   placeholder="Ex: João Silva Santos">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="telefone" class="form-label">
+                                <i class="fas fa-phone me-2"></i>
+                                Telefone <span class="text-danger">*</span>
+                            </label>
+                            <input type="tel" class="form-control" id="telefone" name="telefone" required 
+                                   placeholder="(11) 99999-9999">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-2"></i>
+                                Email
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   placeholder="joao@email.com">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="observacoes" class="form-label">
+                                <i class="fas fa-sticky-note me-2"></i>
+                                Observações
+                            </label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
+                                      placeholder="Informações adicionais sobre o aluno..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('alunos') }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>
+                            Cadastrar Aluno
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Área de Feedback -->
+                <div id="feedback" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Informações de Ajuda -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Dicas de Preenchimento
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-arrow-right text-primary me-2"></i>
+                        <strong>Nome:</strong> Digite o nome completo do aluno
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-arrow-right text-primary me-2"></i>
+                        <strong>Telefone:</strong> Formato (11) 99999-9999
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-arrow-right text-primary me-2"></i>
+                        <strong>Email:</strong> Opcional, mas recomendado
+                    </li>
+                    <li class="mb-0">
+                        <i class="fas fa-arrow-right text-primary me-2"></i>
+                        <strong>Observações:</strong> Informações extras
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Campos Obrigatórios
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <i class="fas fa-check text-success me-2"></i>
+                    <strong>Nome Completo:</strong> Obrigatório
+                </p>
+                <p class="mb-2">
+                    <i class="fas fa-check text-success me-2"></i>
+                    <strong>Telefone:</strong> Obrigatório
+                </p>
+                <p class="mb-2">
+                    <i class="fas fa-info text-info me-2"></i>
+                    <strong>Email:</strong> Opcional
+                </p>
+                <p class="mb-0">
+                    <i class="fas fa-info text-info me-2"></i>
+                    <strong>Observações:</strong> Opcional
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alunos Cadastrados Recentemente -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Ações Rápidas
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('alunos') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-users me-2"></i>
+                        Ver Todos os Alunos
+                    </a>
+                    <a href="{{ url_for('presenca') }}" class="btn btn-outline-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Marcar Presença
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Máscara para telefone
+    $('#telefone').on('input', function() {
+        let valor = this.value.replace(/\D/g, '');
+        if (valor.length <= 11) {
+            valor = valor.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+            if (valor.length < 14) {
+                valor = valor.replace(/^(\d{2})(\d{4})(\d{4}).*/, '($1) $2-$3');
+            }
+            this.value = valor;
+        }
+    });
+    
+    // Validação em tempo real
+    $('#nome').on('input', function() {
+        const valor = $(this).val().trim();
+        if (valor.length < 3) {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        } else {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        }
+    });
+    
+    $('#telefone').on('input', function() {
+        const valor = $(this).val().replace(/\D/g, '');
+        if (valor.length >= 10) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        }
+    });
+    
+    $('#email').on('input', function() {
+        const valor = $(this).val().trim();
+        if (valor === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        }
+    });
+    
+    // Envio do formulário
+    $('#formCadastro').on('submit', function(e) {
+        e.preventDefault();
+        
+        const nome = $('#nome').val().trim();
+        const telefone = $('#telefone').val().trim();
+        const email = $('#email').val().trim();
+        const observacoes = $('#observacoes').val().trim();
+        
+        // Validação
+        if (!nome || nome.length < 3) {
+            $('#feedback').html(
+                '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
+                '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                'Nome deve ter pelo menos 3 caracteres.' +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                '</div>'
+            );
+            return;
+        }
+        
+        if (!telefone || telefone.replace(/\D/g, '').length < 10) {
+            $('#feedback').html(
+                '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
+                '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                'Telefone deve ter pelo menos 10 dígitos.' +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                '</div>'
+            );
+            return;
+        }
+        
+        // Enviar dados
+        $.ajax({
+            url: '/cadastrar_aluno',
+            method: 'POST',
+            data: {
+                nome: nome,
+                telefone: telefone,
+                email: email,
+                observacoes: observacoes
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#feedback').html(
+                        '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                        '<i class="fas fa-check-circle me-2"></i>' +
+                        response.message +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>'
+                    );
+                    
+                    // Limpar formulário
+                    $('#formCadastro')[0].reset();
+                    $('.form-control').removeClass('is-valid is-invalid');
+                    
+                    // Redirecionar após 2 segundos
+                    setTimeout(function() {
+                        window.location.href = '/alunos';
+                    }, 2000);
+                } else {
+                    $('#feedback').html(
+                        '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                        '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                        response.message +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>'
+                    );
+                }
+            },
+            error: function() {
+                $('#feedback').html(
+                    '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                    '<i class="fas fa-times-circle me-2"></i>' +
+                    'Erro ao conectar com o servidor. Tente novamente.' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                    '</div>'
+                );
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
