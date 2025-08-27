@@ -2,14 +2,8 @@ services:
   - type: web
     name: associacao-amigo-povo
     env: python
-    buildCommand: |
-      pip install --upgrade pip setuptools wheel
-      pip install --only-binary=all -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: FLASK_ENV
-        value: production
       - key: SECRET_KEY
         value: associacao_amigo_do_povo_2024_secure_key
