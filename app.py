@@ -484,5 +484,5 @@ def test():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("🚀 Iniciando Associação Amigo do Povo...")
-    print(f"🌐 Sistema carregado: {len(academia.alunos_exemplo)} alunos")
-    app.run(host='0.0.0.0', port=port, debug=True)  # Debug temporário para ver erro
+    print(f"🌐 Sistema carregado: {len(academia.alunos_reais)} alunos")
+    app.run(host='0.0.0.0', port=port, debug=False)
