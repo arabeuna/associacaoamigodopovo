@@ -152,6 +152,34 @@ def relatorios():
     usuario_nome = session.get('usuario_nome', 'Usuário')
     return render_template('relatorios.html', meses=meses, mes_selecionado='Dezembro', usuario_nome=usuario_nome)
 
+@app.route('/novo_aluno')
+@login_obrigatorio
+def novo_aluno():
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    return render_template('novo_aluno.html', usuario_nome=usuario_nome)
+
+@app.route('/marcar_presenca', methods=['POST'])
+@login_obrigatorio
+def marcar_presenca():
+    nome_aluno = request.form.get('nome_aluno')
+    return jsonify({'success': True, 'message': f'Presença marcada para {nome_aluno}!'})
+
+@app.route('/recarregar_dados')
+@login_obrigatorio
+def recarregar_dados():
+    return redirect(url_for('dashboard'))
+
+@app.route('/relatorio_mes/<mes>')
+@login_obrigatorio
+def relatorio_mes(mes):
+    return jsonify({'message': f'Relatório de {mes} será implementado'})
+
+@app.route('/cadastrar_aluno', methods=['POST'])
+@login_obrigatorio
+def cadastrar_aluno():
+    nome = request.form.get('nome')
+    return jsonify({'success': True, 'message': f'Aluno {nome} será cadastrado'})
+
 @app.route('/backup_planilhas')
 @login_obrigatorio
 def backup_planilhas():
