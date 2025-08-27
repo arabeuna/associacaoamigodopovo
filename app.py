@@ -403,8 +403,166 @@ def relatorio_mes(mes):
 @app.route('/cadastrar_aluno', methods=['POST'])
 @login_obrigatorio
 def cadastrar_aluno():
-    nome = request.form.get('nome')
-    return jsonify({'success': True, 'message': f'Aluno {nome} será cadastrado'})
+    try:
+        # Obter dados do formulário
+        nome = request.form.get('nome', '').strip()
+        telefone = request.form.get('telefone', '').strip()
+        email = request.form.get('email', '').strip()
+        endereco = request.form.get('endereco', '').strip()
+        data_nascimento = request.form.get('data_nascimento', '').strip()
+        atividade = request.form.get('atividade', '').strip()
+        turma = request.form.get('turma', '').strip()
+        observacoes = request.form.get('observacoes', '').strip()
+        
+        # Validações
+        if not nome or len(nome) < 3:
+            return jsonify({'success': False, 'message': 'Nome deve ter pelo menos 3 caracteres'})
+        
+        if not telefone or len(telefone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')) < 10:
+            return jsonify({'success': False, 'message': 'Telefone deve ter pelo menos 10 dígitos'})
+        
+        # Verificar se aluno já existe
+        for aluno in academia.alunos_reais:
+            if aluno['nome'].lower() == nome.lower():
+                return jsonify({'success': False, 'message': 'Já existe um aluno cadastrado com este nome'})
+        
+        # Converter data de nascimento se fornecida
+        data_nasc_formatada = data_nascimento
+        if data_nascimento:
+            try:
+                # Converter de YYYY-MM-DD para DD/MM/YYYY
+                from datetime import datetime as dt
+                data_obj = dt.strptime(data_nascimento, '%Y-%m-%d')
+                data_nasc_formatada = data_obj.strftime('%d/%m/%Y')
+            except:
+                data_nasc_formatada = data_nascimento
+        
+        # Criar novo aluno
+        novo_aluno = {
+            'nome': nome,
+            'telefone': telefone,
+            'endereco': endereco if endereco else 'A definir',
+            'email': email if email else f"{nome.lower().replace(' ', '.')}@email.com",
+            'data_nascimento': data_nasc_formatada if data_nasc_formatada else 'A definir',
+            'data_cadastro': datetime.now().strftime('%d/%m/%Y'),
+            'atividade': atividade if atividade else 'A definir',
+            'turma': turma if turma else 'A definir',
+            'status_frequencia': 'Novo cadastro',
+            'observacoes': observacoes
+        }
+        
+        # Adicionar ao sistema
+        academia.alunos_reais.append(novo_aluno)
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Aluno {nome} cadastrado com sucesso!',
+            'total_alunos': len(academia.alunos_reais)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao cadastrar aluno: {str(e)}'})
+
+@app.route('/editar_aluno/<int:aluno_id>', methods=['PUT', 'POST'])
+@login_obrigatorio
+def editar_aluno(aluno_id):
+    try:
+        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+            return jsonify({'success': False, 'message': 'Aluno não encontrado'})
+        
+        # Obter dados do formulário
+        nome = request.form.get('nome', '').strip()
+        telefone = request.form.get('telefone', '').strip()
+        email = request.form.get('email', '').strip()
+        endereco = request.form.get('endereco', '').strip()
+        data_nascimento = request.form.get('data_nascimento', '').strip()
+        atividade = request.form.get('atividade', '').strip()
+        turma = request.form.get('turma', '').strip()
+        observacoes = request.form.get('observacoes', '').strip()
+        
+        # Validações
+        if not nome or len(nome) < 3:
+            return jsonify({'success': False, 'message': 'Nome deve ter pelo menos 3 caracteres'})
+        
+        if not telefone or len(telefone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')) < 10:
+            return jsonify({'success': False, 'message': 'Telefone deve ter pelo menos 10 dígitos'})
+        
+        # Verificar se outro aluno já tem este nome
+        for i, aluno in enumerate(academia.alunos_reais):
+            if i != aluno_id and aluno['nome'].lower() == nome.lower():
+                return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome'})
+        
+        # Converter data de nascimento se fornecida
+        data_nasc_formatada = data_nascimento
+        if data_nascimento:
+            try:
+                # Converter de YYYY-MM-DD para DD/MM/YYYY
+                from datetime import datetime as dt
+                data_obj = dt.strptime(data_nascimento, '%Y-%m-%d')
+                data_nasc_formatada = data_obj.strftime('%d/%m/%Y')
+            except:
+                data_nasc_formatada = data_nascimento
+        
+        # Atualizar dados do aluno
+        aluno_atual = academia.alunos_reais[aluno_id]
+        aluno_atual.update({
+            'nome': nome,
+            'telefone': telefone,
+            'email': email if email else aluno_atual.get('email', ''),
+            'endereco': endereco if endereco else aluno_atual.get('endereco', 'A definir'),
+            'data_nascimento': data_nasc_formatada if data_nasc_formatada else aluno_atual.get('data_nascimento', 'A definir'),
+            'atividade': atividade if atividade else aluno_atual.get('atividade', 'A definir'),
+            'turma': turma if turma else aluno_atual.get('turma', 'A definir'),
+            'observacoes': observacoes
+        })
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Dados de {nome} atualizados com sucesso!',
+            'aluno': aluno_atual
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao editar aluno: {str(e)}'})
+
+@app.route('/excluir_aluno/<int:aluno_id>', methods=['DELETE', 'POST'])
+@login_obrigatorio
+def excluir_aluno(aluno_id):
+    try:
+        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+            return jsonify({'success': False, 'message': 'Aluno não encontrado'})
+        
+        # Obter nome do aluno antes de excluir
+        nome_aluno = academia.alunos_reais[aluno_id]['nome']
+        
+        # Remover aluno da lista
+        academia.alunos_reais.pop(aluno_id)
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Aluno {nome_aluno} excluído com sucesso!',
+            'total_alunos': len(academia.alunos_reais)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao excluir aluno: {str(e)}'})
+
+@app.route('/obter_aluno/<int:aluno_id>')
+@login_obrigatorio
+def obter_aluno(aluno_id):
+    try:
+        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+            return jsonify({'success': False, 'message': 'Aluno não encontrado'})
+        
+        aluno = academia.alunos_reais[aluno_id]
+        return jsonify({
+            'success': True,
+            'aluno': aluno,
+            'aluno_id': aluno_id
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao obter dados do aluno: {str(e)}'})
 
 @app.route('/backup_planilhas')
 @login_obrigatorio

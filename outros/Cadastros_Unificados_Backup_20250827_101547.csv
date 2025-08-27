@@ -1,0 +1,34 @@
+ASSOCIAÇÃO AMIGO DO POVO - CADASTROS UNIFICADOS
+GERADO EM: 27/08/2025 10:15
+TOTAL DE ALUNOS: 18
+
+NOME,DATA_NASCIMENTO,TELEFONE,ENDERECO,ATIVIDADE,DATA_MATRICULA,TURMA,EMAIL,STATUS_FREQUENCIA,OBSERVACOES
+"JOÃO VITOR GOMES SANTOS","2013-01-06","62 994855458","AVENIDA","Natação","01/01/2024","09:00:00","joão.vitor.gomes.santos@email.com","Aguardando dados de Natação",""
+"KELVIN ENRIQUE DA SILVA DA SILVA","2012-01-06","62 984704675","RUA RDB 6 QD 10 LT 31 DOM BOSCO","Natação","18/08/2025","Padrão","kelvin.enrique.da.silva.da.silva@email.com","Aguardando dados de Natação",""
+"HENRY DE SOUZA VERAS","2009-08-26","62 993452696","RUA SB51 QD 59 LT 06 CASA 02 S. BERNARDO II","Natação","01/01/2024","09:00:00","henry.de.souza.veras@email.com","Aguardando dados de Natação",""
+"ANA CLARA SILVA SANTOS","15/03/1995","(62) 98765-4321","Rua das Flores, 123","Informática","01/02/2024","Básico","ana.clara.silva.santos@email.com","Dados disponíveis",""
+"CARLOS EDUARDO SOUZA","22/08/1990","(62) 93210-9876","Rua Tecnologia, 111","Informática","15/01/2024","Avançado","carlos.eduardo.souza@email.com","Dados disponíveis",""
+"MARIANA COSTA RIBEIRO","10/11/1985","(62) 88765-4321","Rua Saúde, 666","Fisioterapia","20/03/2024","Reabilitação","mariana.costa.ribeiro@email.com","Aguardando dados de Fisioterapia",""
+"PEDRO HENRIQUE DIAS","05/07/1992","(62) 87654-3210","Av. Bem-estar, 777","Fisioterapia","10/02/2024","Prevenção","pedro.henrique.dias@email.com","Aguardando dados de Fisioterapia",""
+"LARISSA OLIVEIRA MELO","18/12/1988","(62) 84321-0987","Rua Ritmo, 101","Dança","05/04/2024","Ballet","larissa.oliveira.melo@email.com","Aguardando dados de Dança",""
+"DIEGO FERREIRA LIMA","25/09/1993","(62) 83210-9876","Av. Dança, 202","Dança","12/03/2024","Hip Hop","diego.ferreira.lima@email.com","Aguardando dados de Dança",""
+"REGINA SANTOS BARBOSA","30/01/1960","(62) 80987-6543","Rua Aquática, 505","Hidroginástica","08/01/2024","Terceira Idade","regina.santos.barbosa@email.com","Aguardando dados de Hidroginástica",""
+"ROBERTO SILVA MENDES","14/05/1955","(62) 79876-5432","Av. Piscina, 606","Hidroginástica","22/02/2024","Adultos","roberto.silva.mendes@email.com","Aguardando dados de Hidroginástica",""
+"ALEXANDRE COSTA MOURA","02/06/1987","(62) 77654-3210","Rua Fitness, 808","Funcional","17/01/2024","Iniciante","alexandre.costa.moura@email.com","Aguardando dados de Funcional",""
+"PATRICIA SANTOS ROCHA","11/04/1991","(62) 76543-2109","Av. Treino, 909","Funcional","29/03/2024","Avançado","patricia.santos.rocha@email.com","Aguardando dados de Funcional",""
+"LETÍCIA FERREIRA GOMES","20/10/2005","(62) 74321-0987","Rua Luta, 111","Karatê","06/02/2024","Infantil","letícia.ferreira.gomes@email.com","Aguardando dados de Karatê",""
+"RAFAEL SANTOS OLIVEIRA","15/02/2000","(62) 73210-9876","Av. Artes Marciais, 212","Karatê","13/04/2024","Juvenil","rafael.santos.oliveira@email.com","Aguardando dados de Karatê",""
+"MIGUEL SANTOS COSTA","08/07/2010","(62) 71098-7654","Rua Coragem, 414","Bombeiro mirim","25/01/2024","Turma A","miguel.santos.costa@email.com","Aguardando dados de Bombeiro mirim",""
+"HELENA OLIVEIRA SILVA","03/12/2011","(62) 70987-6543","Av. Heroísmo, 515","Bombeiro mirim","02/03/2024","Turma A","helena.oliveira.silva@email.com","Aguardando dados de Bombeiro mirim",""
+"CAIO SANTOS FERREIRA","12/01/1989","(62) 69876-5432","Rua Ginga, 616","Capoeira","19/02/2024","Única","caio.santos.ferreira@email.com","Aguardando dados de Capoeira",""
+
+ESTATÍSTICAS POR ATIVIDADE:
+Bombeiro mirim,2
+Capoeira,1
+Dança,2
+Fisioterapia,2
+Funcional,2
+Hidroginástica,2
+Informática,2
+Karatê,2
+Natação,3

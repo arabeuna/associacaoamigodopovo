@@ -135,6 +135,10 @@
                                 <i class="fas fa-chart-bar me-1"></i>
                                 Frequência
                             </th>
+                            <th scope="col">
+                                <i class="fas fa-cogs me-1"></i>
+                                Ações
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -236,6 +240,20 @@
                                     </span>
                                 {% endif %}
                             </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                            onclick="editarAluno({{ loop.index0 }})" 
+                                            title="Editar aluno">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            onclick="confirmarExclusao({{ loop.index0 }}, '{{ aluno.nome }}')" 
+                                            title="Excluir aluno">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -304,4 +322,281 @@
         </a>
     </div>
 </div>
+
+<!-- Modal de Edição de Aluno -->
+<div class="modal fade" id="modalEditarAluno" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Dados do Aluno
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarAluno">
+                    <input type="hidden" id="editAlunoId" name="aluno_id">
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="editNome" class="form-label">
+                                <i class="fas fa-user me-2"></i>
+                                Nome Completo <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="editNome" name="nome" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editTelefone" class="form-label">
+                                <i class="fas fa-phone me-2"></i>
+                                Telefone <span class="text-danger">*</span>
+                            </label>
+                            <input type="tel" class="form-control" id="editTelefone" name="telefone" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editEmail" class="form-label">
+                                <i class="fas fa-envelope me-2"></i>
+                                E-mail
+                            </label>
+                            <input type="email" class="form-control" id="editEmail" name="email">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="editEndereco" class="form-label">
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                Endereço
+                            </label>
+                            <input type="text" class="form-control" id="editEndereco" name="endereco">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editDataNascimento" class="form-label">
+                                <i class="fas fa-birthday-cake me-2"></i>
+                                Data de Nascimento
+                            </label>
+                            <input type="date" class="form-control" id="editDataNascimento" name="data_nascimento">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editAtividade" class="form-label">
+                                <i class="fas fa-graduation-cap me-2"></i>
+                                Atividade
+                            </label>
+                            <select class="form-control" id="editAtividade" name="atividade">
+                                <option value="">Selecione...</option>
+                                <option value="Natação">Natação</option>
+                                <option value="Informática">Informática</option>
+                                <option value="Fisioterapia">Fisioterapia</option>
+                                <option value="Dança">Dança</option>
+                                <option value="Hidroginástica">Hidroginástica</option>
+                                <option value="Funcional">Funcional</option>
+                                <option value="Karatê">Karatê</option>
+                                <option value="Bombeiro mirim">Bombeiro mirim</option>
+                                <option value="Capoeira">Capoeira</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editTurma" class="form-label">
+                                <i class="fas fa-clock me-2"></i>
+                                Turma
+                            </label>
+                            <input type="text" class="form-control" id="editTurma" name="turma" 
+                                   placeholder="Ex: Manhã, Tarde, 09:00">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="editObservacoes" class="form-label">
+                                <i class="fas fa-sticky-note me-2"></i>
+                                Observações
+                            </label>
+                            <textarea class="form-control" id="editObservacoes" name="observacoes" 
+                                      rows="3" placeholder="Observações adicionais sobre o aluno..."></textarea>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="feedbackEdicao"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="salvarEdicaoAluno()">
+                    <i class="fas fa-save me-2"></i>
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="modalConfirmarExclusao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-user-times fa-4x text-danger mb-3"></i>
+                <p class="fs-5">Tem certeza que deseja excluir o aluno:</p>
+                <p class="fs-4 fw-bold text-danger" id="nomeAlunoExcluir"></p>
+                <p class="text-muted">Esta ação não pode ser desfeita!</p>
+                <input type="hidden" id="idAlunoExcluir">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" onclick="excluirAluno()">
+                    <i class="fas fa-trash me-2"></i>
+                    Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Função para editar aluno
+function editarAluno(alunoId) {
+    $.ajax({
+        url: `/obter_aluno/${alunoId}`,
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const aluno = response.aluno;
+                
+                // Preencher formulário
+                $('#editAlunoId').val(alunoId);
+                $('#editNome').val(aluno.nome);
+                $('#editTelefone').val(aluno.telefone);
+                $('#editEmail').val(aluno.email);
+                $('#editEndereco').val(aluno.endereco);
+                $('#editAtividade').val(aluno.atividade);
+                $('#editTurma').val(aluno.turma);
+                $('#editObservacoes').val(aluno.observacoes);
+                
+                // Converter data se necessário
+                if (aluno.data_nascimento && aluno.data_nascimento !== 'A definir') {
+                    const data = aluno.data_nascimento;
+                    if (data.includes('/')) {
+                        const [dia, mes, ano] = data.split('/');
+                        $('#editDataNascimento').val(`${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`);
+                    } else {
+                        $('#editDataNascimento').val(data);
+                    }
+                }
+                
+                // Limpar feedbacks
+                $('#feedbackEdicao').html('');
+                
+                // Mostrar modal
+                $('#modalEditarAluno').modal('show');
+            } else {
+                alert('Erro ao carregar dados do aluno: ' + response.message);
+            }
+        },
+        error: function() {
+            alert('Erro ao carregar dados do aluno');
+        }
+    });
+}
+
+// Função para salvar edição
+function salvarEdicaoAluno() {
+    const alunoId = $('#editAlunoId').val();
+    const formData = new FormData($('#formEditarAluno')[0]);
+    
+    $.ajax({
+        url: `/editar_aluno/${alunoId}`,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                $('#feedbackEdicao').html(`
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        ${response.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+                
+                // Fechar modal e recarregar página
+                setTimeout(function() {
+                    $('#modalEditarAluno').modal('hide');
+                    location.reload();
+                }, 1500);
+            } else {
+                $('#feedbackEdicao').html(`
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${response.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+            }
+        },
+        error: function() {
+            $('#feedbackEdicao').html(`
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Erro ao salvar alterações
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+        }
+    });
+}
+
+// Função para confirmar exclusão
+function confirmarExclusao(alunoId, nomeAluno) {
+    $('#idAlunoExcluir').val(alunoId);
+    $('#nomeAlunoExcluir').text(nomeAluno);
+    $('#modalConfirmarExclusao').modal('show');
+}
+
+// Função para excluir aluno
+function excluirAluno() {
+    const alunoId = $('#idAlunoExcluir').val();
+    
+    $.ajax({
+        url: `/excluir_aluno/${alunoId}`,
+        method: 'POST',
+        success: function(response) {
+            if (response.success) {
+                $('#modalConfirmarExclusao').modal('hide');
+                
+                // Mostrar mensagem de sucesso
+                alert(response.message);
+                
+                // Recarregar página
+                location.reload();
+            } else {
+                alert('Erro ao excluir aluno: ' + response.message);
+            }
+        },
+        error: function() {
+            alert('Erro ao excluir aluno');
+        }
+    });
+}
+</script>
+
 {% endblock %}

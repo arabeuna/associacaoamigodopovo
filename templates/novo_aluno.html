@@ -56,6 +56,53 @@
                     
                     <div class="row">
                         <div class="col-md-12 mb-3">
+                            <label for="endereco" class="form-label">
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                Endereço
+                            </label>
+                            <input type="text" class="form-control" id="endereco" name="endereco" 
+                                   placeholder="Ex: Rua das Flores, 123 - Centro">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="data_nascimento" class="form-label">
+                                <i class="fas fa-birthday-cake me-2"></i>
+                                Data de Nascimento
+                            </label>
+                            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="atividade" class="form-label">
+                                <i class="fas fa-graduation-cap me-2"></i>
+                                Atividade
+                            </label>
+                            <select class="form-control" id="atividade" name="atividade">
+                                <option value="">Selecione uma atividade...</option>
+                                <option value="Natação">Natação</option>
+                                <option value="Informática">Informática</option>
+                                <option value="Fisioterapia">Fisioterapia</option>
+                                <option value="Dança">Dança</option>
+                                <option value="Hidroginástica">Hidroginástica</option>
+                                <option value="Funcional">Funcional</option>
+                                <option value="Karatê">Karatê</option>
+                                <option value="Bombeiro mirim">Bombeiro mirim</option>
+                                <option value="Capoeira">Capoeira</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="turma" class="form-label">
+                                <i class="fas fa-clock me-2"></i>
+                                Turma
+                            </label>
+                            <input type="text" class="form-control" id="turma" name="turma" 
+                                   placeholder="Ex: Manhã, Tarde, 09:00">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
                             <label for="observacoes" class="form-label">
                                 <i class="fas fa-sticky-note me-2"></i>
                                 Observações
@@ -252,6 +299,12 @@ $(document).ready(function() {
             return;
         }
         
+        // Obter outros dados
+        const endereco = $('#endereco').val().trim();
+        const data_nascimento = $('#data_nascimento').val();
+        const atividade = $('#atividade').val();
+        const turma = $('#turma').val().trim();
+        
         // Enviar dados
         $.ajax({
             url: '/cadastrar_aluno',
@@ -260,6 +313,10 @@ $(document).ready(function() {
                 nome: nome,
                 telefone: telefone,
                 email: email,
+                endereco: endereco,
+                data_nascimento: data_nascimento,
+                atividade: atividade,
+                turma: turma,
                 observacoes: observacoes
             },
             success: function(response) {
