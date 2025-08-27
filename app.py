@@ -3,9 +3,6 @@ from datetime import datetime
 import os
 import hashlib
 import json
-import pandas as pd
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill
 from werkzeug.utils import secure_filename
 import io
 
@@ -28,7 +25,7 @@ USUARIOS = {
 
 # Configuração para upload
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
+ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 if not os.path.exists(UPLOAD_FOLDER):
@@ -44,59 +41,15 @@ class SistemaAcademia:
         self.atividades_disponiveis = self.get_atividades_disponiveis()
     
     def carregar_dados_reais(self):
-        """Carrega dados reais da planilha de cadastro"""
+        """Carrega dados reais - usa dados embutidos para deploy estável"""
         try:
-            # 1. Tentar carregar dados processados primeiro
-            if os.path.exists('dados_reais_processados.json'):
-                with open('dados_reais_processados.json', 'r', encoding='utf-8') as f:
-                    dados_processados = json.load(f)
-                print(f"✅ {len(dados_processados)} alunos carregados dos dados processados")
-                return dados_processados
-            
-            # 2. Tentar carregar diretamente da planilha Excel
-            caminho_planilha = 'outros/Cadastros_Unificados_GOOGLE_v2.xlsx'
-            if os.path.exists(caminho_planilha):
-                try:
-                    df = pd.read_excel(caminho_planilha)
-                    alunos_processados = []
-                    
-                    for _, row in df.iterrows():
-                        if pd.notna(row.get('ATIVIDADE')) and pd.notna(row.get('NOME')):
-                            # Normalizar atividade
-                            atividade = str(row['ATIVIDADE']).strip()
-                            if atividade == 'Karatè':
-                                atividade = 'Karatê'
-                            elif atividade == 'Bomveiro mirim':
-                                atividade = 'Bombeiro mirim'
-                            elif atividade == 'Hidroginastica':
-                                atividade = 'Hidroginástica'
-                            
-                            aluno = {
-                                'nome': str(row['NOME']).strip(),
-                                'telefone': str(row.get('TELEFONE', '')).strip(),
-                                'endereco': str(row.get('ENDEREÇO', '')).strip(),
-                                'email': f"{str(row['NOME']).lower().replace(' ', '.')}@email.com",
-                                'data_nascimento': str(row.get('DATA DE NASCIMENTO', '')).split()[0] if pd.notna(row.get('DATA DE NASCIMENTO')) else '',
-                                'data_cadastro': str(row.get('DATA MATRICULA', '')).split()[0] if pd.notna(row.get('DATA MATRICULA')) else '01/01/2024',
-                                'atividade': atividade,
-                                'turma': str(row.get('TURMA', 'Padrão')).strip() if pd.notna(row.get('TURMA')) else 'Padrão',
-                                'status_frequencia': f'Aguardando dados de {atividade}',
-                                'observacoes': ''
-                            }
-                            alunos_processados.append(aluno)
-                    
-                    print(f"✅ {len(alunos_processados)} alunos carregados da planilha Excel")
-                    return alunos_processados
-                    
-                except Exception as e:
-                    print(f"❌ Erro ao ler Excel: {e}")
-            
-            # 3. Fallback com dados reais embutidos para deploy
+            # Para deploy estável, usar dados embutidos
+            print("📦 Carregando dados reais embutidos para deploy estável")
             return self.get_dados_reais_embutidos()
             
         except Exception as e:
-            print(f"❌ Erro ao carregar dados reais: {e}")
-            return self.get_dados_reais_embutidos()
+            print(f"❌ Erro ao carregar dados: {e}")
+            return self.get_dados_exemplo_basico()
     
     def get_dados_reais_embutidos(self):
         """Dados reais embutidos para funcionar no deploy do Render"""
@@ -137,6 +90,15 @@ class SistemaAcademia:
             
             # CAPOEIRA (1 aluno real)
             {'nome': 'CAIO SANTOS FERREIRA', 'telefone': '(62) 69876-5432', 'endereco': 'Rua Ginga, 616', 'email': 'caio.santos.ferreira@email.com', 'data_nascimento': '12/01/1989', 'data_cadastro': '19/02/2024', 'atividade': 'Capoeira', 'turma': 'Única', 'status_frequencia': 'Aguardando dados de Capoeira', 'observacoes': ''}
+        ]
+    
+    def get_dados_exemplo_basico(self):
+        """Dados básicos de emergência"""
+        print("🔧 Usando dados básicos de emergência")
+        return [
+            {'nome': 'João Silva', 'telefone': '(62) 99999-0001', 'endereco': 'Rua A, 100', 'email': 'joao.silva@email.com', 'data_nascimento': '01/01/1990', 'data_cadastro': '01/01/2024', 'atividade': 'Informática', 'turma': 'Básico', 'status_frequencia': 'Ativo', 'observacoes': ''},
+            {'nome': 'Maria Santos', 'telefone': '(62) 99999-0002', 'endereco': 'Rua B, 200', 'email': 'maria.santos@email.com', 'data_nascimento': '02/02/1992', 'data_cadastro': '02/01/2024', 'atividade': 'Natação', 'turma': 'Manhã', 'status_frequencia': 'Ativo', 'observacoes': ''},
+            {'nome': 'Pedro Costa', 'telefone': '(62) 99999-0003', 'endereco': 'Rua C, 300', 'email': 'pedro.costa@email.com', 'data_nascimento': '03/03/1988', 'data_cadastro': '03/01/2024', 'atividade': 'Dança', 'turma': 'Noite', 'status_frequencia': 'Ativo', 'observacoes': ''}
         ]
     
     def criar_dados_exemplo_fallback(self):
@@ -269,49 +231,16 @@ class SistemaAcademia:
             if not alunos_atividade:
                 return None
             
-            # Criar workbook
-            wb = Workbook()
-            ws = wb.active
-            # Título sem caracteres especiais para compatibilidade
-            titulo_seguro = f"Frequencia {atividade.replace('/', '_').replace('\\', '_')} {mes_ano.replace('/', '_')}"
-            ws.title = titulo_seguro[:31]  # Excel limita títulos a 31 caracteres
+            # Gerar CSV simples em vez de Excel para estabilidade
+            csv_content = "Nome,Turma," + ",".join([f'{i:02d}' for i in range(1, 32)]) + "\n"
             
-            # Estilos
-            header_font = Font(bold=True, color="FFFFFF")
-            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-            center_alignment = Alignment(horizontal="center", vertical="center")
+            for aluno in alunos_atividade:
+                linha = f"{aluno['nome']},{aluno['turma']}" + "," * 31 + "\n"
+                csv_content += linha
             
-            # Cabeçalho
-            headers = ['Nome', 'Turma'] + [f'{i:02d}' for i in range(1, 32)]  # Dias do mês
-            
-            for col, header in enumerate(headers, 1):
-                cell = ws.cell(row=1, column=col, value=header)
-                cell.font = header_font
-                cell.fill = header_fill
-                cell.alignment = center_alignment
-            
-            # Adicionar alunos
-            for row, aluno in enumerate(alunos_atividade, 2):
-                ws.cell(row=row, column=1, value=aluno['nome'])
-                ws.cell(row=row, column=2, value=aluno['turma'])
-                
-                # Células para marcação de presença (dias 1-31)
-                for col in range(3, 34):
-                    cell = ws.cell(row=row, column=col, value='')
-                    cell.alignment = center_alignment
-            
-            # Ajustar largura das colunas
-            ws.column_dimensions['A'].width = 30  # Nome
-            ws.column_dimensions['B'].width = 15  # Turma
-            
-            # Colunas dos dias (C até AG = 3 até 33)
-            for col_num in range(3, 34):
-                col_letter = ws.cell(row=1, column=col_num).column_letter
-                ws.column_dimensions[col_letter].width = 4
-            
-            # Salvar em memória
+            # Retornar como BytesIO
             output = io.BytesIO()
-            wb.save(output)
+            output.write(csv_content.encode('utf-8'))
             output.seek(0)
             
             return output
@@ -443,17 +372,17 @@ def gerar_planilha_route(atividade):
         return jsonify({'error': 'Acesso negado'}), 403
     
     try:
-        # Gerar planilha
+        # Gerar planilha CSV
         planilha_bytes = academia.gerar_planilha_frequencia(atividade)
         
         if planilha_bytes:
-            filename = f'Frequencia_{atividade.replace(" ", "_")}_{datetime.now().strftime("%m_%Y")}.xlsx'
+            filename = f'Frequencia_{atividade.replace(" ", "_")}_{datetime.now().strftime("%m_%Y")}.csv'
             
             return send_file(
                 planilha_bytes,
                 as_attachment=True,
                 download_name=filename,
-                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                mimetype='text/csv'
             )
         else:
             return jsonify({'error': f'Nenhum aluno encontrado para a atividade {atividade}'}), 404
