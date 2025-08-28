@@ -242,17 +242,34 @@ class SistemaAcademia:
         return [aluno for aluno in self.alunos_reais if aluno['atividade'] == atividade]
     
     def get_estatisticas(self):
-        """Estatísticas básicas"""
+        """Estatísticas básicas com dados reais de presença"""
         atividades_count = {}
         for aluno in self.alunos_reais:
             atividade = aluno['atividade']
             atividades_count[atividade] = atividades_count.get(atividade, 0) + 1
         
+        # Calcular presenças hoje baseado nos dados reais
+        data_hoje = datetime.now().strftime('%d/%m/%Y')
+        presencas_hoje = 0
+        
+        for nome, dados in self.dados_presenca.items():
+            for registro in dados['registros']:
+                if registro.get('data') == data_hoje and registro.get('status') == 'P':
+                    presencas_hoje += 1
+        
+        # Calcular total de registros de presença
+        total_registros = 0
+        for dados in self.dados_presenca.values():
+            total_registros += len(dados['registros'])
+        
+        # Calcular alunos com presença registrada
+        alunos_com_presenca = len(self.dados_presenca)
+        
         return {
             'total_alunos': len(self.alunos_reais),
-            'presencas_hoje': 42,
-            'total_registros': len(self.alunos_reais) * 12,
-            'alunos_ativos': len(self.alunos_reais) - 3,
+            'presencas_hoje': presencas_hoje,
+            'presencas_semana': total_registros,  # Renomeado para ser mais descritivo
+            'alunos_ativos': alunos_com_presenca,
             'atividades_count': atividades_count
         }
     
@@ -818,8 +835,23 @@ def logout():
 @login_obrigatorio
 def dashboard():
     stats = academia.get_estatisticas()
+    
+    # Obter presenças de hoje
+    data_hoje = datetime.now().strftime('%d/%m/%Y')
+    presencas_hoje = []
+    
+    for nome, dados in academia.dados_presenca.items():
+        for registro in dados['registros']:
+            if registro.get('data') == data_hoje and registro.get('status') == 'P':
+                presencas_hoje.append({
+                    'Nome': nome,
+                    'Horário': registro.get('horario', ''),
+                    'Atividade': dados.get('atividade', ''),
+                    'Observações': 'Presença registrada'
+                })
+    
     usuario_nome = session.get('usuario_nome', 'Usuário')
-    return render_template('dashboard.html', stats=stats, presencas_hoje=[], usuario_nome=usuario_nome)
+    return render_template('dashboard.html', stats=stats, presencas_hoje=presencas_hoje, usuario_nome=usuario_nome)
 
 @app.route('/alunos')
 @login_obrigatorio

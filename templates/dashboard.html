@@ -116,6 +116,10 @@
                         <i class="fas fa-check-circle me-2"></i>
                         Marcar Presença
                     </a>
+                    <button id="btnAtualizarPresenca" class="btn btn-info">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Atualizar Presenças
+                    </button>
                     <a href="{{ url_for('novo_aluno') }}" class="btn btn-success">
                         <i class="fas fa-user-plus me-2"></i>
                         Novo Aluno
@@ -175,4 +179,74 @@
         </div>
     </div>
 </div>
+
+<!-- JavaScript para atualização de presenças -->
+<script>
+$(document).ready(function() {
+    // Botão para atualizar presenças
+    $('#btnAtualizarPresenca').on('click', function() {
+        const btn = $(this);
+        const originalHtml = btn.html();
+        
+        // Mostrar loading
+        btn.html('<i class="fas fa-spinner fa-spin me-2"></i>Atualizando...');
+        btn.prop('disabled', true);
+        
+        // Fazer requisição para recarregar presenças
+        $.ajax({
+            url: '/recarregar_presenca_informatica',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    // Mostrar toast de sucesso
+                    showToast('success', response.message);
+                    
+                    // Recarregar página após 1 segundo
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('error', response.message || 'Erro ao atualizar presenças');
+                }
+            },
+            error: function() {
+                showToast('error', 'Erro de conexão com o servidor');
+            },
+            complete: function() {
+                // Restaurar botão
+                btn.html(originalHtml);
+                btn.prop('disabled', false);
+            }
+        });
+    });
+    
+    // Função para mostrar toast
+    function showToast(type, message) {
+        const toastClass = type === 'success' ? 'bg-success' : 'bg-danger';
+        const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+        
+        const toast = $(`
+            <div class="toast position-fixed top-0 end-0 m-3 ${toastClass} text-white" role="alert" style="z-index: 1055;">
+                <div class="toast-header ${toastClass} text-white border-0">
+                    <i class="fas ${icon} me-2"></i>
+                    <strong class="me-auto">${type === 'success' ? 'Sucesso' : 'Erro'}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            </div>
+        `);
+        
+        $('body').append(toast);
+        const bsToast = new bootstrap.Toast(toast[0]);
+        bsToast.show();
+        
+        // Remover do DOM após fechar
+        toast.on('hidden.bs.toast', function() {
+            $(this).remove();
+        });
+    }
+});
+</script>
 {% endblock %}
