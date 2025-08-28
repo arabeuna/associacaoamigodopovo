@@ -455,6 +455,10 @@
                 <p class="fs-5">Tem certeza que deseja excluir o aluno:</p>
                 <p class="fs-4 fw-bold text-danger" id="nomeAlunoExcluir"></p>
                 <p class="text-muted">Esta ação não pode ser desfeita!</p>
+                
+                <!-- Aviso sobre dados de frequência -->
+                <div id="avisoFrequencia"></div>
+                
                 <input type="hidden" id="idAlunoExcluir">
             </div>
             <div class="modal-footer">
@@ -569,12 +573,48 @@ function salvarEdicaoAluno() {
 function confirmarExclusao(alunoId, nomeAluno) {
     $('#idAlunoExcluir').val(alunoId);
     $('#nomeAlunoExcluir').text(nomeAluno);
+    
+    // Buscar informações detalhadas do aluno para verificar frequência
+    $.ajax({
+        url: `/obter_aluno/${alunoId}`,
+        method: 'GET',
+        success: function(response) {
+            if (response.success && response.dados_presenca) {
+                const totalRegistros = response.dados_presenca.total_presencas + response.dados_presenca.total_faltas;
+                $('#avisoFrequencia').html(
+                    `<div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Atenção:</strong> Este aluno possui <strong>${totalRegistros} registros de frequência</strong> 
+                        que também serão excluídos permanentemente.
+                    </div>`
+                );
+            } else {
+                $('#avisoFrequencia').html(
+                    `<div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Este aluno não possui registros de frequência.
+                    </div>`
+                );
+            }
+        },
+        error: function() {
+            $('#avisoFrequencia').html('');
+        }
+    });
+    
     $('#modalConfirmarExclusao').modal('show');
 }
 
 // Função para excluir aluno
 function excluirAluno() {
     const alunoId = $('#idAlunoExcluir').val();
+    const nomeAluno = $('#nomeAlunoExcluir').text();
+    
+    // Feedback visual no botão
+    const botaoExcluir = $('.btn-danger:contains("Sim, Excluir")');
+    const textoOriginal = botaoExcluir.html();
+    botaoExcluir.html('<i class="fas fa-spinner fa-spin me-2"></i>Excluindo...');
+    botaoExcluir.prop('disabled', true);
     
     $.ajax({
         url: `/excluir_aluno/${alunoId}`,
@@ -583,17 +623,55 @@ function excluirAluno() {
             if (response.success) {
                 $('#modalConfirmarExclusao').modal('hide');
                 
-                // Mostrar mensagem de sucesso
-                alert(response.message);
+                // Mostrar mensagem detalhada de sucesso
+                let mensagem = `✅ ${response.message}`;
+                if (response.frequencia_removida) {
+                    mensagem += `\n📊 ${response.registros_removidos} registros de frequência também foram removidos.`;
+                }
                 
-                // Recarregar página
-                location.reload();
+                // Mostrar notificação melhorada
+                $('body').append(`
+                    <div class="toast-container position-fixed top-0 end-0 p-3">
+                        <div class="toast show" role="alert">
+                            <div class="toast-header bg-success text-white">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong class="me-auto">Exclusão Realizada</strong>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                            </div>
+                            <div class="toast-body">
+                                <p class="mb-1"><strong>${nomeAluno}</strong> foi excluído com sucesso!</p>
+                                ${response.frequencia_removida ? 
+                                    `<small class="text-muted">📊 ${response.registros_removidos} registros de frequência também foram removidos.</small>` : 
+                                    '<small class="text-muted">Nenhum registro de frequência foi encontrado.</small>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `);
+                
+                // Auto-remover toast após 5 segundos
+                setTimeout(function() {
+                    $('.toast').toast('hide');
+                }, 5000);
+                
+                // Recarregar página após 2 segundos
+                setTimeout(function() {
+                    location.reload();
+                }, 2000);
             } else {
+                // Restaurar botão
+                botaoExcluir.html(textoOriginal);
+                botaoExcluir.prop('disabled', false);
+                
                 alert('Erro ao excluir aluno: ' + response.message);
             }
         },
         error: function() {
-            alert('Erro ao excluir aluno');
+            // Restaurar botão
+            botaoExcluir.html(textoOriginal);
+            botaoExcluir.prop('disabled', false);
+            
+            alert('Erro ao conectar com o servidor. Tente novamente.');
         }
     });
 }

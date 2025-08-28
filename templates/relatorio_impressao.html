@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Alunos - Associação Amigo do Povo</title>
+    <style>
+        /* Reset completo */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        
+        /* Configuração da página */
+        @page {
+            margin: 1.5cm;
+            size: A4;
+        }
+        
+        /* Corpo da página */
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        /* Cabeçalho */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .subtitulo {
+            font-size: 16px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+        
+        .titulo-relatorio {
+            font-size: 18px;
+            font-weight: bold;
+            color: #34495e;
+            margin: 15px 0 10px 0;
+        }
+        
+        .info-geracao {
+            font-size: 12px;
+            color: #95a5a6;
+            font-style: italic;
+        }
+        
+        /* Seção de estatísticas */
+        .estatisticas {
+            background-color: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            border-left: 5px solid #3498db;
+            page-break-inside: avoid;
+        }
+        
+        .estatisticas h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            flex-wrap: wrap;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            min-width: 120px;
+            margin: 5px;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2980b9;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Tabela principal */
+        .tabela-container {
+            margin-bottom: 25px;
+        }
+        
+        .tabela-titulo {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tabela-dados {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .tabela-dados thead tr {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            color: white;
+        }
+        
+        .tabela-dados th {
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid #2c3e50;
+        }
+        
+        .tabela-dados td {
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+            font-size: 10px;
+            vertical-align: top;
+        }
+        
+        .tabela-dados tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .tabela-dados tbody tr {
+            page-break-inside: avoid;
+        }
+        
+        /* Coluna de número */
+        .col-numero {
+            width: 40px;
+            text-align: center;
+            font-weight: bold;
+            background-color: #ecf0f1 !important;
+        }
+        
+        /* Coluna de nome */
+        .col-nome {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        /* Coluna de atividade */
+        .col-atividade {
+            background-color: #e8f4f8;
+            font-weight: 500;
+        }
+        
+        /* Rodapé */
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #bdc3c7;
+            text-align: center;
+            color: #7f8c8d;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            page-break-inside: avoid;
+        }
+        
+        .footer .empresa {
+            font-weight: bold;
+            font-size: 14px;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .footer p {
+            margin: 4px 0;
+            font-size: 10px;
+        }
+        
+        /* Quebras de página inteligentes */
+        .page-break {
+            page-break-before: always;
+        }
+        
+        /* Ocultar elementos desnecessários na impressão */
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        /* Estilo para quando não há dados */
+        .sem-dados {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        /* Ícones usando caracteres Unicode */
+        .icon-chart::before { content: "📊 "; }
+        .icon-list::before { content: "📋 "; }
+        .icon-users::before { content: "👥 "; }
+        .icon-calendar::before { content: "📅 "; }
+        .icon-activity::before { content: "🏃 "; }
+        .icon-birthday::before { content: "🎂 "; }
+    </style>
+</head>
+<body>
+    <!-- Cabeçalho do Relatório -->
+    <div class="header">
+        <div class="logo">Associação Amigo do Povo</div>
+        <div class="subtitulo">Sistema de Gestão de Alunos</div>
+        <div class="titulo-relatorio">
+            {% if filtros.nome %}
+                Busca por: "{{ filtros.nome }}"
+            {% elif filtros.atividade %}
+                Alunos de {{ filtros.atividade }}
+            {% elif filtros.mes_aniversario %}
+                {% set meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'] %}
+                Aniversariantes de {{ meses[filtros.mes_aniversario|int] }}
+            {% else %}
+                Relatório Geral de Alunos
+            {% endif %}
+        </div>
+        <div class="info-geracao">
+            <span id="dataHoraAtual">Relatório gerado em: carregando...</span>
+        </div>
+    </div>
+
+    <!-- Estatísticas do Relatório -->
+    {% if estatisticas %}
+    <div class="estatisticas">
+        <h3 class="icon-chart">Estatísticas do Relatório</h3>
+        <div class="stats-container">
+            <div class="stat-box">
+                <span class="stat-number">{{ resultados|length }}</span>
+                <span class="stat-label">Total de Alunos</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-number">{{ estatisticas.total_aniversariantes or 0 }}</span>
+                <span class="stat-label">Aniversariantes</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-number">{{ estatisticas.total_atividades or 0 }}</span>
+                <span class="stat-label">Atividades</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tabela de Dados -->
+    {% if resultados %}
+    <div class="tabela-container">
+        <h3 class="tabela-titulo icon-list">Lista de Alunos Encontrados</h3>
+        <table class="tabela-dados">
+            <thead>
+                <tr>
+                    <th class="col-numero">#</th>
+                    <th>Nome Completo</th>
+                    <th>Data Nasc.</th>
+                    <th>Idade</th>
+                    <th>Telefone</th>
+                    <th class="col-atividade">Atividade</th>
+                    <th>Turma</th>
+                    <th>Data Cadastro</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for aluno in resultados %}
+                <tr>
+                    <td class="col-numero">{{ loop.index }}</td>
+                    <td class="col-nome">{{ aluno.nome }}</td>
+                    <td>{{ aluno.data_nascimento or 'A definir' }}</td>
+                    <td>
+                        {% if aluno.idade and aluno.idade != 'N/A' %}
+                            {{ aluno.idade }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ aluno.telefone or 'A definir' }}</td>
+                    <td class="col-atividade">{{ aluno.atividade or 'A definir' }}</td>
+                    <td>{{ aluno.turma or 'A definir' }}</td>
+                    <td>{{ aluno.data_cadastro or 'A definir' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="sem-dados">
+        <h3>Nenhum resultado encontrado</h3>
+        <p>Não foram encontrados alunos com os filtros aplicados.</p>
+    </div>
+    {% endif %}
+
+    <!-- Rodapé -->
+    <div class="footer">
+        <div class="empresa">Associação Amigo do Povo</div>
+        <p>Endereço da associação • Telefone: (XX) XXXXX-XXXX • Email: contato@amigodopovo.org</p>
+        <p>Relatório gerado pelo Sistema de Gestão de Alunos v2.0</p>
+        <p id="dataCompletaRodape">Data completa será carregada...</p>
+        {% if resultados %}
+        <p><strong>Total de registros encontrados: {{ resultados|length }}</strong></p>
+        {% endif %}
+    </div>
+
+    <!-- Script para auto-impressão (opcional) -->
+    <script>
+        // Auto-imprimir quando a página carregar (opcional)
+        window.onload = function() {
+            // Remover este setTimeout se não quiser auto-impressão
+            setTimeout(function() {
+                if (confirm('Deseja imprimir o relatório agora?')) {
+                    window.print();
+                }
+            }, 1000);
+        };
+        
+        // Configurar data atual usando JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            const agora = new Date();
+            const dataFormatada = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR');
+            
+            // Configurar data no cabeçalho
+            const elementoDataHora = document.getElementById('dataHoraAtual');
+            if (elementoDataHora) {
+                elementoDataHora.textContent = 'Relatório gerado em: ' + dataFormatada;
+            }
+            
+            // Configurar data completa no rodapé
+            const elementoDataRodape = document.getElementById('dataCompletaRodape');
+            if (elementoDataRodape) {
+                const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+                const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+                
+                const diaSemana = diasSemana[agora.getDay()];
+                const dia = agora.getDate();
+                const mes = meses[agora.getMonth()];
+                const ano = agora.getFullYear();
+                const hora = agora.toLocaleTimeString('pt-BR');
+                
+                elementoDataRodape.textContent = `${diaSemana}, ${dia} de ${mes} de ${ano} às ${hora}`;
+            }
+        });
+    </script>
+</body>
+</html>

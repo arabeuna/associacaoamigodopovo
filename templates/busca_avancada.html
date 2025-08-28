@@ -1,0 +1,980 @@
+{% extends "base.html" %}
+
+{% block title %}Busca Avançada - Associação Amigo do Povo{% endblock %}
+
+{% block head %}
+<style>
+/* Estilos específicos para impressão */
+@media print {
+    * {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    body {
+        font-family: Arial, sans-serif !important;
+        line-height: 1.4 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+        color: black !important;
+    }
+    
+    .no-print, .btn, .card-header, .navbar, .footer {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    .print-container {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 15px !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: white !important;
+    }
+    
+    .page-break {
+        page-break-before: always !important;
+    }
+    
+    .header-print {
+        display: block !important;
+        text-align: center !important;
+        margin-bottom: 25px !important;
+        border-bottom: 2px solid #000 !important;
+        padding-bottom: 15px !important;
+        page-break-inside: avoid !important;
+    }
+    
+    .logo-print {
+        font-size: 20px !important;
+        font-weight: bold !important;
+        color: #000 !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .table-print {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-bottom: 15px !important;
+        font-size: 10px !important;
+        page-break-inside: auto !important;
+    }
+    
+    .table-print th,
+    .table-print td {
+        border: 1px solid #000 !important;
+        padding: 6px !important;
+        text-align: left !important;
+        background: white !important;
+        color: black !important;
+        word-wrap: break-word !important;
+    }
+    
+    .table-print th {
+        background-color: #f0f0f0 !important;
+        font-weight: bold !important;
+        font-size: 9px !important;
+        text-transform: uppercase !important;
+    }
+    
+    .table-print tbody tr {
+        page-break-inside: avoid !important;
+    }
+    
+    .footer-print {
+        display: block !important;
+        margin-top: 20px !important;
+        padding-top: 10px !important;
+        border-top: 1px solid #000 !important;
+        font-size: 8px !important;
+        text-align: center !important;
+        color: #666 !important;
+        page-break-inside: avoid !important;
+    }
+    
+    /* Ocultar elementos específicos */
+    .search-card, .results-card .card-header, .stats-card {
+        display: none !important;
+    }
+    
+    /* Mostrar apenas o conteúdo da tabela */
+    .results-card .card-body {
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* Melhorar quebras de página */
+    @page {
+        margin: 1cm !important;
+        size: A4 !important;
+    }
+}
+
+/* Estilos para tela */
+.search-card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.results-card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.filter-section {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.birthday-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.birthday-card .card-title {
+    color: white;
+}
+
+.stats-card {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.stats-card.total {
+    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    color: white;
+}
+
+.stats-card.aniversarios {
+    background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+    color: white;
+}
+
+.stats-card.atividade {
+    background: linear-gradient(135deg, #55efc4 0%, #00b894 100%);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 no-print">
+    <div class="col-12">
+        <h1 class="display-6 text-center mb-4">
+            <i class="fas fa-search text-primary"></i>
+            Busca Avançada
+        </h1>
+        <p class="text-center text-muted">
+            Busque alunos por nome, mês de aniversário, atividade ou combine múltiplos filtros
+        </p>
+    </div>
+</div>
+
+<!-- Formulário de Busca -->
+<div class="row no-print">
+    <div class="col-12">
+        <div class="card search-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>
+                    Filtros de Busca
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="formBuscaAvancada">
+                    <div class="row">
+                        <!-- Busca por Nome -->
+                        <div class="col-md-6 mb-3">
+                            <div class="filter-section">
+                                <label for="buscaNome" class="form-label fw-bold">
+                                    <i class="fas fa-user me-2"></i>
+                                    Busca por Nome
+                                </label>
+                                <input type="text" class="form-control" id="buscaNome" name="buscaNome" 
+                                       placeholder="Digite parte do nome do aluno...">
+                                <div class="form-text">Busca parcial - ex: "João" encontrará "João Silva"</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Busca por Atividade -->
+                        <div class="col-md-6 mb-3">
+                            <div class="filter-section">
+                                <label for="buscaAtividade" class="form-label fw-bold">
+                                    <i class="fas fa-running me-2"></i>
+                                    Filtrar por Atividade
+                                </label>
+                                <select class="form-select" id="buscaAtividade" name="buscaAtividade">
+                                    <option value="">-- Todas as Atividades --</option>
+                                    <option value="Natação">Natação</option>
+                                    <option value="Informática">Informática</option>
+                                    <option value="Fisioterapia">Fisioterapia</option>
+                                    <option value="Dança">Dança</option>
+                                    <option value="Hidroginástica">Hidroginástica</option>
+                                    <option value="Funcional">Funcional</option>
+                                    <option value="Karatê">Karatê</option>
+                                    <option value="Bombeiro mirim">Bombeiro mirim</option>
+                                    <option value="Capoeira">Capoeira</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Busca por Mês de Aniversário -->
+                        <div class="col-md-6 mb-3">
+                            <div class="filter-section">
+                                <label for="buscaAniversario" class="form-label fw-bold">
+                                    <i class="fas fa-birthday-cake me-2"></i>
+                                    Mês de Aniversário
+                                </label>
+                                <select class="form-select" id="buscaAniversario" name="buscaAniversario">
+                                    <option value="">-- Todos os Meses --</option>
+                                    <option value="01">Janeiro</option>
+                                    <option value="02">Fevereiro</option>
+                                    <option value="03">Março</option>
+                                    <option value="04">Abril</option>
+                                    <option value="05">Maio</option>
+                                    <option value="06">Junho</option>
+                                    <option value="07">Julho</option>
+                                    <option value="08">Agosto</option>
+                                    <option value="09">Setembro</option>
+                                    <option value="10">Outubro</option>
+                                    <option value="11">Novembro</option>
+                                    <option value="12">Dezembro</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Período de Cadastro -->
+                        <div class="col-md-6 mb-3">
+                            <div class="filter-section">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-calendar me-2"></i>
+                                    Período de Cadastro
+                                </label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="date" class="form-control" id="dataInicio" name="dataInicio">
+                                        <small class="form-text">Data início</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="date" class="form-control" id="dataFim" name="dataFim">
+                                        <small class="form-text">Data fim</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botões de Ação -->
+                    <div class="row">
+                        <div class="col-12 text-center">
+                            <button type="submit" class="btn btn-primary btn-lg me-2">
+                                <i class="fas fa-search me-2"></i>
+                                Buscar
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-lg me-2" onclick="limparFiltros()">
+                                <i class="fas fa-eraser me-2"></i>
+                                Limpar Filtros
+                            </button>
+                            <button type="button" class="btn btn-info btn-lg" onclick="buscarAniversariantes()">
+                                <i class="fas fa-birthday-cake me-2"></i>
+                                Aniversariantes do Mês
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Área de Resultados -->
+<div class="row">
+    <div class="col-12">
+        <div id="resultadosBusca" style="display: none;">
+            <!-- Cabeçalho para Impressão -->
+            <div class="header-print" style="display: none;">
+                <div class="logo-print">ASSOCIAÇÃO AMIGO DO POVO</div>
+                <div>Relatório de Alunos</div>
+                <div style="font-size: 14px; margin-top: 10px;" id="tituloRelatorio"></div>
+                <div style="font-size: 12px; color: #666;" id="dataRelatorio"></div>
+            </div>
+            
+            <!-- Estatísticas -->
+            <div class="row mb-4 no-print">
+                <div class="col-md-3">
+                    <div class="stats-card total">
+                        <h3 id="totalAlunos">0</h3>
+                        <p class="mb-0">Total de Alunos</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card aniversarios">
+                        <h3 id="totalAniversarios">0</h3>
+                        <p class="mb-0">Aniversariantes</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card atividade">
+                        <h3 id="totalAtividades">0</h3>
+                        <p class="mb-0">Atividades</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <button class="btn btn-success btn-lg" onclick="imprimirRelatorio()" title="Imprimir diretamente em nova janela">
+                            <i class="fas fa-print me-2"></i>
+                            Imprimir Diretamente
+                        </button>
+                        <br>
+                        <button class="btn btn-outline-info btn-sm mt-2" onclick="visualizarImpressao()" title="Visualizar antes de imprimir">
+                            <i class="fas fa-eye me-1"></i>
+                            Visualizar Relatório
+                        </button>
+                        <br>
+                        <button class="btn btn-outline-danger btn-sm mt-2" onclick="salvarComoPDF()" title="Salvar como arquivo PDF">
+                            <i class="fas fa-file-pdf me-1"></i>
+                            Exportar para PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabela de Resultados -->
+            <div class="card results-card print-container">
+                <div class="card-header bg-success text-white no-print">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Resultados da Busca
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-print" id="tabelaResultados">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Data Nascimento</th>
+                                    <th>Idade</th>
+                                    <th>Telefone</th>
+                                    <th>Atividade</th>
+                                    <th>Turma</th>
+                                    <th>Data Cadastro</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpoTabela">
+                                <!-- Resultados serão inseridos aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Rodapé para Impressão -->
+            <div class="footer-print" style="display: none;">
+                <p>Associação Amigo do Povo - Sistema de Gestão de Alunos</p>
+                <p>Relatório gerado em: <span id="dataHoraRelatorio"></span></p>
+            </div>
+        </div>
+        
+        <!-- Mensagem de "Nenhum Resultado" -->
+        <div id="nenhumResultado" style="display: none;">
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-search-minus fa-4x mb-3"></i>
+                <h4>Nenhum resultado encontrado</h4>
+                <p>Tente ajustar os filtros de busca ou limpar os filtros para ver todos os alunos.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cards de Aniversariantes (quando buscar por aniversário) -->
+<div id="cardsAniversariantes" style="display: none;">
+    <div class="row">
+        <div class="col-12">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-birthday-cake text-warning"></i>
+                Aniversariantes do Mês
+            </h3>
+        </div>
+    </div>
+    <div class="row" id="containerAniversariantes">
+        <!-- Cards serão inseridos aqui -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Definir data atual nos campos de data
+    const hoje = new Date();
+    const primeirodia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const ultimodia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    
+    $('#dataInicio').val(primeirodia.toISOString().split('T')[0]);
+    $('#dataFim').val(ultimodia.toISOString().split('T')[0]);
+    
+    // Submit do formulário
+    $('#formBuscaAvancada').on('submit', function(e) {
+        e.preventDefault();
+        realizarBusca();
+    });
+});
+
+function realizarBusca() {
+    const formData = {
+        nome: $('#buscaNome').val(),
+        atividade: $('#buscaAtividade').val(),
+        mes_aniversario: $('#buscaAniversario').val(),
+        data_inicio: $('#dataInicio').val(),
+        data_fim: $('#dataFim').val()
+    };
+    
+    // Mostrar loading
+    $('#resultadosBusca').hide();
+    $('#nenhumResultado').hide();
+    $('#cardsAniversariantes').hide();
+    
+    // Fazer requisição
+    $.ajax({
+        url: '/busca_avancada',
+        method: 'POST',
+        data: formData,
+        success: function(response) {
+            if (response.success && response.resultados.length > 0) {
+                exibirResultados(response.resultados, response.filtros);
+                atualizarEstatisticas(response);
+            } else {
+                $('#nenhumResultado').show();
+            }
+        },
+        error: function() {
+            alert('Erro ao realizar busca. Tente novamente.');
+        }
+    });
+}
+
+function exibirResultados(resultados, filtros) {
+    const corpo = $('#corpoTabela');
+    corpo.empty();
+    
+    resultados.forEach(function(aluno) {
+        const idade = calcularIdade(aluno.data_nascimento);
+        const row = `
+            <tr>
+                <td><strong>${aluno.nome}</strong></td>
+                <td>${formatarData(aluno.data_nascimento)}</td>
+                <td>${idade} anos</td>
+                <td>${aluno.telefone}</td>
+                <td><span class="badge bg-primary">${aluno.atividade}</span></td>
+                <td>${aluno.turma}</td>
+                <td>${formatarData(aluno.data_cadastro)}</td>
+            </tr>
+        `;
+        corpo.append(row);
+    });
+    
+    // Atualizar informações do relatório
+    atualizarInfoRelatorio(filtros, resultados.length);
+    
+    $('#resultadosBusca').show();
+}
+
+function atualizarEstatisticas(response) {
+    $('#totalAlunos').text(response.resultados.length);
+    $('#totalAniversarios').text(response.total_aniversariantes || 0);
+    $('#totalAtividades').text(response.total_atividades || 0);
+}
+
+function atualizarInfoRelatorio(filtros, total) {
+    let titulo = 'Relatório Geral de Alunos';
+    
+    if (filtros.nome) {
+        titulo = `Busca por: "${filtros.nome}"`;
+    } else if (filtros.atividade) {
+        titulo = `Alunos de ${filtros.atividade}`;
+    } else if (filtros.mes_aniversario) {
+        const meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        titulo = `Aniversariantes de ${meses[parseInt(filtros.mes_aniversario)]}`;
+    }
+    
+    $('#tituloRelatorio').text(titulo + ` (${total} resultados)`);
+    $('#dataRelatorio').text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`);
+    $('#dataHoraRelatorio').text(`${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`);
+}
+
+function buscarAniversariantes() {
+    const mesAtual = new Date().getMonth() + 1;
+    $('#buscaAniversario').val(mesAtual.toString().padStart(2, '0'));
+    $('#buscaNome').val('');
+    $('#buscaAtividade').val('');
+    realizarBusca();
+}
+
+function limparFiltros() {
+    $('#formBuscaAvancada')[0].reset();
+    $('#resultadosBusca').hide();
+    $('#nenhumResultado').hide();
+    $('#cardsAniversariantes').hide();
+    
+    // Redefinir datas padrão
+    const hoje = new Date();
+    const primeirodia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const ultimodia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    
+    $('#dataInicio').val(primeirodia.toISOString().split('T')[0]);
+    $('#dataFim').val(ultimodia.toISOString().split('T')[0]);
+}
+
+function calcularIdade(dataNascimento) {
+    if (!dataNascimento || dataNascimento === 'A definir') return 'N/A';
+    
+    try {
+        // Tentar diferentes formatos de data
+        let data;
+        if (dataNascimento.includes('/')) {
+            const partes = dataNascimento.split('/');
+            data = new Date(partes[2], partes[1] - 1, partes[0]);
+        } else {
+            data = new Date(dataNascimento);
+        }
+        
+        const hoje = new Date();
+        let idade = hoje.getFullYear() - data.getFullYear();
+        const mesAtual = hoje.getMonth();
+        const mesNascimento = data.getMonth();
+        
+        if (mesAtual < mesNascimento || (mesAtual === mesNascimento && hoje.getDate() < data.getDate())) {
+            idade--;
+        }
+        
+        return idade > 0 ? idade : 'N/A';
+    } catch (e) {
+        return 'N/A';
+    }
+}
+
+function formatarData(data) {
+    if (!data || data === 'A definir') return 'A definir';
+    
+    try {
+        if (data.includes('/')) {
+            return data; // Já está no formato brasileiro
+        } else {
+            const dataObj = new Date(data);
+            return dataObj.toLocaleDateString('pt-BR');
+        }
+    } catch (e) {
+        return data;
+    }
+}
+
+// Funções de impressão melhoradas usando rota dedicada
+function imprimirRelatorio() {
+    // Verificar se há dados para imprimir
+    const resultados = $('#resultadosBusca');
+    if (!resultados.is(':visible') || $('#corpoTabela tr').length === 0) {
+        alert('❌ Nenhum resultado encontrado para imprimir!\n\nPor favor, realize uma busca antes de tentar imprimir.');
+        return;
+    }
+    
+    // Coletar dados da busca atual
+    const dadosRelatorio = coletarDadosRelatorio();
+    
+    // Criar formulário para enviar dados via POST
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/gerar_relatorio_impressao';
+    form.target = '_blank';
+    form.style.display = 'none';
+    
+    // Adicionar dados como input hidden
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'dados_relatorio';
+    input.value = JSON.stringify(dadosRelatorio);
+    form.appendChild(input);
+    
+    // Enviar formulário
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+
+function coletarDadosRelatorio() {
+    // Coletar dados dos resultados da tabela
+    const resultados = [];
+    $('#tabelaResultados tbody tr').each(function() {
+        const linha = {};
+        const cells = $(this).find('td');
+        
+        linha.nome = cells.eq(0).text().trim();
+        linha.data_nascimento = cells.eq(1).text().trim();
+        linha.idade = cells.eq(2).text().trim();
+        linha.telefone = cells.eq(3).text().trim();
+        // Extrair texto do badge da atividade
+        const atividadeCell = cells.eq(4);
+        linha.atividade = atividadeCell.find('.badge').length > 0 ? 
+                         atividadeCell.find('.badge').text().trim() : 
+                         atividadeCell.text().trim();
+        linha.turma = cells.eq(5).text().trim();
+        linha.data_cadastro = cells.eq(6).text().trim();
+        
+        resultados.push(linha);
+    });
+    
+    // Coletar filtros aplicados
+    const filtros = {};
+    const nomeInput = $('#buscaNome').val();
+    const atividadeInput = $('#buscaAtividade').val();
+    const mesInput = $('#buscaAniversario').val();
+    const dataInicioInput = $('#dataInicio').val();
+    const dataFimInput = $('#dataFim').val();
+    
+    if (nomeInput) filtros.nome = nomeInput;
+    if (atividadeInput) filtros.atividade = atividadeInput;
+    if (mesInput) filtros.mes_aniversario = mesInput;
+    if (dataInicioInput) filtros.data_inicio = dataInicioInput;
+    if (dataFimInput) filtros.data_fim = dataFimInput;
+    
+    // Coletar estatísticas
+    const estatisticas = {
+        total_alunos: $('#totalAlunos').text() || '0',
+        total_aniversariantes: $('#totalAniversarios').text() || '0',
+        total_atividades: $('#totalAtividades').text() || '0'
+    };
+    
+    return {
+        resultados: resultados,
+        filtros: filtros,
+        estatisticas: estatisticas
+    };
+}
+
+function visualizarImpressao() {
+    // Verificar se há dados
+    const resultados = $('#resultadosBusca');
+    if (!resultados.is(':visible') || $('#corpoTabela tr').length === 0) {
+        alert('❌ Nenhum resultado encontrado para visualizar!\n\nPor favor, realize uma busca antes de tentar visualizar.');
+        return;
+    }
+    
+    // Abrir nova janela com versão para impressão
+    const conteudo = gerarConteudoImpressao();
+    const janela = window.open('', '_blank', 'width=800,height=600');
+    janela.document.write(conteudo);
+    janela.document.close();
+}
+
+function prepararImpressao() {
+    // Mostrar elementos de impressão
+    $('.header-print').show();
+    $('.footer-print').show();
+    
+    // Atualizar data/hora
+    const agora = new Date();
+    $('#dataHoraRelatorio').text(`${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR')}`);
+}
+
+function gerarConteudoImpressao() {
+    const titulo = $('#tituloRelatorio').text() || 'Relatório de Alunos';
+    const dataRelatorio = $('#dataRelatorio').text();
+    const totalAlunos = $('#totalAlunos').text();
+    const totalAniversarios = $('#totalAniversarios').text();
+    const totalAtividades = $('#totalAtividades').text();
+    
+    // Gerar HTML da tabela
+    let htmlTabela = '<table class="tabela-dados">';
+    htmlTabela += '<thead><tr>';
+    
+    // Cabeçalhos
+    $('#tabelaResultados thead th').each(function() {
+        htmlTabela += `<th>${$(this).text()}</th>`;
+    });
+    htmlTabela += '</tr></thead><tbody>';
+    
+    // Dados com numeração
+    let contador = 1;
+    $('#tabelaResultados tbody tr').each(function() {
+        htmlTabela += '<tr>';
+        let isFirstColumn = true;
+        $(this).find('td').each(function() {
+            let texto = $(this).text();
+            // Remover badges HTML e manter apenas o texto
+            if ($(this).find('.badge').length > 0) {
+                texto = $(this).find('.badge').text();
+            }
+            
+            // Adicionar numeração na primeira coluna
+            if (isFirstColumn) {
+                texto = `${contador}. ${texto}`;
+                isFirstColumn = false;
+            }
+            
+            htmlTabela += `<td>${texto}</td>`;
+        });
+        htmlTabela += '</tr>';
+        contador++;
+    });
+    htmlTabela += '</tbody></table>';
+    
+    // HTML completo melhorado
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Relatório - Associação Amigo do Povo</title>
+        <style>
+            @page { 
+                margin: 1.5cm; 
+                size: A4; 
+            }
+            
+            * {
+                box-sizing: border-box;
+            }
+            
+            body { 
+                font-family: 'Arial', sans-serif; 
+                margin: 0; 
+                padding: 0; 
+                color: #333;
+                line-height: 1.4;
+                background: white;
+            }
+            
+            .header { 
+                text-align: center; 
+                margin-bottom: 25px; 
+                border-bottom: 3px solid #2c3e50; 
+                padding-bottom: 20px;
+            }
+            
+            .logo { 
+                font-size: 22px; 
+                font-weight: bold; 
+                color: #2c3e50;
+                margin-bottom: 8px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            
+            .subtitulo {
+                font-size: 14px;
+                color: #7f8c8d;
+                margin-bottom: 15px;
+            }
+            
+            .titulo-relatorio {
+                font-size: 16px;
+                font-weight: bold;
+                color: #34495e;
+                margin: 10px 0;
+            }
+            
+            .info-geracao {
+                font-size: 11px;
+                color: #95a5a6;
+                font-style: italic;
+            }
+            
+            .estatisticas {
+                background-color: #ecf0f1;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 5px;
+                border-left: 4px solid #3498db;
+            }
+            
+            .estatisticas h4 {
+                margin: 0 0 10px 0;
+                color: #2c3e50;
+                font-size: 14px;
+            }
+            
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .stat-item {
+                background: white;
+                padding: 10px;
+                border-radius: 4px;
+                border: 1px solid #bdc3c7;
+            }
+            
+            .stat-number {
+                font-size: 18px;
+                font-weight: bold;
+                color: #2980b9;
+                display: block;
+            }
+            
+            .stat-label {
+                font-size: 10px;
+                color: #7f8c8d;
+                text-transform: uppercase;
+            }
+            
+            .tabela-dados { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-bottom: 20px;
+                background: white;
+            }
+            
+            .tabela-dados th {
+                background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+                color: white;
+                border: 1px solid #2c3e50;
+                padding: 12px 8px;
+                text-align: left;
+                font-weight: bold;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            .tabela-dados td {
+                border: 1px solid #bdc3c7;
+                padding: 10px 8px;
+                font-size: 10px;
+                vertical-align: top;
+            }
+            
+            .tabela-dados tbody tr:nth-child(even) {
+                background-color: #f8f9fa;
+            }
+            
+            .tabela-dados tbody tr:hover {
+                background-color: #e8f4f8;
+            }
+            
+            .footer { 
+                margin-top: 30px; 
+                padding-top: 15px; 
+                border-top: 2px solid #bdc3c7; 
+                font-size: 9px; 
+                text-align: center; 
+                color: #7f8c8d;
+                background-color: #f8f9fa;
+                padding: 15px;
+                border-radius: 5px;
+            }
+            
+            .footer p {
+                margin: 5px 0;
+            }
+            
+            .footer .empresa {
+                font-weight: bold;
+                font-size: 10px;
+                color: #2c3e50;
+            }
+            
+            /* Quebras de página */
+            .tabela-dados tbody tr {
+                page-break-inside: avoid;
+            }
+            
+            .header, .estatisticas {
+                page-break-inside: avoid;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="logo">Associação Amigo do Povo</div>
+            <div class="subtitulo">Sistema de Gestão de Alunos</div>
+            <div class="titulo-relatorio">${titulo}</div>
+            <div class="info-geracao">${dataRelatorio}</div>
+        </div>
+        
+        <div class="estatisticas">
+            <h4>📊 Estatísticas do Relatório</h4>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-number">${totalAlunos}</span>
+                    <span class="stat-label">Total de Alunos</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${totalAniversarios}</span>
+                    <span class="stat-label">Aniversariantes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${totalAtividades}</span>
+                    <span class="stat-label">Atividades</span>
+                </div>
+            </div>
+        </div>
+        
+        ${htmlTabela}
+        
+        <div class="footer">
+            <p class="empresa">Associação Amigo do Povo</p>
+            <p>Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+            <p>Total de registros encontrados: ${totalAlunos} | Sistema de Gestão v2.0</p>
+        </div>
+    </body>
+    </html>`;
+}
+
+function salvarComoPDF() {
+    // Verificar se há dados
+    const resultados = $('#resultadosBusca');
+    if (!resultados.is(':visible') || $('#corpoTabela tr').length === 0) {
+        alert('❌ Nenhum resultado encontrado para salvar!\n\nPor favor, realize uma busca antes de tentar salvar.');
+        return;
+    }
+    
+    // Instruções para o usuário
+    const confirmacao = confirm(`📄 Para salvar como PDF:\n\n1. Clique em "OK" para abrir uma nova janela\n2. Use Ctrl+P (ou Cmd+P no Mac)\n3. Selecione "Salvar como PDF" como destino\n4. Escolha onde salvar e clique em "Salvar"\n\nDeseja continuar?`);
+    
+    if (confirmacao) {
+        // Criar nova janela com formatação para PDF
+        const conteudo = gerarConteudoImpressao();
+        const janela = window.open('', '_blank', 'width=800,height=600');
+        janela.document.write(conteudo);
+        janela.document.close();
+        
+        // Focar na nova janela
+        janela.focus();
+        
+        // Mostrar instruções adicionais
+        setTimeout(function() {
+            janela.alert('🖨️ Agora use Ctrl+P (ou Cmd+P) para abrir a janela de impressão e selecione "Salvar como PDF"');
+        }, 1000);
+    }
+}
+
+// Event listeners para impressão
+window.addEventListener('beforeprint', function() {
+    prepararImpressao();
+});
+
+window.addEventListener('afterprint', function() {
+    $('.header-print').hide();
+    $('.footer-print').hide();
+});
+</script>
+{% endblock %}

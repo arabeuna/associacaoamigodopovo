@@ -32,7 +32,7 @@
                         <select class="form-select form-select-lg" id="nome_aluno" name="nome_aluno" required>
                             <option value="">-- Escolha um aluno --</option>
                             {% for aluno in alunos %}
-                                <option value="{{ aluno.nome }}">{{ aluno.nome }}</option>
+                                <option value="{{ aluno.nome }}" data-turma="{{ aluno.turma }}" data-atividade="{{ aluno.atividade }}">{{ aluno.nome }} - {{ aluno.atividade }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -47,6 +47,82 @@
                 
                 <!-- Área de Feedback -->
                 <div id="feedback" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para inserção manual de horário/turma -->
+<div class="modal fade" id="modalPresencaDetalhada" tabindex="-1" aria-labelledby="modalPresencaDetalhadaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalPresencaDetalhadaLabel">
+                    <i class="fas fa-clock me-2"></i>
+                    Definir Horário e Turma
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPresencaDetalhada">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-user me-2"></i>
+                            Aluno Selecionado
+                        </label>
+                        <p id="alunoSelecionado" class="text-primary fs-6 mb-0"></p>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="dataPresenca" class="form-label">
+                                    <i class="fas fa-calendar me-2"></i>
+                                    Data
+                                </label>
+                                <input type="date" class="form-control" id="dataPresenca" name="dataPresenca" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="horarioPresenca" class="form-label">
+                                    <i class="fas fa-clock me-2"></i>
+                                    Horário
+                                </label>
+                                <input type="time" class="form-control" id="horarioPresenca" name="horarioPresenca" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="turmaPresenca" class="form-label">
+                            <i class="fas fa-users me-2"></i>
+                            Turma/Horário da Atividade
+                        </label>
+                        <input type="text" class="form-control" id="turmaPresenca" name="turmaPresenca" 
+                               placeholder="Ex: Manhã, Tarde, 09:00, Básico, Avançado..." required>
+                        <div class="form-text">Informe a turma ou horário específico da atividade</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observacoesPresenca" class="form-label">
+                            <i class="fas fa-comment me-2"></i>
+                            Observações (opcional)
+                        </label>
+                        <textarea class="form-control" id="observacoesPresenca" name="observacoesPresenca" rows="2" 
+                                  placeholder="Informações adicionais sobre esta presença..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="btnConfirmarPresenca">
+                    <i class="fas fa-check me-2"></i>
+                    Confirmar Presença
+                </button>
             </div>
         </div>
     </div>
@@ -73,11 +149,22 @@
                 </div>
                 <h6 class="card-title mb-2">{{ aluno.nome }}</h6>
                 <p class="card-text text-muted small mb-3">{{ aluno.telefone }}</p>
-                <button class="btn btn-outline-success btn-sm btn-presenca-rapida" 
-                        data-nome="{{ aluno.nome }}">
-                    <i class="fas fa-check me-1"></i>
-                    Check-in
-                </button>
+                <div class="btn-group" role="group" aria-label="Ações de presença">
+                    <button class="btn btn-outline-success btn-sm btn-presenca-rapida" 
+                            data-nome="{{ aluno.nome }}" 
+                            data-turma="{{ aluno.turma }}" 
+                            data-atividade="{{ aluno.atividade }}">
+                        <i class="fas fa-check me-1"></i>
+                        Rápido
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm btn-presenca-detalhada" 
+                            data-nome="{{ aluno.nome }}" 
+                            data-turma="{{ aluno.turma }}" 
+                            data-atividade="{{ aluno.atividade }}">
+                        <i class="fas fa-cog me-1"></i>
+                        Manual
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -207,13 +294,79 @@ $(document).ready(function() {
         });
     }
     
-    // Formulário principal
+    // Função para marcar presença com detalhes customizados
+    function marcarPresencaDetalhada(nomeAluno, data, horario, turma, observacoes) {
+        $.ajax({
+            url: '/marcar_presenca_detalhada',
+            method: 'POST',
+            data: {
+                nome_aluno: nomeAluno,
+                data_presenca: data,
+                horario_presenca: horario,
+                turma_presenca: turma,
+                observacoes_presenca: observacoes
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#feedback').html(
+                        '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                        '<i class="fas fa-check-circle me-2"></i>' +
+                        response.message +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>'
+                    );
+                    
+                    // Fechar modal
+                    $('#modalPresencaDetalhada').modal('hide');
+                    
+                    // Auto-dismiss após 3 segundos
+                    setTimeout(function() {
+                        $('.alert').alert('close');
+                    }, 3000);
+                } else {
+                    $('#feedback').html(
+                        '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                        '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                        response.message +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>'
+                    );
+                }
+            },
+            error: function() {
+                $('#feedback').html(
+                    '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                    '<i class="fas fa-times-circle me-2"></i>' +
+                    'Erro ao conectar com o servidor. Tente novamente.' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                    '</div>'
+                );
+            }
+        });
+    }
+
+    // Formulário principal - agora abre o modal
     $('#formPresenca').on('submit', function(e) {
         e.preventDefault();
         const nomeAluno = $('#nome_aluno').val();
+        const alunoOption = $('#nome_aluno option:selected');
         
         if (nomeAluno) {
-            marcarPresenca(nomeAluno);
+            // Preencher dados do modal
+            $('#alunoSelecionado').text(nomeAluno + ' - ' + alunoOption.data('atividade'));
+            
+            // Preencher data e hora atual
+            const agora = new Date();
+            const dataAtual = agora.toISOString().split('T')[0];
+            const horaAtual = agora.toTimeString().split(' ')[0].substring(0, 5);
+            
+            $('#dataPresenca').val(dataAtual);
+            $('#horarioPresenca').val(horaAtual);
+            $('#turmaPresenca').val(alunoOption.data('turma') || '');
+            $('#observacoesPresenca').val('');
+            
+            // Abrir modal
+            $('#modalPresencaDetalhada').modal('show');
         } else {
             $('#feedback').html(
                 '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
@@ -240,9 +393,66 @@ $(document).ready(function() {
         // Restaurar botão após 2 segundos
         setTimeout(function() {
             btn.removeClass('btn-success').addClass('btn-outline-success');
-            btn.html('<i class="fas fa-check me-1"></i>Check-in');
+            btn.html('<i class="fas fa-check me-1"></i>Rápido');
             btn.prop('disabled', false);
         }, 2000);
+    });
+    
+    // Botões de presença detalhada (manual)
+    $('.btn-presenca-detalhada').on('click', function() {
+        const nomeAluno = $(this).data('nome');
+        const turmaAluno = $(this).data('turma');
+        const atividadeAluno = $(this).data('atividade');
+        
+        // Preencher dados do modal
+        $('#alunoSelecionado').text(nomeAluno + ' - ' + atividadeAluno);
+        
+        // Preencher data e hora atual
+        const agora = new Date();
+        const dataAtual = agora.toISOString().split('T')[0];
+        const horaAtual = agora.toTimeString().split(' ')[0].substring(0, 5);
+        
+        $('#dataPresenca').val(dataAtual);
+        $('#horarioPresenca').val(horaAtual);
+        $('#turmaPresenca').val(turmaAluno || '');
+        $('#observacoesPresenca').val('');
+        
+        // Abrir modal
+        $('#modalPresencaDetalhada').modal('show');
+    });
+    
+    // Confirmar presença detalhada
+    $('#btnConfirmarPresenca').on('click', function() {
+        const nomeAluno = $('#alunoSelecionado').text().split(' - ')[0];
+        const data = $('#dataPresenca').val();
+        const horario = $('#horarioPresenca').val();
+        const turma = $('#turmaPresenca').val();
+        const observacoes = $('#observacoesPresenca').val();
+        
+        if (!data || !horario || !turma) {
+            alert('Por favor, preencha todos os campos obrigatórios.');
+            return;
+        }
+        
+        // Feedback visual no botão
+        const btn = $(this);
+        const textoOriginal = btn.html();
+        btn.html('<i class="fas fa-spinner fa-spin me-2"></i>Registrando...');
+        btn.prop('disabled', true);
+        
+        marcarPresencaDetalhada(nomeAluno, data, horario, turma, observacoes);
+        
+        // Restaurar botão após um tempo
+        setTimeout(function() {
+            btn.html(textoOriginal);
+            btn.prop('disabled', false);
+        }, 2000);
+    });
+    
+    // Limpar modal quando fechado
+    $('#modalPresencaDetalhada').on('hidden.bs.modal', function() {
+        $('#formPresencaDetalhada')[0].reset();
+        $('#alunoSelecionado').text('');
     });
 });
 </script>

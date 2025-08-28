@@ -617,6 +617,81 @@ class SistemaAcademia:
             print(f"❌ Erro ao registrar presença: {e}")
             return False, f"Erro ao registrar presença: {str(e)}"
     
+    def registrar_presenca_detalhada(self, nome_aluno, data_presenca, horario_presenca, turma_presenca, observacoes=''):
+        """Registra presença com detalhes customizados (data, horário, turma)"""
+        try:
+            # Encontrar o aluno
+            aluno_encontrado = None
+            for aluno in self.alunos_reais:
+                if aluno['nome'].upper() == nome_aluno.upper():
+                    aluno_encontrado = aluno
+                    break
+            
+            if not aluno_encontrado:
+                return False, "Aluno não encontrado"
+            
+            # Validar formato da data
+            try:
+                data_obj = datetime.strptime(data_presenca, '%Y-%m-%d')
+                data_str = data_obj.strftime('%d/%m/%Y')
+            except ValueError:
+                return False, "Formato de data inválido"
+            
+            # Validar horário
+            try:
+                hora_obj = datetime.strptime(horario_presenca, '%H:%M')
+                hora_str = hora_obj.strftime('%H:%M')
+            except ValueError:
+                return False, "Formato de horário inválido"
+            
+            # Inicializar dados de presença se não existir
+            if nome_aluno not in self.dados_presenca:
+                self.dados_presenca[nome_aluno] = {
+                    'atividade': aluno_encontrado.get('atividade', 'Indefinido'),
+                    'total_presencas': 0,
+                    'total_faltas': 0,
+                    'registros': [],
+                    'percentual': 0
+                }
+            
+            # Verificar se já foi marcada presença nesta data
+            for registro in self.dados_presenca[nome_aluno]['registros']:
+                if registro.get('data') == data_str:
+                    return False, f"Presença já registrada em {data_str} para {nome_aluno}"
+            
+            # Adicionar registro de presença detalhada
+            novo_registro = {
+                'data': data_str,
+                'horario': hora_str,
+                'turma': turma_presenca,
+                'observacoes': observacoes,
+                'status': 'P',
+                'tipo': 'manual_detalhada'
+            }
+            
+            self.dados_presenca[nome_aluno]['registros'].append(novo_registro)
+            self.dados_presenca[nome_aluno]['total_presencas'] += 1
+            
+            # Recalcular percentual
+            total_registros = len(self.dados_presenca[nome_aluno]['registros'])
+            if total_registros > 0:
+                percentual = round((self.dados_presenca[nome_aluno]['total_presencas'] / total_registros) * 100, 2)
+                self.dados_presenca[nome_aluno]['percentual'] = percentual
+            
+            # Salvar arquivo de presença manual
+            self.salvar_presenca_detalhada()
+            
+            # Atualizar status de frequência se for Informática
+            if aluno_encontrado.get('atividade') == 'Informática':
+                self.atualizar_status_frequencia_informatica()
+            
+            print(f"✅ Presença detalhada registrada: {nome_aluno} em {data_str} às {hora_str} - Turma: {turma_presenca}")
+            return True, f"Presença registrada para {nome_aluno} em {data_str} às {hora_str} (Turma: {turma_presenca})"
+            
+        except Exception as e:
+            print(f"❌ Erro ao registrar presença detalhada: {e}")
+            return False, f"Erro ao registrar presença: {str(e)}"
+    
     def salvar_presenca_manual(self):
         """Salva registros de presença manual em arquivo CSV"""
         try:
@@ -655,6 +730,213 @@ class SistemaAcademia:
         except Exception as e:
             print(f"❌ Erro ao salvar presença manual: {e}")
             return False
+    
+    def salvar_presenca_detalhada(self):
+        """Salva registros de presença detalhada em arquivo CSV"""
+        try:
+            arquivo_presenca = 'presencas_detalhadas.csv'
+            
+            # Criar cabeçalho se arquivo não existir
+            arquivo_existe = os.path.exists(arquivo_presenca)
+            
+            with open(arquivo_presenca, 'a', encoding='utf-8', newline='') as f:
+                import csv
+                writer = csv.writer(f)
+                
+                # Escrever cabeçalho se for novo arquivo
+                if not arquivo_existe:
+                    writer.writerow(['NOME', 'DATA', 'HORARIO', 'TURMA', 'ATIVIDADE', 'STATUS', 'OBSERVACOES', 'TIPO'])
+                
+                # Escrever apenas os registros novos (tipo manual_detalhada)
+                for nome, dados in self.dados_presenca.items():
+                    aluno_atividade = dados.get('atividade', 'Indefinido')
+                    
+                    for registro in dados['registros']:
+                        if registro.get('tipo') == 'manual_detalhada':
+                            writer.writerow([
+                                nome,
+                                registro.get('data', ''),
+                                registro.get('horario', ''),
+                                registro.get('turma', ''),
+                                aluno_atividade,
+                                registro.get('status', 'P'),
+                                registro.get('observacoes', ''),
+                                'MANUAL_DETALHADA'
+                            ])
+                            # Remover flag de tipo para evitar duplicação
+                            registro.pop('tipo', None)
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Erro ao salvar presença detalhada: {e}")
+            return False
+    
+    def salvar_remocao_frequencia(self, nome_aluno):
+        """Registra a remoção de dados de frequência de um aluno"""
+        try:
+            arquivo_log = 'log_remocoes_frequencia.csv'
+            
+            # Criar cabeçalho se arquivo não existir
+            arquivo_existe = os.path.exists(arquivo_log)
+            
+            with open(arquivo_log, 'a', encoding='utf-8', newline='') as f:
+                import csv
+                writer = csv.writer(f)
+                
+                # Escrever cabeçalho se for novo arquivo
+                if not arquivo_existe:
+                    writer.writerow(['NOME_ALUNO', 'DATA_REMOCAO', 'HORA_REMOCAO', 'USUARIO'])
+                
+                # Registrar remoção
+                from datetime import datetime
+                agora = datetime.now()
+                writer.writerow([
+                    nome_aluno,
+                    agora.strftime('%d/%m/%Y'),
+                    agora.strftime('%H:%M:%S'),
+                    'SISTEMA'  # Pode ser modificado para incluir usuário logado
+                ])
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Erro ao salvar log de remoção: {e}")
+            return False
+    
+    def busca_avancada(self, filtros):
+        """Realiza busca avançada com múltiplos filtros"""
+        try:
+            resultados = []
+            
+            for aluno in self.alunos_reais:
+                incluir = True
+                
+                # Filtro por nome (busca parcial, case insensitive)
+                if filtros.get('nome') and filtros['nome'].strip():
+                    nome_busca = filtros['nome'].strip().lower()
+                    nome_aluno = aluno.get('nome', '').lower()
+                    if nome_busca not in nome_aluno:
+                        incluir = False
+                
+                # Filtro por atividade
+                if filtros.get('atividade') and filtros['atividade'].strip():
+                    if aluno.get('atividade', '') != filtros['atividade']:
+                        incluir = False
+                
+                # Filtro por mês de aniversário
+                if filtros.get('mes_aniversario') and filtros['mes_aniversario'].strip():
+                    mes_nascimento = self.extrair_mes_nascimento(aluno.get('data_nascimento', ''))
+                    if mes_nascimento != filtros['mes_aniversario']:
+                        incluir = False
+                
+                # Filtro por período de cadastro
+                if filtros.get('data_inicio') or filtros.get('data_fim'):
+                    data_cadastro = self.converter_data_para_comparacao(aluno.get('data_cadastro', ''))
+                    
+                    if filtros.get('data_inicio'):
+                        data_inicio = datetime.strptime(filtros['data_inicio'], '%Y-%m-%d')
+                        if data_cadastro and data_cadastro < data_inicio:
+                            incluir = False
+                    
+                    if filtros.get('data_fim'):
+                        data_fim = datetime.strptime(filtros['data_fim'], '%Y-%m-%d')
+                        if data_cadastro and data_cadastro > data_fim:
+                            incluir = False
+                
+                if incluir:
+                    resultados.append(aluno)
+            
+            return resultados
+            
+        except Exception as e:
+            print(f"❌ Erro na busca avançada: {e}")
+            return []
+    
+    def extrair_mes_nascimento(self, data_nascimento):
+        """Extrai o mês da data de nascimento"""
+        try:
+            if not data_nascimento or data_nascimento == 'A definir':
+                return None
+            
+            # Formato DD/MM/YYYY
+            if '/' in data_nascimento:
+                partes = data_nascimento.split('/')
+                if len(partes) >= 2:
+                    return partes[1].zfill(2)  # Garantir 2 dígitos
+            
+            # Formato YYYY-MM-DD
+            elif '-' in data_nascimento:
+                partes = data_nascimento.split('-')
+                if len(partes) >= 2:
+                    return partes[1].zfill(2)
+            
+            return None
+            
+        except Exception as e:
+            print(f"❌ Erro ao extrair mês: {e}")
+            return None
+    
+    def converter_data_para_comparacao(self, data_str):
+        """Converte string de data para objeto datetime para comparação"""
+        try:
+            if not data_str or data_str == 'A definir':
+                return None
+            
+            # Formato DD/MM/YYYY
+            if '/' in data_str:
+                partes = data_str.split('/')
+                if len(partes) == 3:
+                    return datetime(int(partes[2]), int(partes[1]), int(partes[0]))
+            
+            # Formato YYYY-MM-DD
+            elif '-' in data_str:
+                return datetime.strptime(data_str, '%Y-%m-%d')
+            
+            return None
+            
+        except Exception as e:
+            print(f"❌ Erro ao converter data: {e}")
+            return None
+    
+    def get_estatisticas_busca(self, resultados, mes_aniversario=None):
+        """Calcula estatísticas dos resultados da busca"""
+        try:
+            total_alunos = len(resultados)
+            
+            # Contar aniversariantes (se filtro de mês não foi aplicado)
+            total_aniversariantes = 0
+            if not mes_aniversario:
+                mes_atual = datetime.now().strftime('%m')
+                for aluno in resultados:
+                    mes_nasc = self.extrair_mes_nascimento(aluno.get('data_nascimento', ''))
+                    if mes_nasc == mes_atual:
+                        total_aniversariantes += 1
+            else:
+                total_aniversariantes = total_alunos  # Todos são aniversariantes do mês filtrado
+            
+            # Contar atividades únicas
+            atividades = set()
+            for aluno in resultados:
+                atividade = aluno.get('atividade', '')
+                if atividade and atividade != 'A definir':
+                    atividades.add(atividade)
+            
+            return {
+                'total_alunos': total_alunos,
+                'total_aniversariantes': total_aniversariantes,
+                'total_atividades': len(atividades),
+                'atividades_encontradas': list(atividades)
+            }
+            
+        except Exception as e:
+            print(f"❌ Erro ao calcular estatísticas: {e}")
+            return {
+                'total_alunos': 0,
+                'total_aniversariantes': 0,
+                'total_atividades': 0,
+                'atividades_encontradas': []
+            }
 
     def salvar_dados(self, dados=None):
         """Salva os dados dos alunos no arquivo JSON"""
@@ -691,13 +973,25 @@ class SistemaAcademia:
             return False
     
     def remover_aluno(self, indice):
-        """Remove um aluno e salva os dados"""
+        """Remove um aluno e todos os seus dados de frequência"""
         try:
             if 0 <= indice < len(self.alunos_reais):
                 nome_removido = self.alunos_reais[indice]['nome']
+                
+                # Remover aluno da lista principal
                 self.alunos_reais.pop(indice)
+                
+                # Remover dados de frequência do aluno (se existir)
+                if nome_removido in self.dados_presenca:
+                    registros_removidos = len(self.dados_presenca[nome_removido]['registros'])
+                    del self.dados_presenca[nome_removido]
+                    print(f"📊 Removidos {registros_removidos} registros de frequência de {nome_removido}")
+                
+                # Salvar dados atualizados
                 self.salvar_dados()
-                print(f"🗑️ Aluno {nome_removido} removido")
+                self.salvar_remocao_frequencia(nome_removido)
+                
+                print(f"🗑️ Aluno {nome_removido} e seus dados de frequência foram removidos completamente")
                 return True
             return False
         except Exception as e:
@@ -867,6 +1161,12 @@ def presenca():
     usuario_nome = session.get('usuario_nome', 'Usuário')
     return render_template('presenca.html', alunos=lista_alunos, usuario_nome=usuario_nome)
 
+@app.route('/busca_avancada')
+@login_obrigatorio
+def busca_avancada_page():
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    return render_template('busca_avancada.html', usuario_nome=usuario_nome)
+
 @app.route('/relatorios')
 @login_obrigatorio
 def relatorios():
@@ -905,6 +1205,130 @@ def marcar_presenca():
             
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao marcar presença: {str(e)}'})
+
+@app.route('/marcar_presenca_detalhada', methods=['POST'])
+@login_obrigatorio
+def marcar_presenca_detalhada():
+    try:
+        nome_aluno = request.form.get('nome_aluno')
+        data_presenca = request.form.get('data_presenca')
+        horario_presenca = request.form.get('horario_presenca')
+        turma_presenca = request.form.get('turma_presenca')
+        observacoes_presenca = request.form.get('observacoes_presenca', '')
+        
+        # Validações
+        if not nome_aluno:
+            return jsonify({'success': False, 'message': 'Nome do aluno é obrigatório'})
+        
+        if not data_presenca:
+            return jsonify({'success': False, 'message': 'Data é obrigatória'})
+            
+        if not horario_presenca:
+            return jsonify({'success': False, 'message': 'Horário é obrigatório'})
+            
+        if not turma_presenca:
+            return jsonify({'success': False, 'message': 'Turma/Horário da atividade é obrigatório'})
+        
+        # Registrar presença detalhada
+        sucesso, mensagem = academia.registrar_presenca_detalhada(
+            nome_aluno, 
+            data_presenca, 
+            horario_presenca, 
+            turma_presenca, 
+            observacoes_presenca
+        )
+        
+        if sucesso:
+            return jsonify({
+                'success': True, 
+                'message': mensagem,
+                'aluno': nome_aluno,
+                'data': data_presenca,
+                'horario': horario_presenca,
+                'turma': turma_presenca
+            })
+        else:
+            return jsonify({'success': False, 'message': mensagem})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao marcar presença detalhada: {str(e)}'})
+
+@app.route('/busca_avancada', methods=['POST'])
+@login_obrigatorio
+def processar_busca_avancada():
+    try:
+        # Obter filtros do formulário
+        filtros = {
+            'nome': request.form.get('nome', '').strip(),
+            'atividade': request.form.get('atividade', '').strip(),
+            'mes_aniversario': request.form.get('mes_aniversario', '').strip(),
+            'data_inicio': request.form.get('data_inicio', '').strip(),
+            'data_fim': request.form.get('data_fim', '').strip()
+        }
+        
+        # Remover filtros vazios
+        filtros_limpos = {k: v for k, v in filtros.items() if v}
+        
+        # Realizar busca
+        resultados = academia.busca_avancada(filtros_limpos)
+        
+        # Calcular estatísticas
+        estatisticas = academia.get_estatisticas_busca(
+            resultados, 
+            filtros_limpos.get('mes_aniversario')
+        )
+        
+        # Preparar resposta
+        response_data = {
+            'success': True,
+            'resultados': resultados,
+            'filtros': filtros_limpos,
+            'total_alunos': estatisticas['total_alunos'],
+            'total_aniversariantes': estatisticas['total_aniversariantes'],
+            'total_atividades': estatisticas['total_atividades'],
+            'atividades_encontradas': estatisticas['atividades_encontradas']
+        }
+        
+        print(f"🔍 Busca realizada: {len(resultados)} resultados encontrados")
+        print(f"📊 Filtros aplicados: {filtros_limpos}")
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"❌ Erro na busca avançada: {e}")
+        return jsonify({
+            'success': False, 
+            'message': f'Erro ao realizar busca: {str(e)}',
+            'resultados': []
+        })
+
+@app.route('/gerar_relatorio_impressao', methods=['POST'])
+@login_obrigatorio
+def gerar_relatorio_impressao():
+    try:
+        # Receber dados do relatório via formulário
+        import json
+        dados_str = request.form.get('dados_relatorio')
+        
+        if not dados_str:
+            return "Erro: Dados não encontrados", 400
+        
+        dados = json.loads(dados_str)
+        resultados = dados.get('resultados', [])
+        filtros = dados.get('filtros', {})
+        estatisticas = dados.get('estatisticas', {})
+        
+        print(f"📄 Gerando relatório: {len(resultados)} registros")
+        
+        # Renderizar template limpo para impressão
+        return render_template('relatorio_impressao.html', 
+                             resultados=resultados,
+                             filtros=filtros,
+                             estatisticas=estatisticas)
+        
+    except Exception as e:
+        print(f"❌ Erro ao gerar relatório para impressão: {e}")
+        return f"Erro ao gerar relatório: {str(e)}", 500
 
 @app.route('/recarregar_dados')
 @login_obrigatorio
@@ -1057,17 +1481,28 @@ def excluir_aluno(aluno_id):
         if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
-        # Obter nome do aluno antes de excluir
+        # Obter nome do aluno e dados de frequência antes de excluir
         nome_aluno = academia.alunos_reais[aluno_id]['nome']
+        tem_frequencia = nome_aluno in academia.dados_presenca
         
-        # Remover aluno e salvar
+        if tem_frequencia:
+            registros_frequencia = len(academia.dados_presenca[nome_aluno]['registros'])
+        
+        # Remover aluno e todos os seus dados
         sucesso = academia.remover_aluno(aluno_id)
         
         if sucesso:
+            # Mensagem detalhada sobre o que foi removido
+            mensagem = f'Aluno {nome_aluno} excluído com sucesso!'
+            if tem_frequencia:
+                mensagem += f' Também foram removidos {registros_frequencia} registros de frequência.'
+            
             return jsonify({
                 'success': True, 
-                'message': f'Aluno {nome_aluno} excluído com sucesso!',
-                'total_alunos': len(academia.alunos_reais)
+                'message': mensagem,
+                'total_alunos': len(academia.alunos_reais),
+                'frequencia_removida': tem_frequencia,
+                'registros_removidos': registros_frequencia if tem_frequencia else 0
             })
         else:
             return jsonify({'success': False, 'message': 'Erro ao excluir aluno'})
