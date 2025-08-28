@@ -286,6 +286,10 @@
                             <!-- Ações Admin/Admin Master -->
                             <td>
                                 <div class="btn-group" role="group">
+                                    <a href="{{ url_for('frequencia_individual', aluno_id=loop.index0) }}" class="btn btn-sm btn-outline-info" 
+                                       title="Relatório de Frequência">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </a>
                                     <button type="button" class="btn btn-sm btn-outline-primary" 
                                             onclick="editarAluno({{ loop.index0 }})" 
                                             title="Editar aluno">
@@ -338,6 +342,10 @@
                                             title="Gerenciar frequência">
                                         <i class="fas fa-calendar-check"></i>
                                     </button>
+                                    <a href="{{ url_for('frequencia_individual', aluno_id=loop.index0) }}" class="btn btn-sm btn-outline-secondary" 
+                                       title="Relatório de Frequência">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </a>
                                 </div>
                             </td>
                             {% endif %}

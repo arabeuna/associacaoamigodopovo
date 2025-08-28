@@ -1802,6 +1802,46 @@ def marcar_presenca():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao marcar presença: {str(e)}'})
 
+@app.route('/frequencia_individual')
+@login_obrigatorio
+def frequencia_individual():
+    # Obter alunos baseado no nível de acesso do usuário
+    lista_alunos = obter_alunos_usuario()
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    nivel_usuario = session.get('usuario_nivel', 'usuario')
+    
+    # Verificar se um aluno foi selecionado
+    aluno_id = request.args.get('aluno_id')
+    aluno_selecionado = None
+    dados_presenca = None
+    
+    if aluno_id and aluno_id.isdigit():
+        aluno_id = int(aluno_id)
+        if 0 <= aluno_id < len(academia.alunos_reais):
+            aluno_selecionado = academia.alunos_reais[aluno_id]
+            
+            # Verificar permissão para ver este aluno
+            if nivel_usuario == 'usuario':
+                # Professores só podem ver alunos da sua atividade
+                usuario_logado = session.get('usuario_logado')
+                usuario_info = USUARIOS.get(usuario_logado, {})
+                atividades_responsavel = usuario_info.get('atividades_responsavel', [])
+                
+                if aluno_selecionado.get('atividade') not in atividades_responsavel:
+                    aluno_selecionado = None
+            
+            # Obter dados de presença
+            if aluno_selecionado:
+                dados_presenca = academia.get_presenca_aluno(aluno_selecionado['nome'])
+    
+    return render_template('frequencia_individual.html',
+                          alunos=lista_alunos,
+                          aluno_id=aluno_id,
+                          aluno_selecionado=aluno_selecionado,
+                          dados_presenca=dados_presenca,
+                          usuario_nome=usuario_nome,
+                          nivel_usuario=nivel_usuario)
+
 @app.route('/marcar_presenca_detalhada', methods=['POST'])
 @login_obrigatorio
 def marcar_presenca_detalhada():
@@ -2160,6 +2200,9 @@ def obter_aluno(aluno_id):
         # Adicionar dados de presença se for da Informática
         dados_presenca = None
         if aluno.get('atividade') == 'Informática':
+            dados_presenca = academia.get_presenca_aluno(aluno['nome'])
+        else:
+            # Para outros cursos, também buscar dados de presença
             dados_presenca = academia.get_presenca_aluno(aluno['nome'])
         
         return jsonify({
