@@ -37,15 +37,50 @@ def allowed_file(filename):
 
 class SistemaAcademia:
     def __init__(self):
+        self.arquivo_dados = 'dados_alunos.json'
         self.alunos_reais = self.carregar_dados_reais()
         self.atividades_disponiveis = self.get_atividades_disponiveis()
     
     def carregar_dados_reais(self):
-        """Carrega dados reais - usa dados embutidos para deploy estável"""
+        """Carrega dados do arquivo JSON, CSV ou usa dados embutidos"""
         try:
-            # Para deploy estável, usar dados embutidos
-            print("📦 Carregando dados reais embutidos para deploy estável")
-            return self.get_dados_reais_embutidos()
+            # 1. Tentar carregar dados do arquivo JSON primeiro (dados salvos do sistema)
+            if os.path.exists(self.arquivo_dados):
+                with open(self.arquivo_dados, 'r', encoding='utf-8') as f:
+                    dados_salvos = json.load(f)
+                    print(f"📦 Carregados {len(dados_salvos)} alunos do arquivo salvo")
+                    return dados_salvos
+            
+            # 2. Tentar carregar do CSV da planilha original
+            arquivo_csv = 'outros/Cadastros_Unificados_GOOGLE_v2.csv'
+            if os.path.exists(arquivo_csv):
+                print("📊 Encontrado arquivo CSV da planilha original!")
+                dados_csv = self.carregar_dados_csv(arquivo_csv)
+                if dados_csv:
+                    # Salvar no formato JSON para próximas execuções
+                    self.salvar_dados(dados_csv)
+                    return dados_csv
+            
+            # 3. Procurar por outros arquivos CSV na pasta outros
+            pasta_outros = 'outros'
+            if os.path.exists(pasta_outros):
+                arquivos_csv = [f for f in os.listdir(pasta_outros) if f.endswith('.csv')]
+                print(f"📁 Arquivos CSV encontrados: {arquivos_csv}")
+                
+                for arquivo in arquivos_csv:
+                    caminho_completo = os.path.join(pasta_outros, arquivo)
+                    print(f"🔍 Tentando ler: {arquivo}")
+                    dados_csv = self.carregar_dados_csv(caminho_completo)
+                    if dados_csv and len(dados_csv) > 0:
+                        print(f"✅ Dados carregados de: {arquivo}")
+                        self.salvar_dados(dados_csv)
+                        return dados_csv
+            
+            # 4. Se não encontrou nenhum CSV, criar arquivo com dados embutidos
+            print("📦 Criando arquivo de dados com dados iniciais")
+            dados_iniciais = self.get_dados_reais_embutidos()
+            self.salvar_dados(dados_iniciais)
+            return dados_iniciais
             
         except Exception as e:
             print(f"❌ Erro ao carregar dados: {e}")
@@ -221,6 +256,185 @@ class SistemaAcademia:
     def get_alunos(self):
         """Lista todos os alunos"""
         return self.alunos_reais
+    
+    def carregar_dados_csv(self, arquivo_csv):
+        """Carrega dados de um arquivo CSV sem usar pandas"""
+        try:
+            import csv
+            dados = []
+            
+            with open(arquivo_csv, 'r', encoding='utf-8', newline='') as f:
+                # Tentar diferentes delimitadores
+                primeira_linha = f.readline()
+                f.seek(0)
+                
+                if ',' in primeira_linha:
+                    delimiter = ','
+                elif ';' in primeira_linha:
+                    delimiter = ';'
+                elif '\t' in primeira_linha:
+                    delimiter = '\t'
+                else:
+                    delimiter = ','
+                
+                reader = csv.DictReader(f, delimiter=delimiter)
+                linhas_processadas = 0
+                
+                for linha in reader:
+                    try:
+                        # Limpar dados vazios
+                        linha_limpa = {k.strip(): str(v).strip() for k, v in linha.items() if v and str(v).strip()}
+                        
+                        if not linha_limpa or len(linha_limpa) < 2:
+                            continue
+                            
+                        # Mapear campos conhecidos
+                        aluno = self.mapear_campos_csv(linha_limpa)
+                        
+                        if aluno and aluno.get('nome'):
+                            dados.append(aluno)
+                            linhas_processadas += 1
+                            
+                    except Exception as e:
+                        print(f"⚠️ Erro na linha {linhas_processadas + 1}: {e}")
+                        continue
+                
+                print(f"📊 CSV processado: {linhas_processadas} alunos de {arquivo_csv}")
+                return dados
+                
+        except Exception as e:
+            print(f"❌ Erro ao ler CSV {arquivo_csv}: {e}")
+            return None
+    
+    def mapear_campos_csv(self, linha):
+        """Mapeia campos do CSV para o formato do sistema"""
+        try:
+            # Procurar por campos de nome (várias possibilidades)
+            nome = None
+            campos_nome = ['nome', 'nome_completo', 'aluno', 'Nome', 'NOME', 'Nome Completo', 'Nome do Aluno']
+            for campo in campos_nome:
+                if campo in linha and linha[campo] and len(linha[campo].strip()) > 2:
+                    nome = linha[campo].strip()
+                    break
+            
+            if not nome:
+                return None
+            
+            # Procurar telefone
+            telefone = ''
+            campos_telefone = ['telefone', 'fone', 'celular', 'Telefone', 'TELEFONE', 'Fone', 'Celular']
+            for campo in campos_telefone:
+                if campo in linha and linha[campo]:
+                    telefone = linha[campo].strip()
+                    break
+            
+            # Procurar email
+            email = ''
+            campos_email = ['email', 'e-mail', 'Email', 'E-mail', 'EMAIL', 'E_MAIL']
+            for campo in campos_email:
+                if campo in linha and linha[campo] and '@' in linha[campo]:
+                    email = linha[campo].strip()
+                    break
+            
+            # Procurar endereço
+            endereco = ''
+            campos_endereco = ['endereco', 'endereço', 'Endereço', 'ENDERECO', 'Endereco', 'rua', 'Rua']
+            for campo in campos_endereco:
+                if campo in linha and linha[campo]:
+                    endereco = linha[campo].strip()
+                    break
+            
+            # Procurar atividade
+            atividade = ''
+            campos_atividade = ['atividade', 'curso', 'modalidade', 'Atividade', 'ATIVIDADE', 'Curso', 'Modalidade']
+            for campo in campos_atividade:
+                if campo in linha and linha[campo]:
+                    atividade = linha[campo].strip()
+                    break
+            
+            # Procurar data de nascimento
+            data_nascimento = ''
+            campos_data = ['data_nascimento', 'nascimento', 'dt_nascimento', 'Data de Nascimento', 'Data Nascimento']
+            for campo in campos_data:
+                if campo in linha and linha[campo]:
+                    data_nascimento = linha[campo].strip()
+                    break
+            
+            # Procurar turma
+            turma = ''
+            campos_turma = ['turma', 'horario', 'horário', 'Turma', 'TURMA', 'Horario', 'Horário']
+            for campo in campos_turma:
+                if campo in linha and linha[campo]:
+                    turma = linha[campo].strip()
+                    break
+            
+            # Criar aluno com dados mapeados
+            aluno = {
+                'nome': nome,
+                'telefone': telefone if telefone else 'A definir',
+                'endereco': endereco if endereco else 'A definir',
+                'email': email if email else f"{nome.lower().replace(' ', '.')}@email.com",
+                'data_nascimento': data_nascimento if data_nascimento else 'A definir',
+                'data_cadastro': datetime.now().strftime('%d/%m/%Y'),
+                'atividade': atividade if atividade else 'A definir',
+                'turma': turma if turma else 'A definir',
+                'status_frequencia': 'Importado do CSV',
+                'observacoes': ''
+            }
+            
+            return aluno
+            
+        except Exception as e:
+            print(f"❌ Erro ao mapear linha: {e}")
+            return None
+
+    def salvar_dados(self, dados=None):
+        """Salva os dados dos alunos no arquivo JSON"""
+        try:
+            dados_para_salvar = dados if dados is not None else self.alunos_reais
+            with open(self.arquivo_dados, 'w', encoding='utf-8') as f:
+                json.dump(dados_para_salvar, f, ensure_ascii=False, indent=2)
+            print(f"💾 Dados salvos: {len(dados_para_salvar)} alunos")
+            return True
+        except Exception as e:
+            print(f"❌ Erro ao salvar dados: {e}")
+            return False
+    
+    def adicionar_aluno(self, novo_aluno):
+        """Adiciona um novo aluno e salva os dados"""
+        try:
+            self.alunos_reais.append(novo_aluno)
+            self.salvar_dados()
+            return True
+        except Exception as e:
+            print(f"❌ Erro ao adicionar aluno: {e}")
+            return False
+    
+    def atualizar_aluno(self, indice, dados_atualizados):
+        """Atualiza um aluno existente e salva os dados"""
+        try:
+            if 0 <= indice < len(self.alunos_reais):
+                self.alunos_reais[indice].update(dados_atualizados)
+                self.salvar_dados()
+                return True
+            return False
+        except Exception as e:
+            print(f"❌ Erro ao atualizar aluno: {e}")
+            return False
+    
+    def remover_aluno(self, indice):
+        """Remove um aluno e salva os dados"""
+        try:
+            if 0 <= indice < len(self.alunos_reais):
+                nome_removido = self.alunos_reais[indice]['nome']
+                self.alunos_reais.pop(indice)
+                self.salvar_dados()
+                print(f"🗑️ Aluno {nome_removido} removido")
+                return True
+            return False
+        except Exception as e:
+            print(f"❌ Erro ao remover aluno: {e}")
+            return False
     
     def gerar_planilha_frequencia(self, atividade, mes_ano='01/2025'):
         """Gera planilha de frequência para uma atividade específica"""
@@ -451,14 +665,17 @@ def cadastrar_aluno():
             'observacoes': observacoes
         }
         
-        # Adicionar ao sistema
-        academia.alunos_reais.append(novo_aluno)
+        # Adicionar ao sistema e salvar
+        sucesso = academia.adicionar_aluno(novo_aluno)
         
-        return jsonify({
-            'success': True, 
-            'message': f'Aluno {nome} cadastrado com sucesso!',
-            'total_alunos': len(academia.alunos_reais)
-        })
+        if sucesso:
+            return jsonify({
+                'success': True, 
+                'message': f'Aluno {nome} cadastrado com sucesso!',
+                'total_alunos': len(academia.alunos_reais)
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao salvar dados do aluno'})
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao cadastrar aluno: {str(e)}'})
@@ -503,9 +720,9 @@ def editar_aluno(aluno_id):
             except:
                 data_nasc_formatada = data_nascimento
         
-        # Atualizar dados do aluno
+        # Preparar dados atualizados
         aluno_atual = academia.alunos_reais[aluno_id]
-        aluno_atual.update({
+        dados_atualizados = {
             'nome': nome,
             'telefone': telefone,
             'email': email if email else aluno_atual.get('email', ''),
@@ -514,13 +731,19 @@ def editar_aluno(aluno_id):
             'atividade': atividade if atividade else aluno_atual.get('atividade', 'A definir'),
             'turma': turma if turma else aluno_atual.get('turma', 'A definir'),
             'observacoes': observacoes
-        })
+        }
         
-        return jsonify({
-            'success': True, 
-            'message': f'Dados de {nome} atualizados com sucesso!',
-            'aluno': aluno_atual
-        })
+        # Atualizar e salvar
+        sucesso = academia.atualizar_aluno(aluno_id, dados_atualizados)
+        
+        if sucesso:
+            return jsonify({
+                'success': True, 
+                'message': f'Dados de {nome} atualizados com sucesso!',
+                'aluno': academia.alunos_reais[aluno_id]
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao salvar alterações'})
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao editar aluno: {str(e)}'})
@@ -535,14 +758,17 @@ def excluir_aluno(aluno_id):
         # Obter nome do aluno antes de excluir
         nome_aluno = academia.alunos_reais[aluno_id]['nome']
         
-        # Remover aluno da lista
-        academia.alunos_reais.pop(aluno_id)
+        # Remover aluno e salvar
+        sucesso = academia.remover_aluno(aluno_id)
         
-        return jsonify({
-            'success': True, 
-            'message': f'Aluno {nome_aluno} excluído com sucesso!',
-            'total_alunos': len(academia.alunos_reais)
-        })
+        if sucesso:
+            return jsonify({
+                'success': True, 
+                'message': f'Aluno {nome_aluno} excluído com sucesso!',
+                'total_alunos': len(academia.alunos_reais)
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao excluir aluno'})
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao excluir aluno: {str(e)}'})
@@ -563,6 +789,22 @@ def obter_aluno(aluno_id):
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao obter dados do aluno: {str(e)}'})
+
+@app.route('/salvar_dados_manualmente')
+@login_obrigatorio  
+def salvar_dados_manualmente():
+    try:
+        sucesso = academia.salvar_dados()
+        if sucesso:
+            return jsonify({
+                'success': True,
+                'message': f'Dados salvos com sucesso! Total: {len(academia.alunos_reais)} alunos',
+                'total_alunos': len(academia.alunos_reais)
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao salvar dados'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'})
 
 @app.route('/backup_planilhas')
 @login_obrigatorio
