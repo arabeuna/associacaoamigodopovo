@@ -40,6 +40,9 @@ class SistemaAcademia:
         self.arquivo_dados = 'dados_alunos.json'
         self.alunos_reais = self.carregar_dados_reais()
         self.atividades_disponiveis = self.get_atividades_disponiveis()
+        self.dados_presenca = self.carregar_dados_presenca()
+        # Atualizar status de frequência com dados de presença
+        self.atualizar_status_frequencia_informatica()
     
     def carregar_dados_reais(self):
         """Carrega dados do arquivo JSON, CSV ou usa dados embutidos"""
@@ -307,78 +310,48 @@ class SistemaAcademia:
             return None
     
     def mapear_campos_csv(self, linha):
-        """Mapeia campos do CSV para o formato do sistema"""
+        """Mapeia campos do CSV para o formato do sistema seguindo ordem exata da planilha"""
         try:
-            # Procurar por campos de nome (várias possibilidades)
-            nome = None
-            campos_nome = ['nome', 'nome_completo', 'aluno', 'Nome', 'NOME', 'Nome Completo', 'Nome do Aluno']
-            for campo in campos_nome:
-                if campo in linha and linha[campo] and len(linha[campo].strip()) > 2:
-                    nome = linha[campo].strip()
-                    break
+            # Mapeamento direto conforme cabeçalho do CSV:
+            # NOME,DATA DE NASCIMENTO,TELEFONE,ENDEREÇO,ATIVIDADE,DATA MATRICULA,TURMA
             
-            if not nome:
+            # Campo NOME (posição 0)
+            nome = linha.get('NOME', '').strip()
+            if not nome or len(nome) < 2:
                 return None
             
-            # Procurar telefone
-            telefone = ''
-            campos_telefone = ['telefone', 'fone', 'celular', 'Telefone', 'TELEFONE', 'Fone', 'Celular']
-            for campo in campos_telefone:
-                if campo in linha and linha[campo]:
-                    telefone = linha[campo].strip()
-                    break
+            # Campo DATA DE NASCIMENTO (posição 1)
+            data_nascimento = linha.get('DATA DE NASCIMENTO', '').strip()
             
-            # Procurar email
-            email = ''
-            campos_email = ['email', 'e-mail', 'Email', 'E-mail', 'EMAIL', 'E_MAIL']
-            for campo in campos_email:
-                if campo in linha and linha[campo] and '@' in linha[campo]:
-                    email = linha[campo].strip()
-                    break
+            # Campo TELEFONE (posição 2)
+            telefone = linha.get('TELEFONE', '').strip()
             
-            # Procurar endereço
-            endereco = ''
-            campos_endereco = ['endereco', 'endereço', 'Endereço', 'ENDERECO', 'Endereco', 'rua', 'Rua']
-            for campo in campos_endereco:
-                if campo in linha and linha[campo]:
-                    endereco = linha[campo].strip()
-                    break
+            # Campo ENDEREÇO (posição 3)
+            endereco = linha.get('ENDEREÇO', '').strip()
             
-            # Procurar atividade
-            atividade = ''
-            campos_atividade = ['atividade', 'curso', 'modalidade', 'Atividade', 'ATIVIDADE', 'Curso', 'Modalidade']
-            for campo in campos_atividade:
-                if campo in linha and linha[campo]:
-                    atividade = linha[campo].strip()
-                    break
+            # Campo ATIVIDADE (posição 4)
+            atividade = linha.get('ATIVIDADE', '').strip()
             
-            # Procurar data de nascimento
-            data_nascimento = ''
-            campos_data = ['data_nascimento', 'nascimento', 'dt_nascimento', 'Data de Nascimento', 'Data Nascimento']
-            for campo in campos_data:
-                if campo in linha and linha[campo]:
-                    data_nascimento = linha[campo].strip()
-                    break
+            # Campo DATA MATRICULA (posição 5)
+            data_matricula = linha.get('DATA MATRICULA', '').strip()
             
-            # Procurar turma
-            turma = ''
-            campos_turma = ['turma', 'horario', 'horário', 'Turma', 'TURMA', 'Horario', 'Horário']
-            for campo in campos_turma:
-                if campo in linha and linha[campo]:
-                    turma = linha[campo].strip()
-                    break
+            # Campo TURMA (posição 6)
+            turma = linha.get('TURMA', '').strip()
+            
+            # Gerar email baseado no nome
+            email = f"{nome.lower().replace(' ', '.').replace('ç', 'c').replace('ã', 'a').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')}@email.com"
             
             # Criar aluno com dados mapeados
             aluno = {
                 'nome': nome,
                 'telefone': telefone if telefone else 'A definir',
                 'endereco': endereco if endereco else 'A definir',
-                'email': email if email else f"{nome.lower().replace(' ', '.')}@email.com",
+                'email': email,
                 'data_nascimento': data_nascimento if data_nascimento else 'A definir',
-                'data_cadastro': datetime.now().strftime('%d/%m/%Y'),
+                'data_cadastro': data_matricula if data_matricula else datetime.now().strftime('%d/%m/%Y'),
                 'atividade': atividade if atividade else 'A definir',
                 'turma': turma if turma else 'A definir',
-                'status_frequencia': 'Importado do CSV',
+                'status_frequencia': 'Dados importados da planilha',
                 'observacoes': ''
             }
             
@@ -386,7 +359,180 @@ class SistemaAcademia:
             
         except Exception as e:
             print(f"❌ Erro ao mapear linha: {e}")
+            print(f"   Dados da linha: {linha}")
             return None
+
+    def carregar_dados_presenca(self):
+        """Carrega dados de presença da Informática"""
+        try:
+            dados_presenca = {}
+            
+            # 1. Tentar carregar FICHA_DE_PRESENCA_INFORMATICA.csv (formato individual)
+            arquivo_presenca_individual = 'outros/FICHA_DE_PRESENCA_INFORMATICA.csv'
+            if os.path.exists(arquivo_presenca_individual):
+                print("📊 Carregando dados de presença individuais...")
+                presenca_individual = self.carregar_presenca_individual(arquivo_presenca_individual)
+                if presenca_individual:
+                    dados_presenca.update(presenca_individual)
+            
+            # 2. Tentar carregar planilhas consolidadas
+            arquivos_presenca_consolidada = [
+                'outros/Nova pasta/Presenca_Simples_Academia.csv',
+                'outros/Nova pasta/Academia_Amigo_do_Povo_PRESENCA.csv'
+            ]
+            
+            for arquivo in arquivos_presenca_consolidada:
+                if os.path.exists(arquivo):
+                    print(f"📊 Carregando presença consolidada: {arquivo}")
+                    presenca_consolidada = self.carregar_presenca_consolidada(arquivo)
+                    if presenca_consolidada:
+                        # Merge com dados existentes
+                        for nome, dados in presenca_consolidada.items():
+                            if nome in dados_presenca:
+                                dados_presenca[nome]['registros'].extend(dados['registros'])
+                            else:
+                                dados_presenca[nome] = dados
+            
+            print(f"✅ Dados de presença carregados: {len(dados_presenca)} alunos")
+            return dados_presenca
+            
+        except Exception as e:
+            print(f"❌ Erro ao carregar dados de presença: {e}")
+            return {}
+    
+    def carregar_presenca_individual(self, arquivo):
+        """Carrega dados de presença formato individual (um aluno por arquivo)"""
+        try:
+            import csv
+            dados = {}
+            
+            with open(arquivo, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                linhas = list(reader)
+                
+                # Primeira linha tem o nome do aluno
+                if len(linhas) > 0 and len(linhas[0]) > 1:
+                    nome_aluno = linhas[0][1].strip()
+                    mes_ano = linhas[0][2].strip() if len(linhas[0]) > 2 else 'Agosto'
+                    
+                    presencas = []
+                    total_presencas = 0
+                    
+                    # Processar dados de presença (a partir da linha 4)
+                    for i, linha in enumerate(linhas[4:], start=1):
+                        if len(linha) >= 2 and linha[0].strip().isdigit():
+                            dia = int(linha[0].strip())
+                            status = linha[1].strip().upper()
+                            
+                            if status in ['P', 'F', 'J']:
+                                presencas.append({
+                                    'dia': dia,
+                                    'status': status,
+                                    'data': f"{dia:02d}/{mes_ano}"
+                                })
+                                if status == 'P':
+                                    total_presencas += 1
+                    
+                    dados[nome_aluno] = {
+                        'atividade': 'Informática',
+                        'total_presencas': total_presencas,
+                        'total_faltas': len([p for p in presencas if p['status'] == 'F']),
+                        'registros': presencas,
+                        'percentual': round((total_presencas / len(presencas)) * 100, 2) if presencas else 0
+                    }
+                    
+                    print(f"   📋 {nome_aluno}: {total_presencas} presenças")
+            
+            return dados
+            
+        except Exception as e:
+            print(f"❌ Erro ao ler presença individual: {e}")
+            return {}
+    
+    def carregar_presenca_consolidada(self, arquivo):
+        """Carrega dados de presença formato consolidado (vários alunos)"""
+        try:
+            import csv
+            dados = {}
+            
+            with open(arquivo, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                
+                for linha in reader:
+                    nome = linha.get('Nome', '').strip()
+                    data = linha.get('Data', '').strip()
+                    horario = linha.get('Horário', '').strip()
+                    
+                    if nome and data:
+                        if nome not in dados:
+                            dados[nome] = {
+                                'atividade': 'Informática',
+                                'total_presencas': 0,
+                                'total_faltas': 0,
+                                'registros': [],
+                                'percentual': 0
+                            }
+                        
+                        dados[nome]['registros'].append({
+                            'data': data,
+                            'horario': horario,
+                            'status': 'P'
+                        })
+                        dados[nome]['total_presencas'] += 1
+                
+                # Calcular percentuais
+                for nome, aluno_dados in dados.items():
+                    total_registros = len(aluno_dados['registros'])
+                    if total_registros > 0:
+                        aluno_dados['percentual'] = round((aluno_dados['total_presencas'] / total_registros) * 100, 2)
+            
+            return dados
+            
+        except Exception as e:
+            print(f"❌ Erro ao ler presença consolidada: {e}")
+            return {}
+    
+    def get_presenca_aluno(self, nome_aluno):
+        """Retorna dados de presença de um aluno específico"""
+        return self.dados_presenca.get(nome_aluno, None)
+    
+    def atualizar_status_frequencia_informatica(self):
+        """Atualiza status de frequência dos alunos de Informática com base nos dados de presença"""
+        try:
+            alunos_atualizados = 0
+            
+            for aluno in self.alunos_reais:
+                if aluno.get('atividade') == 'Informática':
+                    nome = aluno['nome']
+                    dados_presenca = self.get_presenca_aluno(nome)
+                    
+                    if dados_presenca:
+                        percentual = dados_presenca['percentual']
+                        total_presencas = dados_presenca['total_presencas']
+                        
+                        if percentual >= 80:
+                            status = f"Excelente frequência ({percentual}% - {total_presencas} presenças)"
+                        elif percentual >= 60:
+                            status = f"Boa frequência ({percentual}% - {total_presencas} presenças)"
+                        elif percentual >= 40:
+                            status = f"Frequência regular ({percentual}% - {total_presencas} presenças)"
+                        else:
+                            status = f"Baixa frequência ({percentual}% - {total_presencas} presenças)"
+                        
+                        aluno['status_frequencia'] = status
+                        alunos_atualizados += 1
+                    else:
+                        aluno['status_frequencia'] = 'Sem dados de presença'
+            
+            if alunos_atualizados > 0:
+                self.salvar_dados()
+                print(f"✅ Status de frequência atualizado para {alunos_atualizados} alunos de Informática")
+            
+            return alunos_atualizados
+            
+        except Exception as e:
+            print(f"❌ Erro ao atualizar status de frequência: {e}")
+            return 0
 
     def salvar_dados(self, dados=None):
         """Salva os dados dos alunos no arquivo JSON"""
@@ -781,10 +927,17 @@ def obter_aluno(aluno_id):
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
         aluno = academia.alunos_reais[aluno_id]
+        
+        # Adicionar dados de presença se for da Informática
+        dados_presenca = None
+        if aluno.get('atividade') == 'Informática':
+            dados_presenca = academia.get_presenca_aluno(aluno['nome'])
+        
         return jsonify({
             'success': True,
             'aluno': aluno,
-            'aluno_id': aluno_id
+            'aluno_id': aluno_id,
+            'dados_presenca': dados_presenca
         })
         
     except Exception as e:
@@ -805,6 +958,26 @@ def salvar_dados_manualmente():
             return jsonify({'success': False, 'message': 'Erro ao salvar dados'})
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'})
+
+@app.route('/recarregar_presenca_informatica')
+@login_obrigatorio
+def recarregar_presenca_informatica():
+    try:
+        # Recarregar dados de presença
+        academia.dados_presenca = academia.carregar_dados_presenca()
+        
+        # Atualizar status de frequência
+        alunos_atualizados = academia.atualizar_status_frequencia_informatica()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Dados de presença recarregados! {alunos_atualizados} alunos atualizados.',
+            'alunos_com_presenca': len(academia.dados_presenca),
+            'alunos_atualizados': alunos_atualizados
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao recarregar presença: {str(e)}'})
 
 @app.route('/backup_planilhas')
 @login_obrigatorio
