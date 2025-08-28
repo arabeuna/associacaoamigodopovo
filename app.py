@@ -533,6 +533,111 @@ class SistemaAcademia:
         except Exception as e:
             print(f"❌ Erro ao atualizar status de frequência: {e}")
             return 0
+    
+    def registrar_presenca_manual(self, nome_aluno, data_hora=None):
+        """Registra presença manual de um aluno"""
+        try:
+            if not data_hora:
+                data_hora = datetime.now()
+            
+            data_str = data_hora.strftime('%d/%m/%Y')
+            hora_str = data_hora.strftime('%H:%M')
+            
+            # Encontrar o aluno
+            aluno_encontrado = None
+            for aluno in self.alunos_reais:
+                if aluno['nome'].upper() == nome_aluno.upper():
+                    aluno_encontrado = aluno
+                    break
+            
+            if not aluno_encontrado:
+                return False, "Aluno não encontrado"
+            
+            # Inicializar dados de presença se não existir
+            if nome_aluno not in self.dados_presenca:
+                self.dados_presenca[nome_aluno] = {
+                    'atividade': aluno_encontrado.get('atividade', 'Indefinido'),
+                    'total_presencas': 0,
+                    'total_faltas': 0,
+                    'registros': [],
+                    'percentual': 0
+                }
+            
+            # Verificar se já foi marcada presença hoje
+            data_hoje = data_hora.strftime('%d/%m/%Y')
+            for registro in self.dados_presenca[nome_aluno]['registros']:
+                if registro.get('data') == data_hoje:
+                    return False, f"Presença já registrada hoje para {nome_aluno}"
+            
+            # Adicionar registro de presença
+            novo_registro = {
+                'data': data_str,
+                'horario': hora_str,
+                'status': 'P',
+                'tipo': 'manual'
+            }
+            
+            self.dados_presenca[nome_aluno]['registros'].append(novo_registro)
+            self.dados_presenca[nome_aluno]['total_presencas'] += 1
+            
+            # Recalcular percentual
+            total_registros = len(self.dados_presenca[nome_aluno]['registros'])
+            if total_registros > 0:
+                percentual = round((self.dados_presenca[nome_aluno]['total_presencas'] / total_registros) * 100, 2)
+                self.dados_presenca[nome_aluno]['percentual'] = percentual
+            
+            # Salvar arquivo de presença manual
+            self.salvar_presenca_manual()
+            
+            # Atualizar status de frequência se for Informática
+            if aluno_encontrado.get('atividade') == 'Informática':
+                self.atualizar_status_frequencia_informatica()
+            
+            print(f"✅ Presença registrada: {nome_aluno} em {data_str} às {hora_str}")
+            return True, f"Presença registrada com sucesso para {nome_aluno}!"
+            
+        except Exception as e:
+            print(f"❌ Erro ao registrar presença: {e}")
+            return False, f"Erro ao registrar presença: {str(e)}"
+    
+    def salvar_presenca_manual(self):
+        """Salva registros de presença manual em arquivo CSV"""
+        try:
+            arquivo_presenca = 'presencas_manuais.csv'
+            
+            # Criar cabeçalho se arquivo não existir
+            arquivo_existe = os.path.exists(arquivo_presenca)
+            
+            with open(arquivo_presenca, 'a', encoding='utf-8', newline='') as f:
+                import csv
+                writer = csv.writer(f)
+                
+                # Escrever cabeçalho se for novo arquivo
+                if not arquivo_existe:
+                    writer.writerow(['NOME', 'DATA', 'HORARIO', 'ATIVIDADE', 'STATUS', 'TIPO'])
+                
+                # Escrever apenas os registros novos (tipo manual)
+                for nome, dados in self.dados_presenca.items():
+                    aluno_atividade = dados.get('atividade', 'Indefinido')
+                    
+                    for registro in dados['registros']:
+                        if registro.get('tipo') == 'manual':
+                            writer.writerow([
+                                nome,
+                                registro.get('data', ''),
+                                registro.get('horario', ''),
+                                aluno_atividade,
+                                registro.get('status', 'P'),
+                                'MANUAL'
+                            ])
+                            # Remover flag de tipo manual para evitar duplicação
+                            registro.pop('tipo', None)
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Erro ao salvar presença manual: {e}")
+            return False
 
     def salvar_dados(self, dados=None):
         """Salva os dados dos alunos no arquivo JSON"""
@@ -747,8 +852,27 @@ def novo_aluno():
 @app.route('/marcar_presenca', methods=['POST'])
 @login_obrigatorio
 def marcar_presenca():
-    nome_aluno = request.form.get('nome_aluno')
-    return jsonify({'success': True, 'message': f'Presença marcada para {nome_aluno}!'})
+    try:
+        nome_aluno = request.form.get('nome_aluno')
+        
+        if not nome_aluno:
+            return jsonify({'success': False, 'message': 'Nome do aluno é obrigatório'})
+        
+        # Registrar presença manual
+        sucesso, mensagem = academia.registrar_presenca_manual(nome_aluno)
+        
+        if sucesso:
+            return jsonify({
+                'success': True, 
+                'message': mensagem,
+                'aluno': nome_aluno,
+                'data_hora': datetime.now().strftime('%d/%m/%Y %H:%M')
+            })
+        else:
+            return jsonify({'success': False, 'message': mensagem})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao marcar presença: {str(e)}'})
 
 @app.route('/recarregar_dados')
 @login_obrigatorio
@@ -978,6 +1102,33 @@ def recarregar_presenca_informatica():
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao recarregar presença: {str(e)}'})
+
+@app.route('/presencas_hoje')
+@login_obrigatorio
+def presencas_hoje():
+    try:
+        data_hoje = datetime.now().strftime('%d/%m/%Y')
+        presencas_hoje = []
+        
+        for nome, dados in academia.dados_presenca.items():
+            for registro in dados['registros']:
+                if registro.get('data') == data_hoje:
+                    presencas_hoje.append({
+                        'nome': nome,
+                        'horario': registro.get('horario', ''),
+                        'atividade': dados.get('atividade', ''),
+                        'status': registro.get('status', 'P')
+                    })
+        
+        return jsonify({
+            'success': True,
+            'data': data_hoje,
+            'total': len(presencas_hoje),
+            'presencas': presencas_hoje
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao buscar presenças: {str(e)}'})
 
 @app.route('/backup_planilhas')
 @login_obrigatorio
