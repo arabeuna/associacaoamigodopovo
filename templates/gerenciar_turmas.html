@@ -1,0 +1,554 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Turmas - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-6 text-center mb-4">
+            <i class="fas fa-calendar-alt text-primary"></i>
+            Gerenciamento de Turmas
+        </h1>
+        <p class="text-center text-muted">
+            <i class="fas fa-clock text-info"></i>
+            Organize horários e turmas de cada atividade
+        </p>
+    </div>
+</div>
+
+<!-- Estatísticas das Turmas -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                <h3 class="card-title">{{ turmas | length }}</h3>
+                <p class="card-text">Total de Turmas</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-sun fa-2x mb-2"></i>
+                <h3 class="card-title">
+                    {{ turmas.values() | selectattr('periodo', 'equalto', 'Manhã') | list | length }}
+                </h3>
+                <p class="card-text">Turmas Manhã</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-cloud-sun fa-2x mb-2"></i>
+                <h3 class="card-title">
+                    {{ turmas.values() | selectattr('periodo', 'equalto', 'Tarde') | list | length }}
+                </h3>
+                <p class="card-text">Turmas Tarde</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-moon fa-2x mb-2"></i>
+                <h3 class="card-title">
+                    {{ turmas.values() | selectattr('periodo', 'equalto', 'Noite') | list | length }}
+                </h3>
+                <p class="card-text">Turmas Noite</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botão para Adicionar Nova Turma -->
+<div class="row mb-4">
+    <div class="col-12">
+        <button class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#modalNovaTurma">
+            <i class="fas fa-plus me-2"></i>
+            Nova Turma
+        </button>
+    </div>
+</div>
+
+<!-- Lista de Turmas por Período -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-alt me-2"></i>
+                    Turmas por Período
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if turmas %}
+                    <!-- Navegação por Abas -->
+                    <ul class="nav nav-tabs mb-3" id="turmasTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="manha-tab" data-bs-toggle="tab" data-bs-target="#manha" type="button" role="tab">
+                                <i class="fas fa-sun me-1"></i>Manhã
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tarde-tab" data-bs-toggle="tab" data-bs-target="#tarde" type="button" role="tab">
+                                <i class="fas fa-cloud-sun me-1"></i>Tarde
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="noite-tab" data-bs-toggle="tab" data-bs-target="#noite" type="button" role="tab">
+                                <i class="fas fa-moon me-1"></i>Noite
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Conteúdo das Abas -->
+                    <div class="tab-content" id="turmasTabContent">
+                        {% for periodo in ['Manhã', 'Tarde', 'Noite'] %}
+                        <div class="tab-pane fade {{ 'show active' if periodo == 'Manhã' else '' }}" 
+                             id="{{ periodo.lower() }}" role="tabpanel">
+                            
+                            {% set turmas_periodo = turmas.values() | selectattr('periodo', 'equalto', periodo) | list %}
+                            
+                            {% if turmas_periodo %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Nome da Turma</th>
+                                                <th>Atividade</th>
+                                                <th>Horário</th>
+                                                <th>Dias</th>
+                                                <th>Professor</th>
+                                                <th>Capacidade</th>
+                                                <th>Status</th>
+                                                <th>Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for turma in turmas_periodo %}
+                                            <tr id="turma-{{ turma.id }}">
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-users text-primary me-2"></i>
+                                                        <strong>{{ turma.nome }}</strong>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-info">{{ turma.atividade }}</span>
+                                                </td>
+                                                <td>
+                                                    <i class="fas fa-clock text-secondary me-1"></i>
+                                                    {{ turma.horario }}
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">{{ turma.dias_semana }}</small>
+                                                </td>
+                                                <td>
+                                                    {% if turma.professor_responsavel %}
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-user-tie me-1"></i>
+                                                            {{ professores[turma.professor_responsavel].nome if turma.professor_responsavel in professores else turma.professor_responsavel }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                                            Sem Professor
+                                                        </span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary">
+                                                        {{ turma.total_alunos }}/{{ turma.capacidade_maxima }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {% if turma.ativa %}
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-check-circle me-1"></i>Ativa
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">
+                                                            <i class="fas fa-times-circle me-1"></i>Inativa
+                                                        </span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <a href="{{ url_for('dashboard_turma', turma_id=turma.id) }}" 
+                                                           class="btn btn-outline-primary" 
+                                                           title="Ver Dashboard">
+                                                            <i class="fas fa-chart-line"></i>
+                                                        </a>
+                                                        <button class="btn btn-outline-warning" 
+                                                                onclick="editarTurma('{{ turma.id }}', '{{ turma.nome }}', '{{ turma.atividade }}', '{{ turma.horario }}', '{{ turma.dias_semana }}', '{{ turma.professor_responsavel }}', '{{ turma.capacidade_maxima }}', '{{ turma.ativa }}')"
+                                                                title="Editar">
+                                                            <i class="fas fa-pencil-alt"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-danger" 
+                                                                onclick="excluirTurma('{{ turma.id }}', '{{ turma.nome }}')"
+                                                                title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                                    <p>Nenhuma turma no período da {{ periodo.lower() }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-calendar-alt fa-3x mb-3"></i>
+                        <p>Nenhuma turma cadastrada ainda</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaTurma">
+                            <i class="fas fa-plus me-2"></i>
+                            Cadastrar Primeira Turma
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Turma -->
+<div class="modal fade" id="modalNovaTurma" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    Nova Turma
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNovaTurma">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nomeTurma" class="form-label">Nome da Turma <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nomeTurma" name="nome" required>
+                            <div class="form-text">Ex: Natação Infantil, Yoga Avançado</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="atividadeTurma" class="form-label">Atividade <span class="text-danger">*</span></label>
+                            <select class="form-select" id="atividadeTurma" name="atividade" required>
+                                <option value="">Selecione uma atividade</option>
+                                {% for atividade_nome in atividades.keys() %}
+                                <option value="{{ atividade_nome }}">{{ atividade_nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="horarioTurma" class="form-label">Horário <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="horarioTurma" name="horario" 
+                                   placeholder="08:00-09:00" pattern="[0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2}" required>
+                            <div class="form-text">Formato: HH:MM-HH:MM (ex: 08:00-09:00)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="diasTurma" class="form-label">Dias da Semana <span class="text-danger">*</span></label>
+                            <select class="form-select" id="diasTurma" name="dias_semana" required>
+                                <option value="">Selecione os dias</option>
+                                <option value="Segunda, Quarta, Sexta">Segunda, Quarta, Sexta</option>
+                                <option value="Terça, Quinta">Terça, Quinta</option>
+                                <option value="Segunda a Sexta">Segunda a Sexta</option>
+                                <option value="Sábado">Sábado</option>
+                                <option value="Segunda, Quarta">Segunda, Quarta</option>
+                                <option value="Terça, Quinta, Sábado">Terça, Quinta, Sábado</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="capacidadeTurma" class="form-label">Capacidade Máxima</label>
+                            <input type="number" class="form-control" id="capacidadeTurma" name="capacidade" 
+                                   min="1" max="50" value="20">
+                            <div class="form-text">Máximo de alunos na turma (1-50)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="professorTurma" class="form-label">Professor Responsável</label>
+                            <select class="form-select" id="professorTurma" name="professor">
+                                <option value="">Selecionar depois</option>
+                                {% for login, dados in professores.items() %}
+                                <option value="{{ login }}">{{ dados.nome }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Pode ser definido posteriormente</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="salvarNovaTurma()">
+                    <i class="fas fa-save me-2"></i>Criar Turma
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Turma -->
+<div class="modal fade" id="modalEditarTurma" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Turma
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarTurma">
+                    <input type="hidden" id="editTurmaId" name="turma_id">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editNome" class="form-label">Nome da Turma <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editNome" name="nome" required>
+                            <div class="form-text">Ex: Natação Infantil, Yoga Avançado</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editAtividade" class="form-label">Atividade <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editAtividade" name="atividade" required>
+                                <option value="">Selecione uma atividade</option>
+                                {% for atividade_nome in atividades.keys() %}
+                                <option value="{{ atividade_nome }}">{{ atividade_nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editHorario" class="form-label">Horário <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editHorario" name="horario" 
+                                   placeholder="08:00-09:00" pattern="[0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2}" required>
+                            <div class="form-text">Formato: HH:MM-HH:MM (ex: 08:00-09:00)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editDiasSemana" class="form-label">Dias da Semana <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editDiasSemana" name="dias_semana" required>
+                                <option value="">Selecione os dias</option>
+                                <option value="Segunda, Quarta, Sexta">Segunda, Quarta, Sexta</option>
+                                <option value="Terça, Quinta">Terça, Quinta</option>
+                                <option value="Segunda a Sexta">Segunda a Sexta</option>
+                                <option value="Sábado">Sábado</option>
+                                <option value="Segunda, Quarta">Segunda, Quarta</option>
+                                <option value="Terça, Quinta, Sábado">Terça, Quinta, Sábado</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editCapacidade" class="form-label">Capacidade Máxima</label>
+                            <input type="number" class="form-control" id="editCapacidade" name="capacidade" 
+                                   min="1" max="50">
+                            <div class="form-text">Máximo de alunos na turma (1-50)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editProfessor" class="form-label">Professor Responsável</label>
+                            <select class="form-select" id="editProfessor" name="professor">
+                                <option value="">Selecionar depois</option>
+                                {% for login, dados in professores.items() %}
+                                <option value="{{ login }}">{{ dados.nome }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Pode ser definido posteriormente</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="editAtiva" name="ativa">
+                        <label class="form-check-label" for="editAtiva">Turma Ativa</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" onclick="salvarEdicaoTurma()">
+                    <i class="fas fa-save me-2"></i>Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+function salvarNovaTurma() {
+    const form = document.getElementById('formNovaTurma');
+    const formData = new FormData(form);
+    
+    const nome = formData.get('nome').trim();
+    const atividade = formData.get('atividade');
+    const horario = formData.get('horario').trim();
+    const dias = formData.get('dias_semana');
+    
+    if (!nome || !atividade || !horario || !dias) {
+        showToast('error', 'Todos os campos obrigatórios devem ser preenchidos');
+        return;
+    }
+    
+    if (nome.length < 3) {
+        showToast('error', 'Nome da turma deve ter pelo menos 3 caracteres');
+        return;
+    }
+    
+    // Validar formato do horário
+    const horarioPattern = /^[0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2}$/;
+    if (!horarioPattern.test(horario)) {
+        showToast('error', 'Formato de horário inválido. Use: HH:MM-HH:MM');
+        return;
+    }
+    
+    $.ajax({
+        url: '/criar_turma',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                showToast('success', response.message);
+                $('#modalNovaTurma').modal('hide');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast('error', response.message);
+            }
+        },
+        error: function() {
+            showToast('error', 'Erro de conexão com o servidor');
+        }
+    });
+}
+
+function editarTurma(turmaId, nome, atividade, horario, diasSemana, professor, capacidade, ativa) {
+    // Preencher o formulário de edição
+    document.getElementById('editTurmaId').value = turmaId;
+    document.getElementById('editNome').value = nome;
+    document.getElementById('editAtividade').value = atividade;
+    document.getElementById('editHorario').value = horario;
+    document.getElementById('editDiasSemana').value = diasSemana;
+    document.getElementById('editProfessor').value = professor || '';
+    document.getElementById('editCapacidade').value = capacidade;
+    document.getElementById('editAtiva').checked = ativa === 'true' || ativa === true;
+    
+    // Mostrar o modal
+    $('#modalEditarTurma').modal('show');
+}
+
+function salvarEdicaoTurma() {
+    const form = document.getElementById('formEditarTurma');
+    const formData = new FormData(form);
+    
+    const nome = formData.get('nome').trim();
+    const atividade = formData.get('atividade');
+    const horario = formData.get('horario').trim();
+    const dias = formData.get('dias_semana');
+    
+    if (!nome || !atividade || !horario || !dias) {
+        showToast('error', 'Todos os campos obrigatórios devem ser preenchidos');
+        return;
+    }
+    
+    if (nome.length < 3) {
+        showToast('error', 'Nome da turma deve ter pelo menos 3 caracteres');
+        return;
+    }
+    
+    // Validar formato do horário
+    const horarioPattern = /^[0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2}$/;
+    if (!horarioPattern.test(horario)) {
+        showToast('error', 'Formato de horário inválido. Use: HH:MM-HH:MM');
+        return;
+    }
+    
+    $.ajax({
+        url: '/editar_turma',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                showToast('success', response.message);
+                $('#modalEditarTurma').modal('hide');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast('error', response.message);
+            }
+        },
+        error: function() {
+            showToast('error', 'Erro de conexão com o servidor');
+        }
+    });
+}
+
+function excluirTurma(turmaId, nomeTurma) {
+    if (!confirm(`Tem certeza que deseja excluir a turma "${nomeTurma}"?\n\nEsta ação não pode ser desfeita!`)) {
+        return;
+    }
+    
+    $.ajax({
+        url: `/excluir_turma/${encodeURIComponent(turmaId)}`,
+        method: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                showToast('success', response.message);
+                $(`#turma-${turmaId}`).fadeOut(500, function() {
+                    $(this).remove();
+                });
+            } else {
+                showToast('error', response.message);
+            }
+        },
+        error: function() {
+            showToast('error', 'Erro de conexão com o servidor');
+        }
+    });
+}
+
+function showToast(type, message) {
+    const toastClass = type === 'success' ? 'bg-success' : 'bg-danger';
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+    
+    const toast = $(`
+        <div class="toast position-fixed top-0 end-0 m-3 ${toastClass} text-white" role="alert" style="z-index: 1055;">
+            <div class="toast-header ${toastClass} text-white border-0">
+                <i class="fas ${icon} me-2"></i>
+                <strong class="me-auto">${type === 'success' ? 'Sucesso' : 'Erro'}</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
+        </div>
+    `);
+    
+    $('body').append(toast);
+    const bsToast = new bootstrap.Toast(toast[0]);
+    bsToast.show();
+    
+    toast.on('hidden.bs.toast', function() {
+        $(this).remove();
+    });
+}
+</script>
+{% endblock %}

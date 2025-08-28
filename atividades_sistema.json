@@ -1,0 +1,101 @@
+{
+  "Bomveiro mirim": {
+    "nome": "Bomveiro mirim",
+    "descricao": "Atividade de Bomveiro mirim",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 1
+  },
+  "Karatè": {
+    "nome": "Karatè",
+    "descricao": "Atividade de Karatè",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 4
+  },
+  "Bombeiro mirim": {
+    "nome": "Bombeiro mirim",
+    "descricao": "Atividade de Bombeiro mirim",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 7
+  },
+  "Hidroginastica": {
+    "nome": "Hidroginastica",
+    "descricao": "Atividade de Hidroginastica",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 52
+  },
+  "Capoeira": {
+    "nome": "Capoeira",
+    "descricao": "Atividade de Capoeira",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 1
+  },
+  "Informática": {
+    "nome": "Informática",
+    "descricao": "Atividade de Informática",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 90
+  },
+  "Karatê": {
+    "nome": "Karatê",
+    "descricao": "Atividade de Karatê",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 23
+  },
+  "Dança": {
+    "nome": "Dança",
+    "descricao": "Atividade de Dança",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 55
+  },
+  "Natação": {
+    "nome": "Natação",
+    "descricao": "Atividade de Natação",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 91
+  },
+  "Funcional": {
+    "nome": "Funcional",
+    "descricao": "Atividade de Funcional",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 51
+  },
+  "Fisioterapia": {
+    "nome": "Fisioterapia",
+    "descricao": "Atividade de Fisioterapia",
+    "ativa": true,
+    "data_criacao": "28/08/2025",
+    "criado_por": "sistema_automatico",
+    "professores_vinculados": [],
+    "total_alunos": 64
+  }
+}

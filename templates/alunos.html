@@ -9,6 +9,22 @@
             <i class="fas fa-users text-primary"></i>
             Alunos Cadastrados
         </h1>
+        {% if nivel_usuario == 'usuario' %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Visualização Restrita:</strong> Você está vendo apenas os alunos da sua atividade responsável.
+        </div>
+        {% elif nivel_usuario == 'admin' %}
+        <div class="alert alert-success text-center">
+            <i class="fas fa-shield-alt me-2"></i>
+            <strong>Acesso Administrativo:</strong> Você pode visualizar e gerenciar todos os alunos.
+        </div>
+        {% elif nivel_usuario == 'admin_master' %}
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-crown me-2"></i>
+            <strong>Acesso Master:</strong> Você tem controle total sobre o sistema.
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -104,6 +120,27 @@
     <div class="card-body">
         {% if alunos %}
             <div class="table-responsive">
+                {% if nivel_usuario == 'usuario' %}
+                <!-- Tabela simplificada para professores -->
+                <table class="table table-hover table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">
+                                <i class="fas fa-user me-1"></i>
+                                Nome do Aluno
+                            </th>
+                            <th scope="col">
+                                <i class="fas fa-chart-bar me-1"></i>
+                                Status de Frequência
+                            </th>
+                            <th scope="col">
+                                <i class="fas fa-cogs me-1"></i>
+                                Ações
+                            </th>
+                        </tr>
+                    </thead>
+                {% else %}
+                <!-- Tabela completa para admins -->
                 <table class="table table-hover table-striped">
                     <thead class="table-dark">
                         <tr>
@@ -141,9 +178,11 @@
                             </th>
                         </tr>
                     </thead>
+                {% endif %}
                     <tbody>
                         {% for aluno in alunos %}
                         <tr>
+                            <!-- Nome (sempre mostrado) -->
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-circle bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
@@ -153,6 +192,9 @@
                                     <strong>{{ aluno.nome }}</strong>
                                 </div>
                             </td>
+                            
+                            {% if nivel_usuario != 'usuario' %}
+                            <!-- Dados completos para admins -->
                             <td>
                                 <a href="tel:{{ aluno.telefone }}" class="text-decoration-none">
                                     <i class="fas fa-phone-alt text-success me-1"></i>
@@ -221,6 +263,7 @@
                                     </span>
                                 {% endif %}
                             </td>
+                            <!-- Frequência -->
                             <td>
                                 {% if aluno.status_frequencia == 'Dados disponíveis' %}
                                     <span class="badge bg-success">
@@ -240,6 +283,7 @@
                                     </span>
                                 {% endif %}
                             </td>
+                            <!-- Ações Admin/Admin Master -->
                             <td>
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-sm btn-outline-primary" 
@@ -254,6 +298,49 @@
                                     </button>
                                 </div>
                             </td>
+                            {% else %}
+                            <!-- Versão simplificada para professores -->
+                            <!-- Status de Frequência -->
+                            <td>
+                                {% if aluno.status_frequencia == 'Dados disponíveis' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        Disponível
+                                    </span>
+                                {% elif 'Aguardando' in aluno.status_frequencia %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Aguardando
+                                    </span>
+                                    <br><small class="text-muted">{{ aluno.status_frequencia }}</small>
+                                {% elif 'frequência' in aluno.status_frequencia.lower() %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-chart-line me-1"></i>
+                                        {{ aluno.status_frequencia }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-user me-1"></i>
+                                        {{ aluno.status_frequencia }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <!-- Ações Professor -->
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-success" 
+                                            onclick="marcarPresencaAluno('{{ aluno.nome }}')" 
+                                            title="Marcar presença">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info" 
+                                            onclick="gerenciarFrequencia('{{ aluno.nome }}')" 
+                                            title="Gerenciar frequência">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -273,8 +360,8 @@
     </div>
 </div>
 
-<!-- Cards de Contato Rápido -->
-{% if alunos %}
+<!-- Cards de Contato Rápido (apenas para admins) -->
+{% if alunos and nivel_usuario in ['admin', 'admin_master'] %}
 <div class="row mt-4">
     <div class="col-12">
         <h5 class="mb-3">

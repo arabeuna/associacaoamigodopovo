@@ -9,17 +9,67 @@ import io
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'associacao_amigo_do_povo_2024_secure_key')
 
-# Usuários do sistema
+# Usuários do sistema com controle hierárquico
 USUARIOS = {
+    # ADMIN MASTER - Controle total do sistema e gerenciamento de colaboradores
+    'admin_master': {
+        'senha': hashlib.sha256('master123'.encode()).hexdigest(),
+        'nome': 'Admin Master',
+        'nivel': 'admin_master',
+        'permissoes': ['gerenciar_colaboradores', 'todas_funcoes'],
+        'ativo': True,
+        'data_criacao': '01/01/2024'
+    },
+    'admin_master2': {
+        'senha': hashlib.sha256('master456'.encode()).hexdigest(),
+        'nome': 'Admin Master 2',
+        'nivel': 'admin_master',
+        'permissoes': ['gerenciar_colaboradores', 'todas_funcoes'],
+        'ativo': True,
+        'data_criacao': '01/01/2024'
+    },
+    'admin_master3': {
+        'senha': hashlib.sha256('master789'.encode()).hexdigest(),
+        'nome': 'Admin Master 3',
+        'nivel': 'admin_master',
+        'permissoes': ['gerenciar_colaboradores', 'todas_funcoes'],
+        'ativo': True,
+        'data_criacao': '01/01/2024'
+    },
+    
+    # ADMINISTRADOR - Todas as funções exceto gerenciamento de colaboradores
     'admin': {
         'senha': hashlib.sha256('admin123'.encode()).hexdigest(),
-        'nome': 'Administrador',
-        'nivel': 'admin'
+        'nome': 'Administrador Geral',
+        'nivel': 'admin',
+        'permissoes': ['cadastrar_alunos', 'editar_alunos', 'excluir_alunos', 'ver_todos_alunos', 'gerar_relatorios', 'backup_planilhas'],
+        'ativo': True,
+        'data_criacao': '02/01/2024',
+        'criado_por': 'admin_master'
     },
-    'usuario': {
-        'senha': hashlib.sha256('usuario123'.encode()).hexdigest(), 
-        'nome': 'Usuário',
-        'nivel': 'usuario'
+    
+    # USUÁRIOS/PROFESSORES - Acesso restrito aos seus próprios alunos
+    'prof_natacao': {
+        'senha': hashlib.sha256('natacao123'.encode()).hexdigest(),
+        'nome': 'Professor de Natação',
+        'nivel': 'usuario',
+        'permissoes': ['consultar_meus_alunos', 'gerenciar_frequencia_meus_alunos'],
+        'atividade_responsavel': 'Natação',
+        'alunos_atribuidos': [],  # Lista de IDs ou nomes dos alunos atribuídos
+        'ativo': True,
+        'data_criacao': '03/01/2024',
+        'criado_por': 'admin_master'
+    },
+    'prof_informatica': {
+        'senha': hashlib.sha256('info123'.encode()).hexdigest(),
+        'nome': 'Professor de Informática',
+        'nivel': 'usuario',
+        'permissoes': ['consultar_meus_alunos', 'gerenciar_frequencia_meus_alunos'],
+        'atividade_responsavel': 'Informática',
+        'alunos_atribuidos': [],
+        'ativo': True,
+        'data_criacao': '03/01/2024',
+        'criado_por': 'admin_master'
     }
 }
 
@@ -38,8 +88,12 @@ def allowed_file(filename):
 class SistemaAcademia:
     def __init__(self):
         self.arquivo_dados = 'dados_alunos.json'
+        self.arquivo_atividades = 'atividades_sistema.json'
+        self.arquivo_turmas = 'turmas_sistema.json'
         self.alunos_reais = self.carregar_dados_reais()
         self.atividades_disponiveis = self.get_atividades_disponiveis()
+        self.atividades_cadastradas = self.carregar_atividades()
+        self.turmas_cadastradas = self.carregar_turmas()
         self.dados_presenca = self.carregar_dados_presenca()
         # Atualizar status de frequência com dados de presença
         self.atualizar_status_frequencia_informatica()
@@ -237,14 +291,384 @@ class SistemaAcademia:
         atividades = set(aluno['atividade'] for aluno in self.alunos_reais)
         return sorted(list(atividades))
     
+    def carregar_atividades(self):
+        """Carrega atividades cadastradas do arquivo JSON"""
+        try:
+            if os.path.exists(self.arquivo_atividades):
+                with open(self.arquivo_atividades, 'r', encoding='utf-8') as f:
+                    atividades = json.load(f)
+                    print(f"🎯 Atividades carregadas: {len(atividades)} atividades")
+                    return atividades
+            else:
+                # Criar atividades baseadas nos dados existentes
+                atividades_auto = self.criar_atividades_automaticas()
+                self.salvar_atividades(atividades_auto)
+                return atividades_auto
+        except Exception as e:
+            print(f"❌ Erro ao carregar atividades: {e}")
+            return self.criar_atividades_automaticas()
+    
+    def criar_atividades_automaticas(self):
+        """Cria atividades baseadas nos alunos existentes"""
+        atividades_encontradas = set()
+        for aluno in self.alunos_reais:
+            atividade = aluno.get('atividade', '').strip()
+            if atividade and atividade != 'A definir':
+                atividades_encontradas.add(atividade)
+        
+        atividades_cadastradas = {}
+        for atividade in atividades_encontradas:
+            atividades_cadastradas[atividade] = {
+                'nome': atividade,
+                'descricao': f'Atividade de {atividade}',
+                'ativa': True,
+                'data_criacao': datetime.now().strftime('%d/%m/%Y'),
+                'criado_por': 'sistema_automatico',
+                'professores_vinculados': [],
+                'total_alunos': len(self.get_alunos_por_atividade(atividade))
+            }
+        
+        print(f"🎯 Criadas {len(atividades_cadastradas)} atividades automaticamente")
+        return atividades_cadastradas
+    
+    def salvar_atividades(self, atividades=None):
+        """Salva atividades no arquivo JSON"""
+        try:
+            dados_para_salvar = atividades if atividades is not None else self.atividades_cadastradas
+            with open(self.arquivo_atividades, 'w', encoding='utf-8') as f:
+                json.dump(dados_para_salvar, f, ensure_ascii=False, indent=2)
+            print(f"💾 Atividades salvas: {len(dados_para_salvar)} atividades")
+            return True
+        except Exception as e:
+            print(f"❌ Erro ao salvar atividades: {e}")
+            return False
+    
     def get_alunos_por_atividade(self, atividade):
         """Retorna alunos de uma atividade"""
         return [aluno for aluno in self.alunos_reais if aluno['atividade'] == atividade]
     
-    def get_estatisticas(self):
+    def cadastrar_atividade(self, nome, descricao, criado_por, professor=None):
+        """Cadastra uma nova atividade"""
+        try:
+            if nome in self.atividades_cadastradas:
+                return False, "Atividade já existe"
+            
+            professores_vinculados = []
+            if professor and professor.strip():
+                professores_vinculados.append(professor)
+            
+            self.atividades_cadastradas[nome] = {
+                'nome': nome,
+                'descricao': descricao,
+                'ativa': True,
+                'data_criacao': datetime.now().strftime('%d/%m/%Y'),
+                'criado_por': criado_por,
+                'professores_vinculados': professores_vinculados,
+                'total_alunos': 0
+            }
+            
+            if self.salvar_atividades():
+                return True, f"Atividade {nome} cadastrada com sucesso"
+            else:
+                return False, "Erro ao salvar atividade"
+                
+        except Exception as e:
+            return False, f"Erro ao cadastrar atividade: {str(e)}"
+    
+    def excluir_atividade(self, nome_atividade):
+        """Exclui uma atividade (mesmo com alunos vinculados)"""
+        try:
+            if nome_atividade not in self.atividades_cadastradas:
+                return False, "Atividade não encontrada"
+            
+            # Verificar se há alunos vinculados
+            alunos_atividade = self.get_alunos_por_atividade(nome_atividade)
+            
+            # Remover atividade
+            del self.atividades_cadastradas[nome_atividade]
+            
+            # Se houver alunos vinculados, remover a vinculação
+            if alunos_atividade:
+                for aluno in alunos_atividade:
+                    # Encontrar o aluno na lista de alunos reais
+                    for aluno_real in self.alunos_reais:
+                        if aluno_real['nome'] == aluno['nome']:
+                            # Remover a atividade do aluno
+                            aluno_real['atividade'] = ''
+                            aluno_real['turma'] = ''
+                            break
+                # Salvar alterações nos alunos
+                self.salvar_dados_reais()
+            
+            if self.salvar_atividades():
+                return True, f"Atividade {nome_atividade} excluída com sucesso"
+            else:
+                return False, "Erro ao salvar alterações"
+                
+        except Exception as e:
+            return False, f"Erro ao excluir atividade: {str(e)}"
+            
+    def editar_atividade(self, nome_antigo, nome_novo, descricao_nova, professor_novo=None):
+        """Edita uma atividade existente"""
+        try:
+            if nome_antigo not in self.atividades_cadastradas:
+                return False, "Atividade não encontrada"
+            
+            # Se o nome for alterado, verificar se o novo nome já existe
+            if nome_antigo != nome_novo and nome_novo in self.atividades_cadastradas:
+                return False, f"Já existe uma atividade com o nome '{nome_novo}'"
+            
+            # Obter dados da atividade atual
+            atividade_atual = self.atividades_cadastradas[nome_antigo].copy()
+            
+            # Atualizar dados
+            atividade_atual['nome'] = nome_novo
+            atividade_atual['descricao'] = descricao_nova
+            
+            # Atualizar professor vinculado se fornecido
+            if professor_novo is not None:
+                if professor_novo.strip():
+                    # Se já existe uma lista de professores, atualizar o primeiro professor
+                    if atividade_atual.get('professores_vinculados') and len(atividade_atual['professores_vinculados']) > 0:
+                        atividade_atual['professores_vinculados'][0] = professor_novo
+                    else:
+                        atividade_atual['professores_vinculados'] = [professor_novo]
+                else:
+                    # Se o professor_novo está vazio, limpar a lista de professores
+                    atividade_atual['professores_vinculados'] = []
+            
+            # Se o nome mudou, remover a antiga e adicionar a nova
+            if nome_antigo != nome_novo:
+                # Remover a atividade antiga
+                del self.atividades_cadastradas[nome_antigo]
+                
+                # Adicionar com o novo nome
+                self.atividades_cadastradas[nome_novo] = atividade_atual
+                
+                # Atualizar a atividade nos alunos
+                for aluno in self.alunos_reais:
+                    if aluno.get('atividade') == nome_antigo:
+                        aluno['atividade'] = nome_novo
+                
+                # Salvar alterações nos alunos
+                self.salvar_dados_reais()
+            else:
+                # Apenas atualizar os dados da atividade existente
+                self.atividades_cadastradas[nome_antigo] = atividade_atual
+            
+            if self.salvar_atividades():
+                return True, f"Atividade atualizada com sucesso"
+            else:
+                return False, "Erro ao salvar alterações"
+                
+        except Exception as e:
+            return False, f"Erro ao editar atividade: {str(e)}"
+    
+    # === GESTÃO DE TURMAS ===
+    
+    def carregar_turmas(self):
+        """Carrega turmas cadastradas do arquivo JSON"""
+        try:
+            if os.path.exists(self.arquivo_turmas):
+                with open(self.arquivo_turmas, 'r', encoding='utf-8') as f:
+                    turmas = json.load(f)
+                    print(f"📅 Turmas carregadas: {len(turmas)} turmas")
+                    return turmas
+            else:
+                # Criar turmas básicas automaticamente
+                turmas_auto = self.criar_turmas_automaticas()
+                self.salvar_turmas(turmas_auto)
+                return turmas_auto
+        except Exception as e:
+            print(f"❌ Erro ao carregar turmas: {e}")
+            return {}
+    
+    def criar_turmas_automaticas(self):
+        """Cria turmas básicas baseadas nas atividades existentes"""
+        turmas_cadastradas = {}
+        turma_id = 1
+        
+        # Horários padrão
+        horarios_manha = ["07:00-08:00", "08:00-09:00", "09:00-10:00", "10:00-11:00"]
+        horarios_tarde = ["14:00-15:00", "15:00-16:00", "16:00-17:00", "17:00-18:00"]
+        horarios_noite = ["18:00-19:00", "19:00-20:00", "20:00-21:00"]
+        
+        for atividade_nome in self.atividades_cadastradas.keys():
+            # Criar 2-3 turmas por atividade
+            for i, horario in enumerate(horarios_manha[:2] + horarios_tarde[:1]):
+                turma_nome = f"{atividade_nome} - Turma {i+1}"
+                turma_key = f"turma_{turma_id}"
+                
+                periodo = "Manhã" if horario in horarios_manha else "Tarde" if horario in horarios_tarde else "Noite"
+                dias = "Segunda, Quarta, Sexta" if i % 2 == 0 else "Terça, Quinta"
+                
+                turmas_cadastradas[turma_key] = {
+                    'id': turma_key,
+                    'nome': turma_nome,
+                    'atividade': atividade_nome,
+                    'horario': horario,
+                    'dias_semana': dias,
+                    'periodo': periodo,
+                    'capacidade_maxima': 20,
+                    'professor_responsavel': '',
+                    'ativa': True,
+                    'data_criacao': datetime.now().strftime('%d/%m/%Y'),
+                    'criado_por': 'sistema_automatico',
+                    'total_alunos': 0,
+                    'descricao': f'Turma de {atividade_nome} - {periodo}'
+                }
+                turma_id += 1
+        
+        print(f"📅 Criadas {len(turmas_cadastradas)} turmas automaticamente")
+        return turmas_cadastradas
+    
+    def salvar_turmas(self, turmas=None):
+        """Salva turmas no arquivo JSON"""
+        try:
+            dados_para_salvar = turmas if turmas is not None else self.turmas_cadastradas
+            with open(self.arquivo_turmas, 'w', encoding='utf-8') as f:
+                json.dump(dados_para_salvar, f, ensure_ascii=False, indent=2)
+            print(f"💾 Turmas salvas: {len(dados_para_salvar)} turmas")
+            return True
+        except Exception as e:
+            print(f"❌ Erro ao salvar turmas: {e}")
+            return False
+    
+    def cadastrar_turma(self, nome, atividade, horario, dias_semana, capacidade, professor, criado_por):
+        """Cadastra uma nova turma"""
+        try:
+            # Gerar ID único
+            turma_id = f"turma_{len(self.turmas_cadastradas) + 1}"
+            while turma_id in self.turmas_cadastradas:
+                turma_id = f"turma_{len(self.turmas_cadastradas) + 2}"
+            
+            # Determinar período
+            hora_inicio = int(horario.split(':')[0])
+            if hora_inicio < 12:
+                periodo = "Manhã"
+            elif hora_inicio < 18:
+                periodo = "Tarde"
+            else:
+                periodo = "Noite"
+            
+            self.turmas_cadastradas[turma_id] = {
+                'id': turma_id,
+                'nome': nome,
+                'atividade': atividade,
+                'horario': horario,
+                'dias_semana': dias_semana,
+                'periodo': periodo,
+                'capacidade_maxima': int(capacidade),
+                'professor_responsavel': professor,
+                'ativa': True,
+                'data_criacao': datetime.now().strftime('%d/%m/%Y'),
+                'criado_por': criado_por,
+                'total_alunos': 0,
+                'descricao': f'{nome} - {periodo}'
+            }
+            
+            if self.salvar_turmas():
+                return True, f"Turma {nome} cadastrada com sucesso"
+            else:
+                return False, "Erro ao salvar turma"
+                
+        except Exception as e:
+            return False, f"Erro ao cadastrar turma: {str(e)}"
+    
+    def excluir_turma(self, turma_id):
+        """Exclui uma turma (mesmo com alunos vinculados)"""
+        try:
+            if turma_id not in self.turmas_cadastradas:
+                return False, "Turma não encontrada"
+            
+            turma = self.turmas_cadastradas[turma_id]
+            
+            # Se houver alunos vinculados, remover a vinculação
+            if turma['total_alunos'] > 0:
+                # Encontrar alunos desta turma
+                for aluno in self.alunos_reais:
+                    if aluno.get('turma') == turma['nome']:
+                        # Remover a turma do aluno
+                        aluno['turma'] = ''
+                        # Se a atividade for a mesma da turma, remover também
+                        if aluno.get('atividade') == turma['atividade']:
+                            aluno['atividade'] = ''
+                # Salvar alterações nos alunos
+                self.salvar_dados_reais()
+            
+            # Remover turma
+            del self.turmas_cadastradas[turma_id]
+            
+            if self.salvar_turmas():
+                return True, f"Turma {turma['nome']} excluída com sucesso"
+            else:
+                return False, "Erro ao salvar alterações"
+                
+        except Exception as e:
+            return False, f"Erro ao excluir turma: {str(e)}"
+    
+    def get_turmas_por_atividade(self, atividade):
+        """Retorna turmas de uma atividade"""
+        return {k: v for k, v in self.turmas_cadastradas.items() if v['atividade'] == atividade}
+    
+    def get_turmas_por_professor(self, professor):
+        """Retorna turmas de um professor"""
+        return {k: v for k, v in self.turmas_cadastradas.items() if v['professor_responsavel'] == professor}
+        
+    def editar_turma(self, turma_id, nome, atividade, horario, dias_semana, capacidade, professor, ativa):
+        """Edita uma turma existente"""
+        try:
+            if turma_id not in self.turmas_cadastradas:
+                return False, "Turma não encontrada"
+            
+            # Obter dados da turma atual
+            turma = self.turmas_cadastradas[turma_id]
+            nome_antigo = turma['nome']
+            
+            # Determinar período
+            hora_inicio = int(horario.split(':')[0])
+            if hora_inicio < 12:
+                periodo = "Manhã"
+            elif hora_inicio < 18:
+                periodo = "Tarde"
+            else:
+                periodo = "Noite"
+            
+            # Atualizar dados
+            turma['nome'] = nome
+            turma['atividade'] = atividade
+            turma['horario'] = horario
+            turma['dias_semana'] = dias_semana
+            turma['periodo'] = periodo
+            turma['capacidade_maxima'] = int(capacidade)
+            turma['professor_responsavel'] = professor
+            turma['ativa'] = ativa == 'true' or ativa == True
+            
+            # Se o nome mudou, atualizar nos alunos
+            if nome_antigo != nome:
+                for aluno in self.alunos_reais:
+                    if aluno.get('turma') == nome_antigo:
+                        aluno['turma'] = nome
+                # Salvar alterações nos alunos
+                self.salvar_dados_reais()
+            
+            if self.salvar_turmas():
+                return True, f"Turma {nome} atualizada com sucesso"
+            else:
+                return False, "Erro ao salvar alterações"
+                
+        except Exception as e:
+            return False, f"Erro ao editar turma: {str(e)}"
+    
+    def get_estatisticas(self, filtro_atividade=None):
         """Estatísticas básicas com dados reais de presença"""
+        # Filtrar alunos se especificado
+        alunos_filtrados = self.alunos_reais
+        if filtro_atividade:
+            alunos_filtrados = [aluno for aluno in self.alunos_reais if aluno.get('atividade') == filtro_atividade]
+        
         atividades_count = {}
-        for aluno in self.alunos_reais:
+        for aluno in alunos_filtrados:
             atividade = aluno['atividade']
             atividades_count[atividade] = atividades_count.get(atividade, 0) + 1
         
@@ -252,25 +676,47 @@ class SistemaAcademia:
         data_hoje = datetime.now().strftime('%d/%m/%Y')
         presencas_hoje = 0
         
+        # Se há filtro de atividade, contar apenas presenças dessa atividade
         for nome, dados in self.dados_presenca.items():
+            # Verificar se o aluno pertence à atividade filtrada
+            if filtro_atividade:
+                aluno_encontrado = None
+                for aluno in self.alunos_reais:
+                    if aluno['nome'] == nome and aluno.get('atividade') == filtro_atividade:
+                        aluno_encontrado = aluno
+                        break
+                if not aluno_encontrado:
+                    continue
+            
             for registro in dados['registros']:
                 if registro.get('data') == data_hoje and registro.get('status') == 'P':
                     presencas_hoje += 1
         
-        # Calcular total de registros de presença
+        # Calcular total de registros de presença (filtrados se necessário)
         total_registros = 0
-        for dados in self.dados_presenca.values():
-            total_registros += len(dados['registros'])
+        alunos_com_presenca = 0
         
-        # Calcular alunos com presença registrada
-        alunos_com_presenca = len(self.dados_presenca)
+        for nome, dados in self.dados_presenca.items():
+            # Verificar se o aluno pertence à atividade filtrada
+            if filtro_atividade:
+                aluno_encontrado = None
+                for aluno in self.alunos_reais:
+                    if aluno['nome'] == nome and aluno.get('atividade') == filtro_atividade:
+                        aluno_encontrado = aluno
+                        break
+                if not aluno_encontrado:
+                    continue
+            
+            total_registros += len(dados['registros'])
+            alunos_com_presenca += 1
         
         return {
-            'total_alunos': len(self.alunos_reais),
+            'total_alunos': len(alunos_filtrados),
             'presencas_hoje': presencas_hoje,
-            'presencas_semana': total_registros,  # Renomeado para ser mais descritivo
+            'presencas_semana': total_registros,
             'alunos_ativos': alunos_com_presenca,
-            'atividades_count': atividades_count
+            'atividades_count': atividades_count,
+            'atividade_filtrada': filtro_atividade
         }
     
     def get_alunos(self):
@@ -1083,6 +1529,54 @@ academia = SistemaAcademia()
 def verificar_login():
     return 'usuario_logado' in session
 
+def verificar_permissao(permissao_necessaria):
+    """Verifica se o usuário logado tem a permissão necessária"""
+    if not verificar_login():
+        return False
+    
+    usuario_logado = session.get('usuario_logado')
+    if not usuario_logado or usuario_logado not in USUARIOS:
+        return False
+    
+    usuario_dados = USUARIOS[usuario_logado]
+    
+    # Admin Master tem todas as permissões
+    if usuario_dados.get('nivel') == 'admin_master':
+        return True
+    
+    # Verificar se o usuário tem a permissão específica
+    permissoes_usuario = usuario_dados.get('permissoes', [])
+    return permissao_necessaria in permissoes_usuario
+
+def apenas_admin_master(f):
+    """Decorator para funções que só Admin Master pode acessar"""
+    def wrapper(*args, **kwargs):
+        if not verificar_login():
+            return redirect(url_for('login'))
+        
+        if session.get('usuario_nivel') != 'admin_master':
+            flash('Acesso negado! Apenas Admin Master pode acessar esta funcionalidade.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        return f(*args, **kwargs)
+    wrapper.__name__ = f.__name__
+    return wrapper
+
+def apenas_admin_ou_master(f):
+    """Decorator para funções que Admin e Admin Master podem acessar"""
+    def wrapper(*args, **kwargs):
+        if not verificar_login():
+            return redirect(url_for('login'))
+        
+        nivel = session.get('usuario_nivel')
+        if nivel not in ['admin', 'admin_master']:
+            flash('Acesso negado! Apenas administradores podem acessar esta funcionalidade.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        return f(*args, **kwargs)
+    wrapper.__name__ = f.__name__
+    return wrapper
+
 def login_obrigatorio(f):
     def wrapper(*args, **kwargs):
         if not verificar_login():
@@ -1090,6 +1584,56 @@ def login_obrigatorio(f):
         return f(*args, **kwargs)
     wrapper.__name__ = f.__name__
     return wrapper
+
+def obter_alunos_usuario():
+    """Retorna lista de alunos que o usuário logado pode ver"""
+    usuario_logado = session.get('usuario_logado')
+    nivel_usuario = session.get('usuario_nivel')
+    
+    # Admin Master e Admin veem todos os alunos
+    if nivel_usuario in ['admin_master', 'admin']:
+        return academia.get_alunos()
+    
+    # Usuários veem apenas seus alunos atribuídos
+    if nivel_usuario == 'usuario' and usuario_logado in USUARIOS:
+        usuario_dados = USUARIOS[usuario_logado]
+        atividade_responsavel = usuario_dados.get('atividade_responsavel')
+        
+        if atividade_responsavel:
+            # Retornar alunos da atividade do professor
+            return academia.get_alunos_por_atividade(atividade_responsavel)
+    
+    return []
+
+def salvar_usuarios():
+    """Salva dados de usuários em arquivo JSON"""
+    try:
+        arquivo_usuarios = 'usuarios_sistema.json'
+        with open(arquivo_usuarios, 'w', encoding='utf-8') as f:
+            # Preparar dados para salvar (sem senhas em texto claro)
+            usuarios_para_salvar = {}
+            for usuario, dados in USUARIOS.items():
+                usuarios_para_salvar[usuario] = dados.copy()
+            
+            json.dump(usuarios_para_salvar, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        print(f"❌ Erro ao salvar usuários: {e}")
+        return False
+
+def carregar_usuarios():
+    """Carrega dados de usuários do arquivo JSON"""
+    try:
+        arquivo_usuarios = 'usuarios_sistema.json'
+        if os.path.exists(arquivo_usuarios):
+            with open(arquivo_usuarios, 'r', encoding='utf-8') as f:
+                usuarios_carregados = json.load(f)
+                USUARIOS.update(usuarios_carregados)
+                print(f"👥 Usuários carregados: {len(USUARIOS)} contas")
+                return True
+    except Exception as e:
+        print(f"❌ Erro ao carregar usuários: {e}")
+    return False
 
 # ROTAS
 @app.route('/')
@@ -1128,7 +1672,28 @@ def logout():
 @app.route('/dashboard')
 @login_obrigatorio
 def dashboard():
-    stats = academia.get_estatisticas()
+    nivel_usuario = session.get('usuario_nivel')
+    usuario_logado = session.get('usuario_logado')
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    
+    # Para professores/usuários, redirecionar para dashboard da sua atividade
+    if nivel_usuario == 'usuario' and usuario_logado in USUARIOS:
+        atividade_responsavel = USUARIOS[usuario_logado].get('atividade_responsavel')
+        if atividade_responsavel:
+            # Redirecionar para dashboard específico da atividade
+            return redirect(url_for('dashboard_atividade', nome_atividade=atividade_responsavel))
+        else:
+            # Se não tem atividade definida, mostrar dashboard básico
+            flash('Nenhuma atividade atribuída. Entre em contato com o administrador.', 'warning')
+            return render_template('dashboard.html', 
+                                 stats={'total_alunos': 0, 'presencas_hoje': 0, 'presencas_semana': 0, 'alunos_ativos': 0},
+                                 presencas_hoje=[],
+                                 usuario_nome=usuario_nome,
+                                 nivel_usuario=nivel_usuario)
+    
+    else:
+        # Para admin e admin_master, mostrar dados completos
+        stats = academia.get_estatisticas()
     
     # Obter presenças de hoje
     data_hoje = datetime.now().strftime('%d/%m/%Y')
@@ -1144,22 +1709,37 @@ def dashboard():
                     'Observações': 'Presença registrada'
                 })
     
-    usuario_nome = session.get('usuario_nome', 'Usuário')
-    return render_template('dashboard.html', stats=stats, presencas_hoje=presencas_hoje, usuario_nome=usuario_nome)
+        return render_template('dashboard.html', 
+                             stats=stats, 
+                             presencas_hoje=presencas_hoje, 
+                             usuario_nome=usuario_nome,
+                             nivel_usuario=nivel_usuario)
 
 @app.route('/alunos')
 @login_obrigatorio
 def alunos():
-    lista_alunos = academia.get_alunos()
+    # Obter alunos baseado no nível de acesso do usuário
+    lista_alunos = obter_alunos_usuario()
     usuario_nome = session.get('usuario_nome', 'Usuário')
-    return render_template('alunos.html', alunos=lista_alunos, usuario_nome=usuario_nome)
+    nivel_usuario = session.get('usuario_nivel', 'usuario')
+    
+    return render_template('alunos.html', 
+                         alunos=lista_alunos, 
+                         usuario_nome=usuario_nome,
+                         nivel_usuario=nivel_usuario)
 
 @app.route('/presenca')
 @login_obrigatorio
 def presenca():
-    lista_alunos = academia.get_alunos()
+    # Obter alunos baseado no nível de acesso do usuário
+    lista_alunos = obter_alunos_usuario()
     usuario_nome = session.get('usuario_nome', 'Usuário')
-    return render_template('presenca.html', alunos=lista_alunos, usuario_nome=usuario_nome)
+    nivel_usuario = session.get('usuario_nivel', 'usuario')
+    
+    return render_template('presenca.html', 
+                         alunos=lista_alunos, 
+                         usuario_nome=usuario_nome,
+                         nivel_usuario=nivel_usuario)
 
 @app.route('/busca_avancada')
 @login_obrigatorio
@@ -1176,7 +1756,7 @@ def relatorios():
     return render_template('relatorios.html', meses=meses, mes_selecionado='Dezembro', usuario_nome=usuario_nome)
 
 @app.route('/novo_aluno')
-@login_obrigatorio
+@apenas_admin_ou_master
 def novo_aluno():
     usuario_nome = session.get('usuario_nome', 'Usuário')
     return render_template('novo_aluno.html', usuario_nome=usuario_nome)
@@ -1190,6 +1770,21 @@ def marcar_presenca():
         if not nome_aluno:
             return jsonify({'success': False, 'message': 'Nome do aluno é obrigatório'})
         
+        # Verificar se o usuário tem permissão para marcar presença deste aluno
+        nivel_usuario = session.get('usuario_nivel')
+        usuario_logado = session.get('usuario_logado')
+        
+        if nivel_usuario == 'usuario':
+            # Usuários só podem marcar presença de alunos da sua atividade
+            alunos_permitidos = obter_alunos_usuario()
+            nomes_permitidos = [aluno['nome'] for aluno in alunos_permitidos]
+            
+            if nome_aluno not in nomes_permitidos:
+                return jsonify({
+                    'success': False, 
+                    'message': 'Você só pode marcar presença dos alunos da sua atividade responsável'
+                })
+        
         # Registrar presença manual
         sucesso, mensagem = academia.registrar_presenca_manual(nome_aluno)
         
@@ -1198,7 +1793,8 @@ def marcar_presenca():
                 'success': True, 
                 'message': mensagem,
                 'aluno': nome_aluno,
-                'data_hora': datetime.now().strftime('%d/%m/%Y %H:%M')
+                'data_hora': datetime.now().strftime('%d/%m/%Y %H:%M'),
+                'usuario': session.get('usuario_nome')
             })
         else:
             return jsonify({'success': False, 'message': mensagem})
@@ -1229,6 +1825,20 @@ def marcar_presenca_detalhada():
         if not turma_presenca:
             return jsonify({'success': False, 'message': 'Turma/Horário da atividade é obrigatório'})
         
+        # Verificar se o usuário tem permissão para marcar presença deste aluno
+        nivel_usuario = session.get('usuario_nivel')
+        
+        if nivel_usuario == 'usuario':
+            # Usuários só podem marcar presença de alunos da sua atividade
+            alunos_permitidos = obter_alunos_usuario()
+            nomes_permitidos = [aluno['nome'] for aluno in alunos_permitidos]
+            
+            if nome_aluno not in nomes_permitidos:
+                return jsonify({
+                    'success': False, 
+                    'message': 'Você só pode marcar presença dos alunos da sua atividade responsável'
+                })
+        
         # Registrar presença detalhada
         sucesso, mensagem = academia.registrar_presenca_detalhada(
             nome_aluno, 
@@ -1245,7 +1855,8 @@ def marcar_presenca_detalhada():
                 'aluno': nome_aluno,
                 'data': data_presenca,
                 'horario': horario_presenca,
-                'turma': turma_presenca
+                'turma': turma_presenca,
+                'usuario': session.get('usuario_nome')
             })
         else:
             return jsonify({'success': False, 'message': mensagem})
@@ -1269,8 +1880,34 @@ def processar_busca_avancada():
         # Remover filtros vazios
         filtros_limpos = {k: v for k, v in filtros.items() if v}
         
-        # Realizar busca
-        resultados = academia.busca_avancada(filtros_limpos)
+        # Obter dados baseados no nível de acesso
+        nivel_usuario = session.get('usuario_nivel')
+        
+        if nivel_usuario == 'usuario':
+            # Usuários só podem buscar em seus próprios alunos
+            alunos_permitidos = obter_alunos_usuario()
+            # Aplicar filtros apenas nos alunos permitidos
+            resultados = []
+            for aluno in alunos_permitidos:
+                incluir = True
+                
+                # Aplicar os mesmos filtros da busca avançada
+                if filtros_limpos.get('nome'):
+                    nome_busca = filtros_limpos['nome'].lower()
+                    nome_aluno = aluno.get('nome', '').lower()
+                    if nome_busca not in nome_aluno:
+                        incluir = False
+                
+                if filtros_limpos.get('atividade'):
+                    if aluno.get('atividade', '') != filtros_limpos['atividade']:
+                        incluir = False
+                
+                # Adicionar outros filtros conforme necessário
+                if incluir:
+                    resultados.append(aluno)
+        else:
+            # Admin e Admin Master podem buscar em todos os alunos
+            resultados = academia.busca_avancada(filtros_limpos)
         
         # Calcular estatísticas
         estatisticas = academia.get_estatisticas_busca(
@@ -1286,10 +1923,11 @@ def processar_busca_avancada():
             'total_alunos': estatisticas['total_alunos'],
             'total_aniversariantes': estatisticas['total_aniversariantes'],
             'total_atividades': estatisticas['total_atividades'],
-            'atividades_encontradas': estatisticas['atividades_encontradas']
+            'atividades_encontradas': estatisticas['atividades_encontradas'],
+            'nivel_acesso': nivel_usuario
         }
         
-        print(f"🔍 Busca realizada: {len(resultados)} resultados encontrados")
+        print(f"🔍 Busca realizada: {len(resultados)} resultados encontrados (Nível: {nivel_usuario})")
         print(f"📊 Filtros aplicados: {filtros_limpos}")
         
         return jsonify(response_data)
@@ -1341,7 +1979,7 @@ def relatorio_mes(mes):
     return jsonify({'message': f'Relatório de {mes} será implementado'})
 
 @app.route('/cadastrar_aluno', methods=['POST'])
-@login_obrigatorio
+@apenas_admin_ou_master
 def cadastrar_aluno():
     try:
         # Obter dados do formulário
@@ -1407,7 +2045,7 @@ def cadastrar_aluno():
         return jsonify({'success': False, 'message': f'Erro ao cadastrar aluno: {str(e)}'})
 
 @app.route('/editar_aluno/<int:aluno_id>', methods=['PUT', 'POST'])
-@login_obrigatorio
+@apenas_admin_ou_master
 def editar_aluno(aluno_id):
     try:
         if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
@@ -1475,7 +2113,7 @@ def editar_aluno(aluno_id):
         return jsonify({'success': False, 'message': f'Erro ao editar aluno: {str(e)}'})
 
 @app.route('/excluir_aluno/<int:aluno_id>', methods=['DELETE', 'POST'])
-@login_obrigatorio
+@apenas_admin_ou_master
 def excluir_aluno(aluno_id):
     try:
         if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
@@ -1598,15 +2236,227 @@ def presencas_hoje():
         return jsonify({'success': False, 'message': f'Erro ao buscar presenças: {str(e)}'})
 
 @app.route('/backup_planilhas')
-@login_obrigatorio
+@apenas_admin_ou_master
 def backup_planilhas():
-    if session.get('usuario_nivel') != 'admin':
-        flash('Acesso negado! Apenas administradores podem acessar esta área.', 'error')
-        return redirect(url_for('dashboard'))
-    
     atividades = academia.get_atividades_disponiveis()
     usuario_nome = session.get('usuario_nome', 'Usuário')
     return render_template('backup_planilhas.html', atividades=atividades, usuario_nome=usuario_nome)
+
+# === ROTAS PARA GERENCIAMENTO DE COLABORADORES (APENAS ADMIN MASTER) ===
+
+@app.route('/gerenciar_colaboradores')
+@apenas_admin_master
+def gerenciar_colaboradores():
+    """Página de gerenciamento de colaboradores - apenas Admin Master"""
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    colaboradores = []
+    
+    # Listar todos os usuários exceto Admin Masters
+    for username, dados in USUARIOS.items():
+        if dados.get('nivel') != 'admin_master':
+            colaborador = dados.copy()
+            colaborador['username'] = username
+            # Não incluir senha hash na resposta
+            colaborador.pop('senha', None)
+            colaboradores.append(colaborador)
+    
+    atividades = academia.get_atividades_disponiveis()
+    
+    return render_template('gerenciar_colaboradores.html', 
+                         colaboradores=colaboradores,
+                         atividades=atividades,
+                         usuario_nome=usuario_nome)
+
+@app.route('/criar_colaborador', methods=['POST'])
+@apenas_admin_master
+def criar_colaborador():
+    """Cria um novo colaborador - apenas Admin Master"""
+    try:
+        # Obter dados do formulário
+        username = request.form.get('username', '').strip().lower()
+        nome = request.form.get('nome', '').strip()
+        senha = request.form.get('senha', '').strip()
+        nivel = request.form.get('nivel', '').strip()
+        atividade_responsavel = request.form.get('atividade_responsavel', '').strip()
+        
+        # Validações
+        if not username or len(username) < 4:
+            return jsonify({'success': False, 'message': 'Username deve ter pelo menos 4 caracteres'})
+        
+        if not nome or len(nome) < 3:
+            return jsonify({'success': False, 'message': 'Nome deve ter pelo menos 3 caracteres'})
+        
+        if not senha or len(senha) < 6:
+            return jsonify({'success': False, 'message': 'Senha deve ter pelo menos 6 caracteres'})
+        
+        if nivel not in ['admin', 'usuario']:
+            return jsonify({'success': False, 'message': 'Nível deve ser "admin" ou "usuario"'})
+        
+        # Verificar se username já existe
+        if username in USUARIOS:
+            return jsonify({'success': False, 'message': 'Este username já existe'})
+        
+        # Definir permissões baseadas no nível
+        if nivel == 'admin':
+            permissoes = ['cadastrar_alunos', 'editar_alunos', 'excluir_alunos', 
+                         'ver_todos_alunos', 'gerar_relatorios', 'backup_planilhas']
+        else:  # usuario
+            permissoes = ['consultar_meus_alunos', 'gerenciar_frequencia_meus_alunos']
+        
+        # Criar novo colaborador
+        novo_colaborador = {
+            'senha': hashlib.sha256(senha.encode()).hexdigest(),
+            'nome': nome,
+            'nivel': nivel,
+            'permissoes': permissoes,
+            'ativo': True,
+            'data_criacao': datetime.now().strftime('%d/%m/%Y'),
+            'criado_por': session.get('usuario_logado')
+        }
+        
+        # Se for usuário, adicionar atividade responsável
+        if nivel == 'usuario' and atividade_responsavel:
+            novo_colaborador['atividade_responsavel'] = atividade_responsavel
+            novo_colaborador['alunos_atribuidos'] = []
+        
+        # Adicionar ao sistema
+        USUARIOS[username] = novo_colaborador
+        
+        # Salvar dados
+        sucesso = salvar_usuarios()
+        
+        if sucesso:
+            return jsonify({
+                'success': True,
+                'message': f'Colaborador {nome} criado com sucesso!',
+                'colaborador': {
+                    'username': username,
+                    'nome': nome,
+                    'nivel': nivel,
+                    'atividade_responsavel': atividade_responsavel if nivel == 'usuario' else None
+                }
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao salvar dados do colaborador'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao criar colaborador: {str(e)}'})
+
+@app.route('/editar_colaborador/<username>', methods=['POST'])
+@apenas_admin_master
+def editar_colaborador(username):
+    """Edita um colaborador existente - apenas Admin Master"""
+    try:
+        if username not in USUARIOS or USUARIOS[username].get('nivel') == 'admin_master':
+            return jsonify({'success': False, 'message': 'Colaborador não encontrado ou não pode ser editado'})
+        
+        # Obter dados do formulário
+        nome = request.form.get('nome', '').strip()
+        nova_senha = request.form.get('nova_senha', '').strip()
+        nivel = request.form.get('nivel', '').strip()
+        ativo = request.form.get('ativo') == 'true'
+        atividade_responsavel = request.form.get('atividade_responsavel', '').strip()
+        
+        # Validações
+        if not nome or len(nome) < 3:
+            return jsonify({'success': False, 'message': 'Nome deve ter pelo menos 3 caracteres'})
+        
+        if nivel not in ['admin', 'usuario']:
+            return jsonify({'success': False, 'message': 'Nível deve ser "admin" ou "usuario"'})
+        
+        # Atualizar dados do colaborador
+        colaborador = USUARIOS[username]
+        colaborador['nome'] = nome
+        colaborador['nivel'] = nivel
+        colaborador['ativo'] = ativo
+        
+        # Atualizar senha se fornecida
+        if nova_senha and len(nova_senha) >= 6:
+            colaborador['senha'] = hashlib.sha256(nova_senha.encode()).hexdigest()
+        
+        # Atualizar permissões baseadas no nível
+        if nivel == 'admin':
+            colaborador['permissoes'] = ['cadastrar_alunos', 'editar_alunos', 'excluir_alunos',
+                                       'ver_todos_alunos', 'gerar_relatorios', 'backup_planilhas']
+            # Remover atividade responsável se virou admin
+            colaborador.pop('atividade_responsavel', None)
+            colaborador.pop('alunos_atribuidos', None)
+        else:  # usuario
+            colaborador['permissoes'] = ['consultar_meus_alunos', 'gerenciar_frequencia_meus_alunos']
+            if atividade_responsavel:
+                colaborador['atividade_responsavel'] = atividade_responsavel
+                if 'alunos_atribuidos' not in colaborador:
+                    colaborador['alunos_atribuidos'] = []
+        
+        # Salvar dados
+        sucesso = salvar_usuarios()
+        
+        if sucesso:
+            return jsonify({
+                'success': True,
+                'message': f'Colaborador {nome} atualizado com sucesso!',
+                'colaborador': {
+                    'username': username,
+                    'nome': nome,
+                    'nivel': nivel,
+                    'ativo': ativo,
+                    'atividade_responsavel': colaborador.get('atividade_responsavel')
+                }
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao salvar alterações'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao editar colaborador: {str(e)}'})
+
+@app.route('/excluir_colaborador/<username>', methods=['DELETE'])
+@apenas_admin_master
+def excluir_colaborador(username):
+    """Exclui um colaborador - apenas Admin Master"""
+    try:
+        if username not in USUARIOS or USUARIOS[username].get('nivel') == 'admin_master':
+            return jsonify({'success': False, 'message': 'Colaborador não encontrado ou não pode ser excluído'})
+        
+        nome_colaborador = USUARIOS[username]['nome']
+        
+        # Remover colaborador
+        del USUARIOS[username]
+        
+        # Salvar dados
+        sucesso = salvar_usuarios()
+        
+        if sucesso:
+            return jsonify({
+                'success': True,
+                'message': f'Colaborador {nome_colaborador} excluído com sucesso!',
+                'total_colaboradores': len([u for u in USUARIOS.values() if u.get('nivel') != 'admin_master'])
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao salvar alterações'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao excluir colaborador: {str(e)}'})
+
+@app.route('/obter_colaborador/<username>')
+@apenas_admin_master
+def obter_colaborador(username):
+    """Obtém dados de um colaborador - apenas Admin Master"""
+    try:
+        if username not in USUARIOS or USUARIOS[username].get('nivel') == 'admin_master':
+            return jsonify({'success': False, 'message': 'Colaborador não encontrado'})
+        
+        colaborador = USUARIOS[username].copy()
+        colaborador['username'] = username
+        # Não incluir senha hash na resposta
+        colaborador.pop('senha', None)
+        
+        return jsonify({
+            'success': True,
+            'colaborador': colaborador
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao obter dados do colaborador: {str(e)}'})
 
 @app.route('/gerar_planilha/<atividade>')
 @login_obrigatorio
@@ -1805,9 +2655,395 @@ def health():
 def test():
     return "Sistema funcionando! ✅"
 
+@app.route('/debug_stats')
+@login_obrigatorio
+def debug_stats():
+    """Endpoint para debug das estatísticas"""
+    nivel_usuario = session.get('usuario_nivel')
+    usuario_logado = session.get('usuario_logado')
+    
+    debug_info = {
+        'nivel_usuario': nivel_usuario,
+        'usuario_logado': usuario_logado,
+        'usuario_dados': USUARIOS.get(usuario_logado, {}),
+    }
+    
+    if nivel_usuario == 'usuario' and usuario_logado in USUARIOS:
+        atividade_responsavel = USUARIOS[usuario_logado].get('atividade_responsavel')
+        debug_info['atividade_responsavel'] = atividade_responsavel
+        
+        # Testar estatísticas gerais
+        stats_gerais = academia.get_estatisticas()
+        debug_info['stats_gerais'] = stats_gerais
+        
+        # Testar estatísticas filtradas
+        stats_filtradas = academia.get_estatisticas(filtro_atividade=atividade_responsavel)
+        debug_info['stats_filtradas'] = stats_filtradas
+        
+        # Verificar alunos da atividade
+        alunos_atividade = academia.get_alunos_por_atividade(atividade_responsavel)
+        debug_info['alunos_atividade'] = len(alunos_atividade)
+        debug_info['primeiros_alunos'] = [aluno['nome'] for aluno in alunos_atividade[:5]]
+    
+    return jsonify(debug_info)
+
+# === ROTAS PARA GERENCIAMENTO DE ATIVIDADES ===
+
+@app.route('/gerenciar_atividades')
+@apenas_admin_ou_master
+def gerenciar_atividades():
+    """Página de gerenciamento de atividades - Admin/Admin Master"""
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    
+    # Atualizar contadores de alunos
+    for nome_atividade, dados_atividade in academia.atividades_cadastradas.items():
+        alunos_atividade = academia.get_alunos_por_atividade(nome_atividade)
+        dados_atividade['total_alunos'] = len(alunos_atividade)
+    
+    # Salvar atualizações
+    academia.salvar_atividades()
+    
+    # Obter lista de professores para o dropdown
+    professores = {login: dados for login, dados in USUARIOS.items() 
+                  if dados.get('nivel') == 'usuario'}
+    
+    return render_template('gerenciar_atividades.html', 
+                         atividades=academia.atividades_cadastradas,
+                         professores=professores,
+                         usuario_nome=usuario_nome)
+
+@app.route('/dashboard_atividade/<nome_atividade>')
+@login_obrigatorio
+def dashboard_atividade(nome_atividade):
+    """Dashboard específico de uma atividade"""
+    nivel_usuario = session.get('usuario_nivel')
+    usuario_logado = session.get('usuario_logado')
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    
+    # Verificar se a atividade existe
+    if nome_atividade not in academia.atividades_cadastradas:
+        flash('Atividade não encontrada!', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Verificar permissões
+    if nivel_usuario == 'usuario':
+        # Usuários só podem ver dashboard da sua atividade responsável
+        atividade_responsavel = USUARIOS[usuario_logado].get('atividade_responsavel')
+        if nome_atividade != atividade_responsavel:
+            flash('Acesso negado! Você só pode acessar dashboard da sua atividade.', 'error')
+            return redirect(url_for('dashboard'))
+    
+    # Obter estatísticas da atividade
+    stats = academia.get_estatisticas(filtro_atividade=nome_atividade)
+    atividade_info = academia.atividades_cadastradas[nome_atividade]
+    
+    # Obter presenças de hoje da atividade
+    data_hoje = datetime.now().strftime('%d/%m/%Y')
+    presencas_hoje = []
+    
+    for nome, dados in academia.dados_presenca.items():
+        # Verificar se o aluno pertence à atividade
+        aluno_da_atividade = False
+        for aluno in academia.alunos_reais:
+            if aluno['nome'] == nome and aluno.get('atividade') == nome_atividade:
+                aluno_da_atividade = True
+                break
+        
+        if aluno_da_atividade:
+            for registro in dados['registros']:
+                if registro.get('data') == data_hoje and registro.get('status') == 'P':
+                    presencas_hoje.append({
+                        'Nome': nome,
+                        'Horário': registro.get('horario', ''),
+                        'Atividade': nome_atividade,
+                        'Observações': 'Presença registrada'
+                    })
+    
+    return render_template('dashboard_atividade.html', 
+                         stats=stats, 
+                         presencas_hoje=presencas_hoje, 
+                         usuario_nome=usuario_nome,
+                         nivel_usuario=nivel_usuario,
+                         atividade=atividade_info,
+                         nome_atividade=nome_atividade)
+
+@app.route('/criar_atividade', methods=['POST'])
+@apenas_admin_ou_master
+def criar_atividade():
+    """Cria uma nova atividade"""
+    try:
+        # Verificar se a requisição é JSON ou form-data
+        if request.is_json:
+            dados = request.json
+            nome = dados.get('nome', '').strip()
+            descricao = dados.get('descricao', '').strip()
+            professor = dados.get('professor', '')
+        else:
+            nome = request.form.get('nome', '').strip()
+            descricao = request.form.get('descricao', '').strip()
+            professor = request.form.get('professor', '')
+            
+        criado_por = session.get('usuario_logado')
+        
+        if not nome:
+            return jsonify({'status': 'error', 'message': 'Nome da atividade é obrigatório'})
+        
+        if len(nome) < 3:
+            return jsonify({'status': 'error', 'message': 'Nome deve ter pelo menos 3 caracteres'})
+        
+        sucesso, mensagem = academia.cadastrar_atividade(nome, descricao, criado_por, professor)
+        
+        if sucesso:
+            return jsonify({
+                'status': 'success',
+                'message': mensagem,
+                'atividade': {
+                    'nome': nome,
+                    'descricao': descricao,
+                    'professor': professor,
+                    'total_alunos': 0
+                }
+            })
+        else:
+            return jsonify({'status': 'error', 'message': mensagem})
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Erro ao criar atividade: {str(e)}'})
+
+@app.route('/excluir_atividade/<nome_atividade>', methods=['DELETE'])
+@apenas_admin_ou_master
+def excluir_atividade_route(nome_atividade):
+    """Exclui uma atividade"""
+    try:
+        sucesso, mensagem = academia.excluir_atividade(nome_atividade)
+        
+        if sucesso:
+            return jsonify({
+                'success': True,
+                'message': mensagem,
+                'total_atividades': len(academia.atividades_cadastradas)
+            })
+        else:
+            return jsonify({'success': False, 'message': mensagem})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao excluir atividade: {str(e)}'})
+
+@app.route('/obter_professor_atividade/<nome_atividade>', methods=['GET'])
+@login_obrigatorio
+def obter_professor_atividade(nome_atividade):
+    """Retorna o professor vinculado a uma atividade"""
+    try:
+        atividade = academia.atividades_cadastradas.get(nome_atividade, {})
+        professores = atividade.get('professores_vinculados', [])
+        professor = professores[0] if professores else ''
+        
+        return jsonify({
+            'success': True,
+            'professor': professor
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao obter professor: {str(e)}'
+        }), 500
+
+@app.route('/editar_atividade', methods=['POST'])
+@apenas_admin_ou_master
+def editar_atividade_route():
+    """Edita uma atividade existente"""
+    try:
+        dados = request.json
+        nome_antigo = dados.get('nome_antigo')
+        nome_novo = dados.get('nome_novo')
+        descricao_nova = dados.get('descricao_nova')
+        professor_novo = dados.get('professor_novo', '')
+        
+        if not nome_antigo or not nome_novo or not descricao_nova:
+            return jsonify({'success': False, 'message': 'Dados incompletos'}), 400
+        
+        sucesso, mensagem = academia.editar_atividade(nome_antigo, nome_novo, descricao_nova, professor_novo)
+        
+        if sucesso:
+            # Obter a atividade atualizada para incluir o professor na resposta
+            atividade = academia.atividades_cadastradas.get(nome_novo, {})
+            professores = atividade.get('professores_vinculados', [])
+            professor = professores[0] if professores else ''
+            
+            return jsonify({
+                'success': True,
+                'message': mensagem,
+                'atividade': {
+                    'nome': nome_novo,
+                    'descricao': descricao_nova,
+                    'professor': professor,
+                    'total_alunos': len(academia.get_alunos_por_atividade(nome_novo))
+                }
+            })
+        else:
+            return jsonify({'success': False, 'message': mensagem})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao editar atividade: {str(e)}'})
+
+# === ROTAS PARA GERENCIAMENTO DE TURMAS ===
+
+@app.route('/gerenciar_turmas')
+@apenas_admin_ou_master
+def gerenciar_turmas():
+    """Página de gerenciamento de turmas - Admin/Admin Master"""
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    
+    # Obter lista de professores para o dropdown
+    professores = {login: dados for login, dados in USUARIOS.items() 
+                  if dados.get('nivel') == 'usuario'}
+    
+    return render_template('gerenciar_turmas.html', 
+                         turmas=academia.turmas_cadastradas,
+                         atividades=academia.atividades_cadastradas,
+                         professores=professores,
+                         usuario_nome=usuario_nome)
+
+@app.route('/criar_turma', methods=['POST'])
+@apenas_admin_ou_master
+def criar_turma():
+    """Cria uma nova turma"""
+    try:
+        nome = request.form.get('nome', '').strip()
+        atividade = request.form.get('atividade', '').strip()
+        horario = request.form.get('horario', '').strip()
+        dias_semana = request.form.get('dias_semana', '').strip()
+        capacidade = request.form.get('capacidade', '20')
+        professor = request.form.get('professor', '').strip()
+        criado_por = session.get('usuario_logado')
+        
+        if not all([nome, atividade, horario, dias_semana]):
+            return jsonify({'success': False, 'message': 'Todos os campos obrigatórios devem ser preenchidos'})
+        
+        if len(nome) < 3:
+            return jsonify({'success': False, 'message': 'Nome da turma deve ter pelo menos 3 caracteres'})
+        
+        try:
+            capacidade = int(capacidade)
+            if capacidade < 1 or capacidade > 50:
+                return jsonify({'success': False, 'message': 'Capacidade deve ser entre 1 e 50 alunos'})
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Capacidade deve ser um número válido'})
+        
+        sucesso, mensagem = academia.cadastrar_turma(nome, atividade, horario, dias_semana, capacidade, professor, criado_por)
+        
+        if sucesso:
+            return jsonify({
+                'success': True,
+                'message': mensagem,
+                'total_turmas': len(academia.turmas_cadastradas)
+            })
+        else:
+            return jsonify({'success': False, 'message': mensagem})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao criar turma: {str(e)}'})
+
+@app.route('/excluir_turma/<turma_id>', methods=['DELETE'])
+@apenas_admin_ou_master
+def excluir_turma_route(turma_id):
+    """Exclui uma turma"""
+    try:
+        sucesso, mensagem = academia.excluir_turma(turma_id)
+        
+        if sucesso:
+            return jsonify({
+                'success': True,
+                'message': mensagem,
+                'total_turmas': len(academia.turmas_cadastradas)
+            })
+        else:
+            return jsonify({'success': False, 'message': mensagem})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao excluir turma: {str(e)}'})
+
+@app.route('/editar_turma', methods=['POST'])
+@apenas_admin_ou_master
+def editar_turma_route():
+    """Edita uma turma existente"""
+    try:
+        turma_id = request.form.get('turma_id')
+        nome = request.form.get('nome', '').strip()
+        atividade = request.form.get('atividade', '').strip()
+        horario = request.form.get('horario', '').strip()
+        dias_semana = request.form.get('dias_semana', '').strip()
+        capacidade = request.form.get('capacidade', '20')
+        professor = request.form.get('professor', '').strip()
+        ativa = request.form.get('ativa', 'true')
+        
+        if not all([turma_id, nome, atividade, horario, dias_semana]):
+            return jsonify({'success': False, 'message': 'Todos os campos obrigatórios devem ser preenchidos'})
+        
+        if len(nome) < 3:
+            return jsonify({'success': False, 'message': 'Nome da turma deve ter pelo menos 3 caracteres'})
+        
+        try:
+            capacidade = int(capacidade)
+            if capacidade < 1 or capacidade > 50:
+                return jsonify({'success': False, 'message': 'Capacidade deve ser entre 1 e 50 alunos'})
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Capacidade deve ser um número válido'})
+        
+        sucesso, mensagem = academia.editar_turma(turma_id, nome, atividade, horario, dias_semana, capacidade, professor, ativa)
+        
+        if sucesso:
+            return jsonify({
+                'success': True,
+                'message': mensagem,
+                'turma': academia.turmas_cadastradas[turma_id]
+            })
+        else:
+            return jsonify({'success': False, 'message': mensagem})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao editar turma: {str(e)}'})
+
+@app.route('/dashboard_turma/<turma_id>')
+@login_obrigatorio
+def dashboard_turma(turma_id):
+    """Dashboard específico de uma turma"""
+    nivel_usuario = session.get('usuario_nivel')
+    usuario_logado = session.get('usuario_logado')
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    
+    # Verificar se a turma existe
+    if turma_id not in academia.turmas_cadastradas:
+        flash('Turma não encontrada!', 'error')
+        return redirect(url_for('dashboard'))
+    
+    turma = academia.turmas_cadastradas[turma_id]
+    
+    # Verificar permissões
+    if nivel_usuario == 'usuario':
+        # Usuários só podem ver dashboard das suas turmas
+        if turma['professor_responsavel'] != usuario_logado:
+            flash('Acesso negado! Você só pode acessar dashboard das suas turmas.', 'error')
+            return redirect(url_for('dashboard'))
+    
+    # Obter estatísticas da turma (filtrar por atividade por enquanto)
+    stats = academia.get_estatisticas(filtro_atividade=turma['atividade'])
+    
+    # TODO: Implementar estatísticas específicas da turma
+    
+    return render_template('dashboard_turma.html', 
+                         stats=stats, 
+                         turma=turma,
+                         usuario_nome=usuario_nome,
+                         nivel_usuario=nivel_usuario)
+
+# Carregar usuários existentes do arquivo (se existir)
+carregar_usuarios()
+
 # Para produção
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("🚀 Iniciando Associação Amigo do Povo...")
     print(f"🌐 Sistema carregado: {len(academia.alunos_reais)} alunos")
+    print(f"👥 Usuários carregados: {len(USUARIOS)} contas")
     app.run(host='0.0.0.0', port=port, debug=False)

@@ -9,6 +9,22 @@
             <i class="fas fa-check-circle text-success"></i>
             Marcar Presença
         </h1>
+        {% if nivel_usuario == 'usuario' %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-chalkboard-teacher me-2"></i>
+            <strong>Presença Restrita:</strong> Você pode marcar presença apenas dos seus alunos atribuídos.
+        </div>
+        {% elif nivel_usuario == 'admin' %}
+        <div class="alert alert-success text-center">
+            <i class="fas fa-shield-alt me-2"></i>
+            <strong>Acesso Administrativo:</strong> Você pode marcar presença de qualquer aluno.
+        </div>
+        {% elif nivel_usuario == 'admin_master' %}
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-crown me-2"></i>
+            <strong>Acesso Master:</strong> Você tem controle total sobre as presenças.
+        </div>
+        {% endif %}
     </div>
 </div>
 

@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Atividades - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-6 text-center mb-4">
+            <i class="fas fa-tasks text-primary"></i>
+            Gerenciamento de Atividades
+        </h1>
+        <p class="text-center text-muted">
+            <i class="fas fa-info-circle text-info"></i>
+            Controle total sobre as atividades da associação
+        </p>
+    </div>
+</div>
+
+<!-- Estatísticas das Atividades -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-tasks fa-2x mb-2"></i>
+                <h3 class="card-title">{{ atividades | length }}</h3>
+                <p class="card-text">Total de Atividades</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h3 class="card-title">{{ atividades | selectattr('ativa', 'equalto', true) | list | length }}</h3>
+                <p class="card-text">Atividades Ativas</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <h3 class="card-title">
+                    {% set total_alunos = [] %}
+                    {% for atividade in atividades.values() %}
+                        {% set _ = total_alunos.extend(range(atividade.total_alunos)) %}
+                    {% endfor %}
+                    {{ total_alunos | length }}
+                </h3>
+                <p class="card-text">Total de Alunos</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botão para Adicionar Nova Atividade -->
+<div class="row mb-4">
+    <div class="col-12">
+        <button class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#modalNovaAtividade">
+            <i class="fas fa-plus me-2"></i>
+            Nova Atividade
+        </button>
+    </div>
+</div>
+
+<!-- Lista de Atividades -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Lista de Atividades
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if atividades %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Descrição</th>
+                                    <th>Total Alunos</th>
+                                    <th>Status</th>
+                                    <th>Data Criação</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for nome, atividade in atividades.items() %}
+                                <tr id="atividade-{{ nome | replace(' ', '_') }}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-{{ 'swimming-pool' if 'Nata' in nome else 'computer' if 'Inform' in nome else 'dumbbell' if 'Funcional' in nome else 'heart' if 'Fisio' in nome else 'music' if 'Dan' in nome else 'fist-raised' if 'Karat' in nome else 'fire-extinguisher' if 'Bombeiro' in nome else 'hand-rock' if 'Capoeira' in nome else 'water' if 'Hidro' in nome else 'cog' }} text-primary me-2"></i>
+                                            <strong>{{ nome }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>{{ atividade.descricao }}</td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-users me-1"></i>
+                                            {{ atividade.total_alunos }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if atividade.ativa %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                Ativa
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times-circle me-1"></i>
+                                                Inativa
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ atividade.data_criacao }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{{ url_for('dashboard_atividade', nome_atividade=nome) }}" 
+                                               class="btn btn-outline-primary" 
+                                               title="Ver Dashboard">
+                                                <i class="fas fa-chart-line"></i>
+                                            </a>
+                                            <button class="btn btn-outline-warning" 
+                                                    onclick="editarAtividade('{{ nome }}', '{{ atividade.descricao }}')" 
+                                                    title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" 
+                                                    onclick="excluirAtividade('{{ nome }}', '{{ atividade.descricao }}')" 
+                                                    title="Excluir">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-tasks fa-3x mb-3"></i>
+                        <p>Nenhuma atividade cadastrada ainda</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaAtividade">
+                            <i class="fas fa-plus me-2"></i>
+                            Cadastrar Primeira Atividade
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Atividade -->
+<div class="modal fade" id="modalNovaAtividade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    Nova Atividade
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNovaAtividade">
+                    <div class="mb-3">
+                        <label for="nomeAtividade" class="form-label">Nome da Atividade <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nomeAtividade" name="nome" required>
+                        <div class="form-text">Ex: Yoga, Pilates, Jiu-Jitsu, etc.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descricaoAtividade" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricaoAtividade" name="descricao" rows="3"></textarea>
+                        <div class="form-text">Descrição detalhada da atividade</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="professorAtividade" class="form-label">Professor Responsável</label>
+                        <select class="form-select" id="professorAtividade" name="professor">
+                            <option value="">Selecione um professor...</option>
+                            {% for username, dados in professores.items() %}
+                                <option value="{{ username }}">{{ dados.nome }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Professor responsável pela atividade</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="salvarNovaAtividade()">
+                    <i class="fas fa-save me-2"></i>Criar Atividade
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Atividade -->
+<div class="modal fade" id="modalEditarAtividade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Atividade
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarAtividade">
+                    <input type="hidden" id="nomeAtividadeAntigo">
+                    <div class="mb-3">
+                        <label for="nomeAtividadeEdit" class="form-label">Nome da Atividade <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nomeAtividadeEdit" name="nome_novo" required>
+                        <div class="form-text">Ex: Yoga, Pilates, Jiu-Jitsu, etc.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descricaoAtividadeEdit" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricaoAtividadeEdit" name="descricao_nova" rows="3"></textarea>
+                        <div class="form-text">Descrição detalhada da atividade</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="professorAtividadeEdit" class="form-label">Professor Responsável</label>
+                        <select class="form-select" id="professorAtividadeEdit" name="professor_novo">
+                            <option value="">Selecione um professor...</option>
+                            {% for username, dados in professores.items() %}
+                                <option value="{{ username }}">{{ dados.nome }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Professor responsável pela atividade</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" onclick="salvarEdicaoAtividade()">
+                    <i class="fas fa-save me-2"></i>Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+function editarAtividade(nome, descricao) {
+    // Preencher o formulário de edição
+    document.getElementById('nomeAtividadeAntigo').value = nome;
+    document.getElementById('nomeAtividadeEdit').value = nome;
+    document.getElementById('descricaoAtividadeEdit').value = descricao;
+    
+    // Busca o professor responsável pela atividade
+    fetch(`/obter_professor_atividade/${nome}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.professor) {
+                document.getElementById('professorAtividadeEdit').value = data.professor;
+            } else {
+                document.getElementById('professorAtividadeEdit').value = '';
+            }
+        });
+    
+    // Abrir o modal
+    const modalEditarAtividade = new bootstrap.Modal(document.getElementById('modalEditarAtividade'));
+    modalEditarAtividade.show();
+}
+
+function salvarEdicaoAtividade() {
+    const nomeAntigo = document.getElementById('nomeAtividadeAntigo').value;
+    const nomeNovo = document.getElementById('nomeAtividadeEdit').value.trim();
+    const descricaoNova = document.getElementById('descricaoAtividadeEdit').value.trim();
+    const professorNovo = document.getElementById('professorAtividadeEdit').value;
+    
+    if (!nomeNovo) {
+        showToast('error', 'Nome da atividade é obrigatório');
+        return;
+    }
+    
+    if (nomeNovo.length < 3) {
+        showToast('error', 'Nome deve ter pelo menos 3 caracteres');
+        return;
+    }
+    
+    const dados = {
+        nome_antigo: nomeAntigo,
+        nome_novo: nomeNovo,
+        descricao_nova: descricaoNova,
+        professor_novo: professorNovo
+    };
+    
+    $.ajax({
+        url: '/editar_atividade',
+        method: 'POST',
+        data: JSON.stringify(dados),
+        contentType: 'application/json',
+        success: function(response) {
+            if (response.success) {
+                showToast('success', response.message);
+                $('#modalEditarAtividade').modal('hide');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast('error', response.message);
+            }
+        },
+        error: function() {
+            showToast('error', 'Erro de conexão com o servidor');
+        }
+    });
+}
+
+function salvarNovaAtividade() {
+    const form = document.getElementById('formNovaAtividade');
+    const formData = new FormData(form);
+    
+    const nome = formData.get('nome').trim();
+    const descricao = formData.get('descricao').trim();
+    const professor = formData.get('professor');
+    
+    if (!nome) {
+        showToast('error', 'Nome da atividade é obrigatório');
+        return;
+    }
+    
+    if (nome.length < 3) {
+        showToast('error', 'Nome deve ter pelo menos 3 caracteres');
+        return;
+    }
+    
+    $.ajax({
+        url: '/criar_atividade',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                showToast('success', response.message);
+                $('#modalNovaAtividade').modal('hide');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast('error', response.message);
+            }
+        },
+        error: function() {
+            showToast('error', 'Erro de conexão com o servidor');
+        }
+    });
+}
+
+function excluirAtividade(nome, descricao) {
+    if (!confirm(`Tem certeza que deseja excluir a atividade "${nome}"?\n\nDescrição: ${descricao}\n\nEsta ação não pode ser desfeita!`)) {
+        return;
+    }
+    
+    $.ajax({
+        url: `/excluir_atividade/${encodeURIComponent(nome)}`,
+        method: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                showToast('success', response.message);
+                $(`#atividade-${nome.replace(' ', '_')}`).fadeOut(500, function() {
+                    $(this).remove();
+                });
+            } else {
+                showToast('error', response.message);
+            }
+        },
+        error: function() {
+            showToast('error', 'Erro de conexão com o servidor');
+        }
+    });
+}
+
+// Função removida para evitar duplicação - já existe acima
+
+function showToast(type, message) {
+    const toastClass = type === 'success' ? 'bg-success' : 'bg-danger';
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+    
+    const toast = $(`
+        <div class="toast position-fixed top-0 end-0 m-3 ${toastClass} text-white" role="alert" style="z-index: 1055;">
+            <div class="toast-header ${toastClass} text-white border-0">
+                <i class="fas ${icon} me-2"></i>
+                <strong class="me-auto">${type === 'success' ? 'Sucesso' : 'Erro'}</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
+        </div>
+    `);
+    
+    $('body').append(toast);
+    const bsToast = new bootstrap.Toast(toast[0]);
+    bsToast.show();
+    
+    toast.on('hidden.bs.toast', function() {
+        $(this).remove();
+    });
+}
+</script>
+{% endblock %}

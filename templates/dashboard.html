@@ -7,8 +7,18 @@
     <div class="col-12">
         <h1 class="display-6 text-center mb-4">
             <i class="fas fa-chart-line text-primary"></i>
-            Dashboard - Associação Amigo do Povo
+            {% if nivel_usuario == 'usuario' and atividade_responsavel %}
+                Dashboard - {{ atividade_responsavel }}
+            {% else %}
+                Dashboard - Associação Amigo do Povo
+            {% endif %}
         </h1>
+        {% if nivel_usuario == 'usuario' and atividade_responsavel %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-chalkboard-teacher me-2"></i>
+            <strong>Área do Professor:</strong> Você está visualizando dados específicos da atividade {{ atividade_responsavel }}
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -19,7 +29,17 @@
             <div class="card-body text-center">
                 <i class="fas fa-users fa-2x mb-2"></i>
                 <h3 class="card-title">{{ stats.total_alunos }}</h3>
-                <p class="card-text">Total de Alunos</p>
+                <p class="card-text">
+                    {% if nivel_usuario == 'usuario' %}
+                        {% if atividade_responsavel %}
+                            Alunos de {{ atividade_responsavel }}
+                        {% else %}
+                            Meus Alunos
+                        {% endif %}
+                    {% else %}
+                        Total de Alunos
+                    {% endif %}
+                </p>
             </div>
         </div>
     </div>
@@ -28,7 +48,17 @@
             <div class="card-body text-center">
                 <i class="fas fa-calendar-day fa-2x mb-2"></i>
                 <h3 class="card-title">{{ stats.presencas_hoje }}</h3>
-                <p class="card-text">Presenças Hoje</p>
+                <p class="card-text">
+                    {% if nivel_usuario == 'usuario' %}
+                        {% if atividade_responsavel %}
+                            Presenças Hoje ({{ atividade_responsavel }})
+                        {% else %}
+                            Presenças Hoje (Minhas)
+                        {% endif %}
+                    {% else %}
+                        Presenças Hoje
+                    {% endif %}
+                </p>
             </div>
         </div>
     </div>
@@ -37,7 +67,17 @@
             <div class="card-body text-center">
                 <i class="fas fa-chart-bar fa-2x mb-2"></i>
                 <h3 class="card-title">{{ stats.presencas_semana }}</h3>
-                <p class="card-text">Total Registros</p>
+                <p class="card-text">
+                    {% if nivel_usuario == 'usuario' %}
+                        {% if atividade_responsavel %}
+                            Total Registros ({{ atividade_responsavel }})
+                        {% else %}
+                            Total Registros (Meus)
+                        {% endif %}
+                    {% else %}
+                        Total Registros
+                    {% endif %}
+                </p>
             </div>
         </div>
     </div>
@@ -46,7 +86,17 @@
             <div class="card-body text-center">
                 <i class="fas fa-fire fa-2x mb-2"></i>
                 <h3 class="card-title">{{ stats.alunos_ativos }}</h3>
-                <p class="card-text">Alunos Ativos</p>
+                <p class="card-text">
+                    {% if nivel_usuario == 'usuario' %}
+                        {% if atividade_responsavel %}
+                            Alunos com Frequência ({{ atividade_responsavel }})
+                        {% else %}
+                            Meus Alunos Ativos
+                        {% endif %}
+                    {% else %}
+                        Alunos Ativos
+                    {% endif %}
+                </p>
             </div>
         </div>
     </div>
@@ -59,7 +109,11 @@
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">
                     <i class="fas fa-check-circle me-2"></i>
-                    Presenças de Hoje
+                    {% if nivel_usuario == 'usuario' and atividade_responsavel %}
+                        Presenças de Hoje - {{ atividade_responsavel }}
+                    {% else %}
+                        Presenças de Hoje
+                    {% endif %}
                 </h5>
             </div>
             <div class="card-body">
@@ -116,6 +170,7 @@
                         <i class="fas fa-check-circle me-2"></i>
                         Marcar Presença
                     </a>
+                    {% if session.usuario_nivel in ['admin', 'admin_master'] %}
                     <button id="btnAtualizarPresenca" class="btn btn-info">
                         <i class="fas fa-sync-alt me-2"></i>
                         Atualizar Presenças
@@ -124,10 +179,12 @@
                         <i class="fas fa-user-plus me-2"></i>
                         Novo Aluno
                     </a>
+                    {% endif %}
                     <a href="{{ url_for('alunos') }}" class="btn btn-outline-primary">
                         <i class="fas fa-users me-2"></i>
-                        Ver Alunos
+                        {% if session.usuario_nivel == 'usuario' %}Meus Alunos{% else %}Ver Alunos{% endif %}
                     </a>
+                    {% if session.usuario_nivel in ['admin', 'admin_master'] %}
                     <a href="{{ url_for('busca_avancada_page') }}" class="btn btn-warning">
                         <i class="fas fa-search me-2"></i>
                         Busca Avançada
@@ -136,6 +193,13 @@
                         <i class="fas fa-sync-alt me-2"></i>
                         Recarregar Dados
                     </a>
+                    {% endif %}
+                    {% if session.usuario_nivel == 'admin_master' %}
+                    <a href="{{ url_for('gerenciar_colaboradores') }}" class="btn btn-warning">
+                        <i class="fas fa-users-cog me-2"></i>
+                        Gerenciar Colaboradores
+                    </a>
+                    {% endif %}
                 </div>
                 
                 <hr class="my-3">

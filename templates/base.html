@@ -84,10 +84,29 @@
                             <i class="fas fa-chart-bar me-1"></i> Relatórios
                         </a>
                     </li>
-                    {% if session.usuario_nivel == 'admin' %}
+                    {% if session.usuario_nivel in ['admin', 'admin_master'] %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('backup_planilhas') }}">
                             <i class="fas fa-download me-1"></i> Backup Planilhas
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if session.usuario_nivel in ['admin', 'admin_master'] %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('gerenciar_atividades') }}">
+                            <i class="fas fa-tasks me-1"></i> Gerenciar Atividades
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('gerenciar_turmas') }}">
+                            <i class="fas fa-calendar-alt me-1"></i> Gerenciar Turmas
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if session.usuario_nivel == 'admin_master' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('gerenciar_colaboradores') }}">
+                            <i class="fas fa-users-cog me-1"></i> Gerenciar Colaboradores
                         </a>
                     </li>
                     {% endif %}
