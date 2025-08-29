@@ -3,6 +3,8 @@ gunicorn==21.2.0
 Werkzeug==2.3.7
 psycopg2-binary==2.9.7
 SQLAlchemy==2.0.21
-pandas==2.0.3
+# Especificando versões compatíveis com Python 3.11
+numpy==1.24.3
+pandas==1.5.3
 openpyxl==3.1.2
 python-dotenv==1.0.0
