@@ -3398,6 +3398,11 @@ def logs_atividades():
 def health_check():
     return jsonify({"status": "ok"})
 
+# Rota para o service worker
+@app.route('/service-worker.js')
+def service_worker():
+    return app.send_static_file('js/service-worker.js'), 200, {'Content-Type': 'application/javascript'}
+
 # Para produção
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

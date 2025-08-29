@@ -6,6 +6,21 @@
     <title>{% block title %}Associação Amigo do Povo{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Sistema de Gestão da Associação Amigo do Povo">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Amigo do Povo">
+    
+    <!-- PWA Icons -->
+    <link rel="icon" href="{{ url_for('static', filename='images/icons/icon-192x192.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icons/icon-192x192.png') }}">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    
     <style>
         body {
             background-color: #f8f9fa;
@@ -120,6 +135,11 @@
                         </a>
                     </li>
                     {% endif %}
+                    <li class="nav-item">
+                        <button id="install-button" class="btn btn-sm btn-light nav-link" style="display: none;">
+                            <i class="fas fa-download me-1"></i> Instalar App
+                        </button>
+                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user me-1"></i> {{ session.usuario_nome or 'Usuário' }}
@@ -161,6 +181,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

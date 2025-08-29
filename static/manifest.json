@@ -1,0 +1,45 @@
+{
+  "name": "Associação Amigo do Povo",
+  "short_name": "Amigo do Povo",
+  "description": "Sistema de Gestão da Associação Amigo do Povo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#667eea",
+  "icons": [
+    {
+      "src": "/static/images/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/images/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/images/icons/maskable-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ver o dashboard principal",
+      "url": "/dashboard",
+      "icons": [{ "src": "/static/images/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Presença",
+      "short_name": "Presença",
+      "description": "Registrar presença",
+      "url": "/presenca",
+      "icons": [{ "src": "/static/images/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
