@@ -1,0 +1,138 @@
+[
+  {
+    "timestamp": "2025-08-28T22:30:00",
+    "data_hora": "28/08/2025 às 22:30:00",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Admin Master fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-28T22:25:00",
+    "data_hora": "28/08/2025 às 22:25:00",
+    "usuario": "joyce",
+    "tipo_usuario": "admin",
+    "acao": "Cadastrou Aluno",
+    "detalhes": "Cadastrou o aluno JOÃO VITOR GOMES SANTOS na atividade Informática"
+  },
+  {
+    "timestamp": "2025-08-28T22:20:00",
+    "data_hora": "28/08/2025 às 22:20:00",
+    "usuario": "prof_natacao",
+    "tipo_usuario": "usuario",
+    "acao": "Marcou Presença",
+    "detalhes": "Marcou presença do aluno MARIA SILVA"
+  },
+  {
+    "timestamp": "2025-08-28T22:15:00",
+    "data_hora": "28/08/2025 às 22:15:00",
+    "usuario": "prof_natacao",
+    "tipo_usuario": "usuario",
+    "acao": "Marcou Presença",
+    "detalhes": "Marcou presença do aluno PEDRO SANTOS"
+  },
+  {
+    "timestamp": "2025-08-28T22:10:00",
+    "data_hora": "28/08/2025 às 22:10:00",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Criou Atividade",
+    "detalhes": "Criou a atividade \"Natação\" com professor prof_natacao"
+  },
+  {
+    "timestamp": "2025-08-28T22:05:00",
+    "data_hora": "28/08/2025 às 22:05:00",
+    "usuario": "joyce",
+    "tipo_usuario": "admin",
+    "acao": "Alterou Aluno",
+    "detalhes": "Alterou dados do aluno KELVIN ENRIQUE DA SILVA DA SILVA"
+  },
+  {
+    "timestamp": "2025-08-28T22:00:00",
+    "data_hora": "28/08/2025 às 22:00:00",
+    "usuario": "prof_informatica",
+    "tipo_usuario": "usuario",
+    "acao": "Marcou Presença",
+    "detalhes": "Marcou presença do aluno ANA COSTA"
+  },
+  {
+    "timestamp": "2025-08-28T21:55:00",
+    "data_hora": "28/08/2025 às 21:55:00",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Criou Atividade",
+    "detalhes": "Criou a atividade \"Informática\" com professor prof_informatica"
+  },
+  {
+    "timestamp": "2025-08-28T21:50:00",
+    "data_hora": "28/08/2025 às 21:50:00",
+    "usuario": "joyce",
+    "tipo_usuario": "admin",
+    "acao": "Cadastrou Aluno",
+    "detalhes": "Cadastrou o aluno KELVIN ENRIQUE DA SILVA DA SILVA na atividade Informática"
+  },
+  {
+    "timestamp": "2025-08-28T21:45:00",
+    "data_hora": "28/08/2025 às 21:45:00",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Admin Master fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-28T22:50:04.821338",
+    "data_hora": "28/08/2025 às 22:50:04",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Teste Sistema",
+    "detalhes": "Testando o sistema de logs de atividades"
+  },
+  {
+    "timestamp": "2025-08-28T22:51:06.118173",
+    "data_hora": "28/08/2025 às 22:51:06",
+    "usuario": "admin",
+    "tipo_usuario": "admin",
+    "acao": "Fez Logout",
+    "detalhes": "Usuário Administrador Geral fez logout do sistema"
+  },
+  {
+    "timestamp": "2025-08-28T22:52:23.362702",
+    "data_hora": "28/08/2025 às 22:52:23",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Admin Master fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-28T23:01:05.203486",
+    "data_hora": "28/08/2025 às 23:01:05",
+    "usuario": "admin",
+    "tipo_usuario": "admin",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Administrador Geral fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-28T23:05:05.965707",
+    "data_hora": "28/08/2025 às 23:05:05",
+    "usuario": "admin",
+    "tipo_usuario": "admin",
+    "acao": "Criou Atividade",
+    "detalhes": "Criou a atividade \"Teste\" com professor prof_informatica"
+  },
+  {
+    "timestamp": "2025-08-28T23:06:18.066698",
+    "data_hora": "28/08/2025 às 23:06:18",
+    "usuario": "admin",
+    "tipo_usuario": "admin",
+    "acao": "Excluiu Atividade",
+    "detalhes": "Excluiu a atividade \"Teste\""
+  },
+  {
+    "timestamp": "2025-08-28T23:09:09.112948",
+    "data_hora": "28/08/2025 às 23:09:09",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Fez Logout",
+    "detalhes": "Usuário Admin Master fez logout do sistema"
+  }
+]

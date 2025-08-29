@@ -290,6 +290,10 @@
                                        title="Relatório de Frequência">
                                         <i class="fas fa-calendar-check"></i>
                                     </a>
+                                    <a href="{{ url_for('ficha_cadastro', aluno_id=loop.index0) }}" class="btn btn-sm btn-outline-warning" 
+                                       title="Ficha de Cadastro" target="_blank">
+                                        <i class="fas fa-id-card"></i>
+                                    </a>
                                     <button type="button" class="btn btn-sm btn-outline-primary" 
                                             onclick="editarAluno({{ loop.index0 }})" 
                                             title="Editar aluno">
@@ -345,6 +349,10 @@
                                     <a href="{{ url_for('frequencia_individual', aluno_id=loop.index0) }}" class="btn btn-sm btn-outline-secondary" 
                                        title="Relatório de Frequência">
                                         <i class="fas fa-chart-bar"></i>
+                                    </a>
+                                    <a href="{{ url_for('ficha_cadastro', aluno_id=loop.index0) }}" class="btn btn-sm btn-outline-warning" 
+                                       title="Ficha de Cadastro" target="_blank">
+                                        <i class="fas fa-id-card"></i>
                                     </a>
                                 </div>
                             </td>

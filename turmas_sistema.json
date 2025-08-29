@@ -1,19 +1,4 @@
 {
-  "turma_1": {
-    "id": "turma_1",
-    "nome": "Bomveiro mirim - Turma 1",
-    "atividade": "Bomveiro mirim",
-    "horario": "07:00-08:00",
-    "dias_semana": "Segunda, Quarta, Sexta",
-    "periodo": "Manhã",
-    "capacidade_maxima": 20,
-    "professor_responsavel": "",
-    "ativa": true,
-    "data_criacao": "28/08/2025",
-    "criado_por": "sistema_automatico",
-    "total_alunos": 0,
-    "descricao": "Turma de Bomveiro mirim - Manhã"
-  },
   "turma_2": {
     "id": "turma_2",
     "nome": "Bomveiro mirim - Turma 2",

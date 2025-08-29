@@ -1,13 +1,4 @@
 {
-  "Bomveiro mirim": {
-    "nome": "Bomveiro mirim",
-    "descricao": "Atividade de Bomveiro mirim",
-    "ativa": true,
-    "data_criacao": "28/08/2025",
-    "criado_por": "sistema_automatico",
-    "professores_vinculados": [],
-    "total_alunos": 1
-  },
   "Karatè": {
     "nome": "Karatè",
     "descricao": "Atividade de Karatè",
@@ -78,7 +69,7 @@
     "data_criacao": "28/08/2025",
     "criado_por": "sistema_automatico",
     "professores_vinculados": [],
-    "total_alunos": 91
+    "total_alunos": 90
   },
   "Funcional": {
     "nome": "Funcional",

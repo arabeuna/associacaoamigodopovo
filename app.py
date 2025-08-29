@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash, send_file
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import hashlib
 import json
@@ -1654,6 +1654,15 @@ def login():
                 session['usuario_logado'] = usuario
                 session['usuario_nome'] = USUARIOS[usuario]['nome']
                 session['usuario_nivel'] = USUARIOS[usuario]['nivel']
+                
+                # Registrar atividade de login
+                registrar_atividade(
+                    usuario, 
+                    'Fez Login', 
+                    f'Usuário {USUARIOS[usuario]["nome"]} fez login no sistema', 
+                    USUARIOS[usuario]['nivel']
+                )
+                
                 flash('Login realizado com sucesso!', 'success')
                 return redirect(url_for('dashboard'))
             else:
@@ -1665,6 +1674,15 @@ def login():
 
 @app.route('/logout')
 def logout():
+    # Registrar atividade de logout antes de limpar a sessão
+    if 'usuario_logado' in session:
+        registrar_atividade(
+            session['usuario_logado'], 
+            'Fez Logout', 
+            f'Usuário {session.get("usuario_nome", "Desconhecido")} fez logout do sistema', 
+            session.get('usuario_nivel', 'usuario')
+        )
+    
     session.clear()
     flash('Logout realizado com sucesso!', 'success')
     return redirect(url_for('index'))
@@ -1789,6 +1807,16 @@ def marcar_presenca():
         sucesso, mensagem = academia.registrar_presenca_manual(nome_aluno)
         
         if sucesso:
+            # Registrar atividade
+            usuario_logado = session.get('usuario_logado')
+            nivel_usuario = session.get('usuario_nivel', 'usuario')
+            registrar_atividade(
+                usuario_logado, 
+                'Marcou Presença', 
+                f'Marcou presença do aluno {nome_aluno}', 
+                nivel_usuario
+            )
+            
             return jsonify({
                 'success': True, 
                 'message': mensagem,
@@ -2914,6 +2942,15 @@ def criar_atividade():
         sucesso, mensagem = academia.cadastrar_atividade(nome, descricao, criado_por, professor)
         
         if sucesso:
+            # Registrar atividade
+            nivel_usuario = session.get('usuario_nivel', 'admin')
+            registrar_atividade(
+                criado_por, 
+                'Criou Atividade', 
+                f'Criou a atividade "{nome}" com professor {professor}', 
+                nivel_usuario
+            )
+            
             return jsonify({
                 'status': 'success',
                 'message': mensagem,
@@ -2938,6 +2975,16 @@ def excluir_atividade_route(nome_atividade):
         sucesso, mensagem = academia.excluir_atividade(nome_atividade)
         
         if sucesso:
+            # Registrar atividade
+            usuario_logado = session.get('usuario_logado')
+            nivel_usuario = session.get('usuario_nivel', 'admin')
+            registrar_atividade(
+                usuario_logado, 
+                'Excluiu Atividade', 
+                f'Excluiu a atividade "{nome_atividade}"', 
+                nivel_usuario
+            )
+            
             return jsonify({
                 'success': True,
                 'message': mensagem,
@@ -3184,8 +3231,142 @@ def demo_submit():
             'message': f'Erro na demonstração: {str(e)}'
         })
 
+@app.route('/ficha_cadastro/<int:aluno_id>')
+@login_obrigatorio
+def ficha_cadastro(aluno_id):
+    """Gera ficha de cadastro individual do aluno para impressão"""
+    try:
+        # Verificar se o aluno existe
+        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+            return "Aluno não encontrado", 404
+        
+        aluno = academia.alunos_reais[aluno_id]
+        
+        # Verificar permissão do usuário
+        nivel_usuario = session.get('usuario_nivel', 'usuario')
+        if nivel_usuario == 'usuario':
+            # Professores só podem ver alunos da sua atividade
+            usuario_logado = session.get('usuario_logado')
+            usuario_info = USUARIOS.get(usuario_logado, {})
+            atividades_responsavel = usuario_info.get('atividades_responsavel', [])
+            
+            if aluno.get('atividade') not in atividades_responsavel:
+                return "Você não tem permissão para visualizar este aluno", 403
+        
+        # Obter dados de presença do aluno
+        dados_presenca = academia.get_presenca_aluno(aluno['nome'])
+        
+        return render_template('ficha_cadastro.html',
+                              aluno=aluno,
+                              dados_presenca=dados_presenca,
+                              data_geracao=datetime.now().strftime('%d/%m/%Y às %H:%M'))
+                              
+    except Exception as e:
+        return f"Erro ao gerar ficha: {str(e)}", 500
+
 # Carregar usuários existentes do arquivo (se existir)
 carregar_usuarios()
+
+# Sistema de Logs de Atividades
+import json
+from datetime import datetime, timedelta
+
+def registrar_atividade(usuario, acao, detalhes, tipo_usuario="usuario"):
+    """Registra uma atividade no sistema de logs"""
+    try:
+        # Carregar logs existentes
+        logs_file = 'logs_atividades.json'
+        logs = []
+        
+        if os.path.exists(logs_file):
+            with open(logs_file, 'r', encoding='utf-8') as f:
+                logs = json.load(f)
+        
+        # Criar novo log
+        novo_log = {
+            'timestamp': datetime.now().isoformat(),
+            'data_hora': datetime.now().strftime('%d/%m/%Y às %H:%M:%S'),
+            'usuario': usuario,
+            'tipo_usuario': tipo_usuario,
+            'acao': acao,
+            'detalhes': detalhes
+        }
+        
+        logs.append(novo_log)
+        
+        # Salvar logs (manter apenas últimos 1000 logs)
+        if len(logs) > 1000:
+            logs = logs[-1000:]
+        
+        with open(logs_file, 'w', encoding='utf-8') as f:
+            json.dump(logs, f, ensure_ascii=False, indent=2)
+            
+    except Exception as e:
+        print(f"Erro ao registrar atividade: {e}")
+
+def carregar_logs(filtro_periodo="todos"):
+    """Carrega logs com filtro por período"""
+    try:
+        logs_file = 'logs_atividades.json'
+        if not os.path.exists(logs_file):
+            return []
+        
+        with open(logs_file, 'r', encoding='utf-8') as f:
+            logs = json.load(f)
+        
+        # Aplicar filtro por período
+        agora = datetime.now()
+        
+        if filtro_periodo == "hoje":
+            hoje = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+            logs = [log for log in logs if datetime.fromisoformat(log['timestamp']) >= hoje]
+        elif filtro_periodo == "semana":
+            semana_atras = agora - timedelta(days=7)
+            logs = [log for log in logs if datetime.fromisoformat(log['timestamp']) >= semana_atras]
+        elif filtro_periodo == "mes":
+            mes_atras = agora - timedelta(days=30)
+            logs = [log for log in logs if datetime.fromisoformat(log['timestamp']) >= mes_atras]
+        
+        # Ordenar por timestamp (mais recente primeiro)
+        logs.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return logs
+        
+    except Exception as e:
+        print(f"Erro ao carregar logs: {e}")
+        return []
+
+@app.route('/logs_atividades')
+@login_obrigatorio
+def logs_atividades():
+    """Página de logs de atividades (apenas para admin master)"""
+    nivel_usuario = session.get('usuario_nivel')
+    
+    if nivel_usuario != 'admin_master':
+        flash('Acesso negado! Apenas administradores master podem visualizar os logs.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    filtro = request.args.get('filtro', 'todos')
+    logs = carregar_logs(filtro)
+    
+    # Estatísticas dos logs
+    total_logs = len(logs)
+    usuarios_ativos = len(set(log['usuario'] for log in logs))
+    
+    # Agrupar por tipo de ação
+    acoes_count = {}
+    for log in logs:
+        acao = log['acao']
+        acoes_count[acao] = acoes_count.get(acao, 0) + 1
+    
+    return render_template('logs_atividades.html', 
+                         logs=logs, 
+                         filtro_atual=filtro,
+                         total_logs=total_logs,
+                         usuarios_ativos=usuarios_ativos,
+                         acoes_count=acoes_count)
+
+# ... existing code ...
 
 # Para produção
 if __name__ == '__main__':
@@ -3193,4 +3374,4 @@ if __name__ == '__main__':
     print("🚀 Iniciando Associação Amigo do Povo...")
     print(f"🌐 Sistema carregado: {len(academia.alunos_reais)} alunos")
     print(f"👥 Usuários carregados: {len(USUARIOS)} contas")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)
