@@ -134,5 +134,29 @@
     "tipo_usuario": "admin_master",
     "acao": "Fez Logout",
     "detalhes": "Usuário Admin Master fez logout do sistema"
+  },
+  {
+    "timestamp": "2025-08-29T01:12:03.177942",
+    "data_hora": "29/08/2025 às 01:12:03",
+    "usuario": "admin",
+    "tipo_usuario": "admin",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Administrador Geral fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-29T01:13:06.145875",
+    "data_hora": "29/08/2025 às 01:13:06",
+    "usuario": "admin",
+    "tipo_usuario": "admin",
+    "acao": "Fez Logout",
+    "detalhes": "Usuário Administrador Geral fez logout do sistema"
+  },
+  {
+    "timestamp": "2025-08-29T01:13:23.176041",
+    "data_hora": "29/08/2025 às 01:13:23",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Admin Master fez login no sistema"
   }
 ]
