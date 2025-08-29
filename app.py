@@ -2016,7 +2016,84 @@ def recarregar_dados():
 @app.route('/relatorio_mes/<mes>')
 @login_obrigatorio
 def relatorio_mes(mes):
-    return jsonify({'message': f'Relatório de {mes} será implementado'})
+    try:
+        # Mapear nome do mês para número
+        meses_map = {
+            'Janeiro': 1, 'Fevereiro': 2, 'Março': 3, 'Abril': 4,
+            'Maio': 5, 'Junho': 6, 'Julho': 7, 'Agosto': 8,
+            'Setembro': 9, 'Outubro': 10, 'Novembro': 11, 'Dezembro': 12
+        }
+        
+        if mes not in meses_map:
+            return jsonify({'error': 'Mês inválido'}), 400
+        
+        mes_num = meses_map[mes]
+        ano_atual = datetime.now().year
+        
+        # Obter dados de presença do mês
+        presencas_por_dia = {}
+        presencas_por_aluno = {}
+        total_presencas = 0
+        total_faltas = 0
+        dias_com_aula = set()
+        
+        # Processar dados de presença do arquivo CSV
+        if os.path.exists('presencas_detalhadas.csv'):
+            import csv
+            with open('presencas_detalhadas.csv', 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    try:
+                        # Converter data do formato DD/MM/YYYY
+                        data_str = row.get('DATA', '')
+                        if data_str:
+                            dia, mes_data, ano = data_str.split('/')
+                            if int(mes_data) == mes_num and int(ano) == ano_atual:
+                                dia_int = int(dia)
+                                dias_com_aula.add(dia_int)
+                                
+                                # Contar presenças por dia
+                                if dia_int not in presencas_por_dia:
+                                    presencas_por_dia[dia_int] = 0
+                                
+                                if row.get('STATUS') == 'P':
+                                    presencas_por_dia[dia_int] += 1
+                                    total_presencas += 1
+                                    
+                                    # Contar presenças por aluno
+                                    nome_aluno = row.get('NOME', '')
+                                    if nome_aluno not in presencas_por_aluno:
+                                        presencas_por_aluno[nome_aluno] = 0
+                                    presencas_por_aluno[nome_aluno] += 1
+                                else:
+                                    total_faltas += 1
+                    except Exception as e:
+                        print(f"Erro ao processar linha: {e}")
+                        continue
+        
+        # Ordenar ranking de alunos por presenças
+        ranking_alunos = sorted(presencas_por_aluno.items(), key=lambda x: x[1], reverse=True)
+        
+        # Preparar dados para o gráfico
+        for dia in range(1, 32):
+            if dia not in presencas_por_dia:
+                presencas_por_dia[dia] = 0
+        
+        return jsonify({
+            'mes': mes,
+            'total_alunos': len(academia.alunos_reais),
+            'estatisticas': {
+                'total_presencas': total_presencas,
+                'total_faltas': total_faltas,
+                'dias_com_aula': len(dias_com_aula)
+            },
+            'presencas_por_dia': presencas_por_dia,
+            'presencas_por_aluno': dict(ranking_alunos[:10])  # Top 10 alunos
+        })
+        
+    except Exception as e:
+        print(f"Erro ao gerar relatório: {e}")
+        return jsonify({'error': f'Erro interno: {str(e)}'}), 500
 
 @app.route('/cadastrar_aluno', methods=['POST'])
 @apenas_admin_ou_master
@@ -3079,6 +3156,33 @@ def dashboard_turma(turma_id):
                          turma=turma,
                          usuario_nome=usuario_nome,
                          nivel_usuario=nivel_usuario)
+
+@app.route('/form_manager_demo')
+@login_obrigatorio
+def form_manager_demo():
+    """Página de demonstração do FormManager com useMemo pattern"""
+    return render_template('form_manager_demo.html')
+
+@app.route('/demo_submit', methods=['POST'])
+@login_obrigatorio
+def demo_submit():
+    """Rota de demonstração para testar o FormManager"""
+    try:
+        # Simular processamento
+        import time
+        time.sleep(1)  # Simular delay
+        
+        # Retornar sucesso para demonstração
+        return jsonify({
+            'success': True,
+            'message': 'Formulário processado com sucesso! (Demonstração)',
+            'data': dict(request.form)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro na demonstração: {str(e)}'
+        })
 
 # Carregar usuários existentes do arquivo (se existir)
 carregar_usuarios()

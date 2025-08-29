@@ -293,8 +293,27 @@
 </div>
 
 <!-- JavaScript -->
+<script src="{{ url_for('static', filename='js/formManager.js') }}"></script>
 <script>
 $(document).ready(function() {
+    // Inicializar FormManager com useMemo pattern
+    formManager.initForm('formNovoColaborador', {
+        autoSave: true,
+        clearOnSuccess: true,
+        validateBeforeSubmit: true,
+        cacheTimeout: 300000 // 5 minutos
+    });
+    
+    formManager.initForm('formEditarColaborador', {
+        autoSave: true,
+        clearOnSuccess: false, // Não limpar formulário de edição
+        validateBeforeSubmit: true,
+        cacheTimeout: 300000 // 5 minutos
+    });
+    
+    console.log('FormManager Stats:', formManager.getCacheStats());
+    
+    // Mostrar/ocultar campo atividade baseado no nível
     // Mostrar/ocultar campo atividade baseado no nível
     $('#novoNivel').on('change', function() {
         const nivel = $(this).val();
@@ -318,55 +337,21 @@ $(document).ready(function() {
 });
 
 function salvarNovoColaborador() {
-    const form = document.getElementById('formNovoColaborador');
-    const formData = new FormData(form);
-    
-    // Validações
-    const username = formData.get('username');
-    const nome = formData.get('nome');
-    const senha = formData.get('senha');
-    const nivel = formData.get('nivel');
-    
-    if (!username || username.length < 4) {
-        showToast('error', 'Username deve ter pelo menos 4 caracteres');
-        return;
-    }
-    
-    if (!nome || nome.length < 3) {
-        showToast('error', 'Nome deve ter pelo menos 3 caracteres');
-        return;
-    }
-    
-    if (!senha || senha.length < 6) {
-        showToast('error', 'Senha deve ter pelo menos 6 caracteres');
-        return;
-    }
-    
-    if (!nivel) {
-        showToast('error', 'Selecione um nível de acesso');
-        return;
-    }
-    
-    // Enviar dados
-    $.ajax({
-        url: '/criar_colaborador',
-        method: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-            if (response.success) {
-                showToast('success', response.message);
-                $('#modalNovoColaborador').modal('hide');
-                // Recarregar página após 1 segundo
-                setTimeout(() => window.location.reload(), 1000);
-            } else {
-                showToast('error', response.message);
-            }
-        },
-        error: function() {
-            showToast('error', 'Erro de conexão com o servidor');
+    // Usar FormManager com useMemo pattern
+    formManager.submitForm('formNovoColaborador', {
+        url: '/criar_colaborador'
+    }).then(response => {
+        if (response.success) {
+            showToast('success', response.message);
+            $('#modalNovoColaborador').modal('hide');
+            // Recarregar página após 1 segundo
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('error', response.message);
         }
+    }).catch(error => {
+        showToast('error', 'Erro de conexão com o servidor');
+        console.error('Erro no FormManager:', error);
     });
 }
 

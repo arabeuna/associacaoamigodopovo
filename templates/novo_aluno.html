@@ -225,8 +225,17 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/formManager.js') }}"></script>
 <script>
 $(document).ready(function() {
+    // Inicializar FormManager com useMemo pattern
+    formManager.initForm('formCadastro', {
+        autoSave: true,
+        clearOnSuccess: true,
+        validateBeforeSubmit: true,
+        cacheTimeout: 300000 // 5 minutos
+    });
+
     // Máscara para telefone
     $('#telefone').on('input', function() {
         let valor = this.value.replace(/\D/g, '');
@@ -239,125 +248,63 @@ $(document).ready(function() {
         }
     });
     
-    // Validação em tempo real
-    $('#nome').on('input', function() {
-        const valor = $(this).val().trim();
-        if (valor.length < 3) {
-            $(this).removeClass('is-valid').addClass('is-invalid');
-        } else {
-            $(this).removeClass('is-invalid').addClass('is-valid');
-        }
-    });
-    
-    $('#telefone').on('input', function() {
-        const valor = $(this).val().replace(/\D/g, '');
-        if (valor.length >= 10) {
-            $(this).removeClass('is-invalid').addClass('is-valid');
-        } else {
-            $(this).removeClass('is-valid').addClass('is-invalid');
-        }
-    });
-    
-    $('#email').on('input', function() {
-        const valor = $(this).val().trim();
-        if (valor === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) {
-            $(this).removeClass('is-invalid').addClass('is-valid');
-        } else {
-            $(this).removeClass('is-valid').addClass('is-invalid');
-        }
-    });
-    
-    // Envio do formulário
+    // Envio do formulário com useMemo pattern
     $('#formCadastro').on('submit', function(e) {
         e.preventDefault();
         
-        const nome = $('#nome').val().trim();
-        const telefone = $('#telefone').val().trim();
-        const email = $('#email').val().trim();
-        const observacoes = $('#observacoes').val().trim();
-        
-        // Validação
-        if (!nome || nome.length < 3) {
-            $('#feedback').html(
-                '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
-                '<i class="fas fa-exclamation-triangle me-2"></i>' +
-                'Nome deve ter pelo menos 3 caracteres.' +
-                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
-                '</div>'
-            );
-            return;
-        }
-        
-        if (!telefone || telefone.replace(/\D/g, '').length < 10) {
-            $('#feedback').html(
-                '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
-                '<i class="fas fa-exclamation-triangle me-2"></i>' +
-                'Telefone deve ter pelo menos 10 dígitos.' +
-                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
-                '</div>'
-            );
-            return;
-        }
-        
-        // Obter outros dados
-        const endereco = $('#endereco').val().trim();
-        const data_nascimento = $('#data_nascimento').val();
-        const atividade = $('#atividade').val();
-        const turma = $('#turma').val().trim();
-        
-        // Enviar dados
-        $.ajax({
-            url: '/cadastrar_aluno',
-            method: 'POST',
-            data: {
-                nome: nome,
-                telefone: telefone,
-                email: email,
-                endereco: endereco,
-                data_nascimento: data_nascimento,
-                atividade: atividade,
-                turma: turma,
-                observacoes: observacoes
-            },
-            success: function(response) {
-                if (response.success) {
-                    $('#feedback').html(
-                        '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
-                        '<i class="fas fa-check-circle me-2"></i>' +
-                        response.message +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
-                        '</div>'
-                    );
-                    
-                    // Limpar formulário
-                    $('#formCadastro')[0].reset();
-                    $('.form-control').removeClass('is-valid is-invalid');
-                    
-                    // Redirecionar após 2 segundos
-                    setTimeout(function() {
-                        window.location.href = '/alunos';
-                    }, 2000);
-                } else {
-                    $('#feedback').html(
-                        '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
-                        '<i class="fas fa-exclamation-triangle me-2"></i>' +
-                        response.message +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
-                        '</div>'
-                    );
-                }
-            },
-            error: function() {
+        // Usar FormManager para submeter com cache e callback
+        formManager.submitForm('formCadastro', {
+            url: '/cadastrar_aluno'
+        }).then(response => {
+            if (response.success) {
+                $('#feedback').html(
+                    '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                    '<i class="fas fa-check-circle me-2"></i>' +
+                    response.message +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                    '</div>'
+                );
+                
+                // Formulário será limpo automaticamente pelo FormManager após sucesso
+                // Redirecionar após 2 segundos
+                setTimeout(function() {
+                    window.location.href = '/alunos';
+                }, 2000);
+            } else {
                 $('#feedback').html(
                     '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
-                    '<i class="fas fa-times-circle me-2"></i>' +
-                    'Erro ao conectar com o servidor. Tente novamente.' +
+                    '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                    response.message +
                     '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
                     '</div>'
                 );
             }
+        }).catch(error => {
+            $('#feedback').html(
+                '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                '<i class="fas fa-times-circle me-2"></i>' +
+                'Erro ao conectar com o servidor. Tente novamente.' +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                '</div>'
+            );
+            console.error('Erro no FormManager:', error);
         });
     });
+
+    // Botão para restaurar dados do cache (opcional)
+    $('#restaurarDados').on('click', function() {
+        formManager.restoreFormData('formCadastro');
+        $('#feedback').html(
+            '<div class="alert alert-info alert-dismissible fade show" role="alert">' +
+            '<i class="fas fa-info-circle me-2"></i>' +
+            'Dados restaurados do cache.' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+            '</div>'
+        );
+    });
+
+    // Mostrar estatísticas do cache (para debug)
+    console.log('FormManager Stats:', formManager.getCacheStats());
 });
 </script>
 {% endblock %}

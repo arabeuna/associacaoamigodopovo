@@ -391,51 +391,42 @@
 </div>
 
 <!-- JavaScript -->
+<script src="{{ url_for('static', filename='js/formManager.js') }}"></script>
 <script>
+// Inicializar FormManager com useMemo pattern
+document.addEventListener('DOMContentLoaded', function() {
+    formManager.initForm('formNovaTurma', {
+        autoSave: true,
+        clearOnSuccess: true,
+        validateBeforeSubmit: true,
+        cacheTimeout: 300000 // 5 minutos
+    });
+    
+    formManager.initForm('formEditarTurma', {
+        autoSave: true,
+        clearOnSuccess: false, // Não limpar formulário de edição
+        validateBeforeSubmit: true,
+        cacheTimeout: 300000 // 5 minutos
+    });
+    
+    console.log('FormManager Stats:', formManager.getCacheStats());
+});
+
 function salvarNovaTurma() {
-    const form = document.getElementById('formNovaTurma');
-    const formData = new FormData(form);
-    
-    const nome = formData.get('nome').trim();
-    const atividade = formData.get('atividade');
-    const horario = formData.get('horario').trim();
-    const dias = formData.get('dias_semana');
-    
-    if (!nome || !atividade || !horario || !dias) {
-        showToast('error', 'Todos os campos obrigatórios devem ser preenchidos');
-        return;
-    }
-    
-    if (nome.length < 3) {
-        showToast('error', 'Nome da turma deve ter pelo menos 3 caracteres');
-        return;
-    }
-    
-    // Validar formato do horário
-    const horarioPattern = /^[0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2}$/;
-    if (!horarioPattern.test(horario)) {
-        showToast('error', 'Formato de horário inválido. Use: HH:MM-HH:MM');
-        return;
-    }
-    
-    $.ajax({
-        url: '/criar_turma',
-        method: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-            if (response.success) {
-                showToast('success', response.message);
-                $('#modalNovaTurma').modal('hide');
-                setTimeout(() => window.location.reload(), 1000);
-            } else {
-                showToast('error', response.message);
-            }
-        },
-        error: function() {
-            showToast('error', 'Erro de conexão com o servidor');
+    // Usar FormManager com useMemo pattern
+    formManager.submitForm('formNovaTurma', {
+        url: '/criar_turma'
+    }).then(response => {
+        if (response.success) {
+            showToast('success', response.message);
+            $('#modalNovaTurma').modal('hide');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('error', response.message);
         }
+    }).catch(error => {
+        showToast('error', 'Erro de conexão com o servidor');
+        console.error('Erro no FormManager:', error);
     });
 }
 

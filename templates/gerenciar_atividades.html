@@ -248,7 +248,20 @@
 </div>
 
 <!-- JavaScript -->
+<script src="{{ url_for('static', filename='js/formManager.js') }}"></script>
 <script>
+// Inicializar FormManager com useMemo pattern
+document.addEventListener('DOMContentLoaded', function() {
+    formManager.initForm('formNovaAtividade', {
+        autoSave: true,
+        clearOnSuccess: true,
+        validateBeforeSubmit: true,
+        cacheTimeout: 300000 // 5 minutos
+    });
+    
+    console.log('FormManager Stats:', formManager.getCacheStats());
+});
+
 function editarAtividade(nome, descricao) {
     // Preencher o formulário de edição
     document.getElementById('nomeAtividadeAntigo').value = nome;
@@ -315,41 +328,20 @@ function salvarEdicaoAtividade() {
 }
 
 function salvarNovaAtividade() {
-    const form = document.getElementById('formNovaAtividade');
-    const formData = new FormData(form);
-    
-    const nome = formData.get('nome').trim();
-    const descricao = formData.get('descricao').trim();
-    const professor = formData.get('professor');
-    
-    if (!nome) {
-        showToast('error', 'Nome da atividade é obrigatório');
-        return;
-    }
-    
-    if (nome.length < 3) {
-        showToast('error', 'Nome deve ter pelo menos 3 caracteres');
-        return;
-    }
-    
-    $.ajax({
-        url: '/criar_atividade',
-        method: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-            if (response.success) {
-                showToast('success', response.message);
-                $('#modalNovaAtividade').modal('hide');
-                setTimeout(() => window.location.reload(), 1000);
-            } else {
-                showToast('error', response.message);
-            }
-        },
-        error: function() {
-            showToast('error', 'Erro de conexão com o servidor');
+    // Usar FormManager com useMemo pattern
+    formManager.submitForm('formNovaAtividade', {
+        url: '/criar_atividade'
+    }).then(response => {
+        if (response.success) {
+            showToast('success', response.message);
+            $('#modalNovaAtividade').modal('hide');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('error', response.message);
         }
+    }).catch(error => {
+        showToast('error', 'Erro de conexão com o servidor');
+        console.error('Erro no FormManager:', error);
     });
 }
 

@@ -302,30 +302,38 @@ function criarRanking(presencasPorAluno) {
     const tbody = $('#ranking-tbody');
     tbody.empty();
     
-    presencasPorAluno.forEach((aluno, index) => {
-        let badgeClass = 'bg-success';
-        let status = 'Excelente';
-        let icone = 'fa-trophy';
-        
-        if (aluno.percentual < 50) {
-            badgeClass = 'bg-danger';
-            status = 'Crítico';
-            icone = 'fa-exclamation-triangle';
-        } else if (aluno.percentual < 75) {
-            badgeClass = 'bg-warning';
-            status = 'Atenção';
-            icone = 'fa-exclamation-circle';
-        } else if (aluno.percentual < 90) {
-            badgeClass = 'bg-info';
-            status = 'Bom';
-            icone = 'fa-check-circle';
-        }
-        
+    // Converter objeto para array e ordenar
+    const ranking = Object.entries(presencasPorAluno)
+        .map(([nome, presencas]) => ({ nome, presencas }))
+        .sort((a, b) => b.presencas - a.presencas);
+    
+    ranking.forEach((aluno, index) => {
         let posicaoIcon = '';
         if (index === 0) posicaoIcon = '🥇';
         else if (index === 1) posicaoIcon = '🥈';
         else if (index === 2) posicaoIcon = '🥉';
         else posicaoIcon = `${index + 1}º`;
+        
+        // Calcular percentual (assumindo que o máximo é 30 dias)
+        const percentual = Math.round((aluno.presencas / 30) * 100);
+        
+        let badgeClass = 'bg-success';
+        let status = 'Excelente';
+        let icone = 'fa-trophy';
+        
+        if (percentual < 50) {
+            badgeClass = 'bg-danger';
+            status = 'Crítico';
+            icone = 'fa-exclamation-triangle';
+        } else if (percentual < 75) {
+            badgeClass = 'bg-warning';
+            status = 'Atenção';
+            icone = 'fa-exclamation-circle';
+        } else if (percentual < 90) {
+            badgeClass = 'bg-info';
+            status = 'Bom';
+            icone = 'fa-check-circle';
+        }
         
         const row = `
             <tr>
@@ -340,18 +348,18 @@ function criarRanking(presencasPorAluno) {
                     <span class="badge bg-success">${aluno.presencas}</span>
                 </td>
                 <td>
-                    <span class="badge bg-warning">${aluno.faltas}</span>
+                    <span class="badge bg-warning">-</span>
                 </td>
                 <td>
-                    <strong>${aluno.total_aulas}</strong>
+                    <strong>30</strong>
                 </td>
                 <td>
                     <div class="progress" style="width: 100px;">
                         <div class="progress-bar ${badgeClass}" role="progressbar" 
-                             style="width: ${aluno.percentual}%" 
-                             aria-valuenow="${aluno.percentual}" 
+                             style="width: ${percentual}%" 
+                             aria-valuenow="${percentual}" 
                              aria-valuemin="0" aria-valuemax="100">
-                            ${aluno.percentual}%
+                            ${percentual}%
                         </div>
                     </div>
                 </td>
