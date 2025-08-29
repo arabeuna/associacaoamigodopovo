@@ -9,7 +9,13 @@ from dotenv import load_dotenv
 from models import SessionLocal, engine, Base
 
 # Carregar variáveis de ambiente
-load_dotenv()
+# Tenta carregar .env.production primeiro (para ambiente de produção)
+if os.path.exists('.env.production'):
+    load_dotenv('.env.production')
+    print("Carregando variáveis de ambiente de produção (.env.production)")
+else:
+    load_dotenv()
+    print("Carregando variáveis de ambiente de desenvolvimento (.env)")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'associacao_amigo_do_povo_2024_secure_key')

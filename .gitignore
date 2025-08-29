@@ -27,6 +27,8 @@ instance/
 
 # Environment variables
 .env
+# NÃO ignorar o arquivo de produção
+!.env.production
 .venv
 env/
 venv/
