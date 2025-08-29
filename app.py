@@ -124,6 +124,28 @@ class SistemaAcademia:
         self.dados_presenca = self.carregar_dados_presenca()
         # Atualizar status de frequência com dados de presença
         self.atualizar_status_frequencia_informatica()
+        
+        # Iniciar sistema de auto-save para garantir persistência
+        self.iniciar_auto_save()
+    
+    def iniciar_auto_save(self):
+        """Inicia o sistema de auto-save para garantir persistência dos dados"""
+        import threading
+        import time
+        
+        def auto_save_loop():
+            while True:
+                try:
+                    time.sleep(60)  # Salvar a cada 1 minuto
+                    self.salvar_dados()
+                    print("💾 Auto-save executado - dados salvos automaticamente")
+                except Exception as e:
+                    print(f"❌ Erro no auto-save: {e}")
+        
+        # Iniciar thread de auto-save em background
+        auto_save_thread = threading.Thread(target=auto_save_loop, daemon=True)
+        auto_save_thread.start()
+        print("🔄 Sistema de auto-save iniciado - dados serão salvos automaticamente a cada minuto")
     
     def carregar_dados_reais(self):
         """Carrega dados do arquivo JSON, CSV ou usa dados embutidos"""
@@ -1197,6 +1219,11 @@ class SistemaAcademia:
                             ])
                             # Remover flag de tipo manual para evitar duplicação
                             registro.pop('tipo', None)
+                
+                # FORÇAR SINCRONIZAÇÃO DO ARQUIVO PARA GARANTIR PERSISTÊNCIA
+                f.flush()  # Força escrita no buffer
+                import os
+                os.fsync(f.fileno())  # Força sincronização com disco
             
             return True
             
@@ -1417,6 +1444,12 @@ class SistemaAcademia:
             dados_para_salvar = dados if dados is not None else self.alunos_reais
             with open(self.arquivo_dados, 'w', encoding='utf-8') as f:
                 json.dump(dados_para_salvar, f, ensure_ascii=False, indent=2)
+            
+            # FORÇAR SINCRONIZAÇÃO DO ARQUIVO PARA GARANTIR PERSISTÊNCIA
+            import os
+            f.flush()  # Força escrita no buffer
+            os.fsync(f.fileno())  # Força sincronização com disco
+            
             print(f"💾 Dados salvos: {len(dados_para_salvar)} alunos")
             return True
         except Exception as e:
@@ -3327,6 +3360,11 @@ def registrar_atividade(usuario, acao, detalhes, tipo_usuario="usuario"):
         
         with open(logs_file, 'w', encoding='utf-8') as f:
             json.dump(logs, f, ensure_ascii=False, indent=2)
+            
+            # FORÇAR SINCRONIZAÇÃO DO ARQUIVO PARA GARANTIR PERSISTÊNCIA
+            f.flush()  # Força escrita no buffer
+            import os
+            os.fsync(f.fileno())  # Força sincronização com disco
             
     except Exception as e:
         print(f"Erro ao registrar atividade: {e}")
