@@ -1,4 +1,10 @@
-Flask==2.3.3
+# ...existing code...
+import os
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+# ...existing code...Flask==2.3.3
 gunicorn==21.2.0
 Werkzeug==2.3.7
 psycopg2-binary==2.9.7
