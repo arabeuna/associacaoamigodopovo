@@ -11,5 +11,15 @@ services:
         value: 3.11.0
       - key: SECRET_KEY
         generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: associacao-amigo-do-povo-db
+          property: connectionString
     autoDeploy: true
     healthCheckPath: /health
+
+  - type: postgres
+    name: associacao-amigo-do-povo-db
+    plan: free
+    region: oregon
+    ipAllowList: [] # only allow internal connections

@@ -5,9 +5,30 @@ import hashlib
 import json
 from werkzeug.utils import secure_filename
 import io
+from dotenv import load_dotenv
+from models import SessionLocal, engine, Base
+
+# Carregar variáveis de ambiente
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'associacao_amigo_do_povo_2024_secure_key')
+
+# Inicializar banco de dados
+try:
+    Base.metadata.create_all(bind=engine)
+    print("Tabelas do banco de dados criadas/verificadas com sucesso!")
+except Exception as e:
+    print(f"Erro ao inicializar banco de dados: {e}")
+
+# Função para obter sessão do banco de dados
+def get_db():
+    return SessionLocal()
+
+# Função para fechar sessão do banco de dados
+def close_db(db):
+    if db:
+        db.close()
 
 # Usuários do sistema com controle hierárquico
 USUARIOS = {
@@ -3366,7 +3387,10 @@ def logs_atividades():
                          usuarios_ativos=usuarios_ativos,
                          acoes_count=acoes_count)
 
-# ... existing code ...
+# Rota de health check para o Render
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "ok"})
 
 # Para produção
 if __name__ == '__main__':
