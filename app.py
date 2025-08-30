@@ -7,18 +7,16 @@ from werkzeug.utils import secure_filename
 import io
 from dotenv import load_dotenv
 from models import SessionLocal, engine, Base
+from database_integration import get_db_integration
 
 # Carregar variáveis de ambiente
-# Priorizar .env local para desenvolvimento
-if os.path.exists('.env'):
-    load_dotenv('.env')
-    print("Carregando variáveis de ambiente de desenvolvimento (.env)")
-elif os.path.exists('.env.production'):
+# Tenta carregar .env.production primeiro (para ambiente de produção)
+if os.path.exists('.env.production'):
     load_dotenv('.env.production')
     print("Carregando variáveis de ambiente de produção (.env.production)")
 else:
     load_dotenv()
-    print("Carregando variáveis de ambiente padrão")
+    print("Carregando variáveis de ambiente de desenvolvimento (.env)")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'associacao_amigo_do_povo_2024_secure_key')
@@ -127,28 +125,6 @@ class SistemaAcademia:
         self.dados_presenca = self.carregar_dados_presenca()
         # Atualizar status de frequência com dados de presença
         self.atualizar_status_frequencia_informatica()
-        
-        # Iniciar sistema de auto-save para garantir persistência
-        self.iniciar_auto_save()
-    
-    def iniciar_auto_save(self):
-        """Inicia o sistema de auto-save para garantir persistência dos dados"""
-        import threading
-        import time
-        
-        def auto_save_loop():
-            while True:
-                try:
-                    time.sleep(60)  # Salvar a cada 1 minuto
-                    self.salvar_dados()
-                    print("💾 Auto-save executado - dados salvos automaticamente")
-                except Exception as e:
-                    print(f"❌ Erro no auto-save: {e}")
-        
-        # Iniciar thread de auto-save em background
-        auto_save_thread = threading.Thread(target=auto_save_loop, daemon=True)
-        auto_save_thread.start()
-        print("🔄 Sistema de auto-save iniciado - dados serão salvos automaticamente a cada minuto")
     
     def carregar_dados_reais(self):
         """Carrega dados do arquivo JSON, CSV ou usa dados embutidos"""
@@ -158,11 +134,6 @@ class SistemaAcademia:
                 with open(self.arquivo_dados, 'r', encoding='utf-8') as f:
                     dados_salvos = json.load(f)
                     print(f"📦 Carregados {len(dados_salvos)} alunos do arquivo salvo")
-                    # Adicionar IDs únicos se não existirem
-                    if dados_salvos and 'id_unico' not in dados_salvos[0]:
-                        dados_salvos = self.adicionar_ids_unicos(dados_salvos)
-                        # Salvar com IDs únicos
-                        self.salvar_dados(dados_salvos)
                     return dados_salvos
             
             # 2. Tentar carregar do CSV da planilha original
@@ -823,8 +794,6 @@ class SistemaAcademia:
                         continue
                 
                 print(f"📊 CSV processado: {linhas_processadas} alunos de {arquivo_csv}")
-                # Adicionar IDs únicos aos alunos
-                dados = self.adicionar_ids_unicos(dados)
                 return dados
                 
         except Exception as e:
@@ -883,31 +852,6 @@ class SistemaAcademia:
             print(f"❌ Erro ao mapear linha: {e}")
             print(f"   Dados da linha: {linha}")
             return None
-    
-    def adicionar_ids_unicos(self, dados_alunos):
-        """Adiciona IDs únicos aos alunos baseado no hash do nome"""
-        import hashlib
-        
-        for i, aluno in enumerate(dados_alunos):
-            # Criar ID único baseado no nome do aluno
-            nome_hash = hashlib.md5(aluno['nome'].encode('utf-8')).hexdigest()[:8]
-            aluno['id_unico'] = f"{nome_hash}_{i}"
-        
-        return dados_alunos
-    
-    def encontrar_aluno_por_id(self, id_unico):
-        """Encontra um aluno pelo ID único"""
-        for aluno in self.alunos_reais:
-            if aluno.get('id_unico') == id_unico:
-                return aluno
-        return None
-    
-    def encontrar_indice_por_id(self, id_unico):
-        """Encontra o índice de um aluno pelo ID único"""
-        for i, aluno in enumerate(self.alunos_reais):
-            if aluno.get('id_unico') == id_unico:
-                return i
-        return -1
 
     def carregar_dados_presenca(self):
         """Carrega dados de presença da Informática"""
@@ -1082,7 +1026,7 @@ class SistemaAcademia:
             return 0
     
     def registrar_presenca_manual(self, nome_aluno, data_hora=None):
-        """Registra presença manual de um aluno"""
+        """Registra presença manual de um aluno no banco PostgreSQL"""
         try:
             if not data_hora:
                 data_hora = datetime.now()
@@ -1100,29 +1044,46 @@ class SistemaAcademia:
             if not aluno_encontrado:
                 return False, "Aluno não encontrado"
             
-            # Inicializar dados de presença se não existir
-            if nome_aluno not in self.dados_presenca:
-                self.dados_presenca[nome_aluno] = {
-                    'atividade': aluno_encontrado.get('atividade', 'Indefinido'),
-                    'total_presencas': 0,
-                    'total_faltas': 0,
-                    'registros': [],
-                    'percentual': 0
-                }
+            # Registrar presença no banco de dados PostgreSQL
+            db_integration = get_db_integration()
             
-            # Verificar se já foi marcada presença hoje
-            data_hoje = data_hora.strftime('%d/%m/%Y')
-            for registro in self.dados_presenca[nome_aluno]['registros']:
-                if registro.get('data') == data_hoje:
-                    return False, f"Presença já registrada hoje para {nome_aluno}"
-            
-            # Adicionar registro de presença
-            novo_registro = {
-                'data': data_str,
-                'horario': hora_str,
+            dados_presenca = {
+                'aluno_id': aluno_encontrado.get('id'),
+                'data_presenca': data_hora.date(),
                 'status': 'P',
-                'tipo': 'manual'
+                'turma_id': None,  # Pode ser obtido do aluno se necessário
+                'atividade_id': None,  # Pode ser obtido do aluno se necessário
+                'observacoes': 'Presença manual',
+                'registrado_por': session.get('username', 'sistema')
             }
+            
+            sucesso = db_integration.registrar_presenca_db(dados_presenca)
+            
+            if sucesso:
+                # Manter compatibilidade com sistema antigo (temporário)
+                # Inicializar dados de presença se não existir
+                if nome_aluno not in self.dados_presenca:
+                    self.dados_presenca[nome_aluno] = {
+                        'atividade': aluno_encontrado.get('atividade', 'Indefinido'),
+                        'total_presencas': 0,
+                        'total_faltas': 0,
+                        'registros': [],
+                        'percentual': 0
+                    }
+                
+                # Verificar se já foi marcada presença hoje
+                data_hoje = data_hora.strftime('%d/%m/%Y')
+                for registro in self.dados_presenca[nome_aluno]['registros']:
+                    if registro.get('data') == data_hoje:
+                        return False, f"Presença já registrada hoje para {nome_aluno}"
+                
+                # Adicionar registro de presença
+                novo_registro = {
+                    'data': data_str,
+                    'horario': hora_str,
+                    'status': 'P',
+                    'tipo': 'manual'
+                }
             
             self.dados_presenca[nome_aluno]['registros'].append(novo_registro)
             self.dados_presenca[nome_aluno]['total_presencas'] += 1
@@ -1254,11 +1215,6 @@ class SistemaAcademia:
                             ])
                             # Remover flag de tipo manual para evitar duplicação
                             registro.pop('tipo', None)
-                
-                # FORÇAR SINCRONIZAÇÃO DO ARQUIVO PARA GARANTIR PERSISTÊNCIA
-                f.flush()  # Força escrita no buffer
-                import os
-                os.fsync(f.fileno())  # Força sincronização com disco
             
             return True
             
@@ -1479,12 +1435,6 @@ class SistemaAcademia:
             dados_para_salvar = dados if dados is not None else self.alunos_reais
             with open(self.arquivo_dados, 'w', encoding='utf-8') as f:
                 json.dump(dados_para_salvar, f, ensure_ascii=False, indent=2)
-            
-            # FORÇAR SINCRONIZAÇÃO DO ARQUIVO PARA GARANTIR PERSISTÊNCIA
-            import os
-            f.flush()  # Força escrita no buffer
-            os.fsync(f.fileno())  # Força sincronização com disco
-            
             print(f"💾 Dados salvos: {len(dados_para_salvar)} alunos")
             return True
         except Exception as e:
@@ -1492,22 +1442,54 @@ class SistemaAcademia:
             return False
     
     def adicionar_aluno(self, novo_aluno):
-        """Adiciona um novo aluno e salva os dados"""
+        """Adiciona um novo aluno e salva os dados no banco PostgreSQL"""
         try:
-            self.alunos_reais.append(novo_aluno)
-            self.salvar_dados()
-            return True
+            # Salvar no banco de dados PostgreSQL
+            db_integration = get_db_integration()
+            aluno_id = db_integration.salvar_aluno_db(novo_aluno)
+            
+            if aluno_id:
+                # Também manter compatibilidade com sistema antigo (temporário)
+                novo_aluno['id'] = aluno_id
+                self.alunos_reais.append(novo_aluno)
+                self.salvar_dados()  # Backup em JSON
+                print(f"✅ Aluno {novo_aluno.get('nome')} salvo no banco PostgreSQL (ID: {aluno_id})")
+                return True
+            else:
+                print("❌ Falha ao salvar aluno no banco de dados")
+                return False
         except Exception as e:
             print(f"❌ Erro ao adicionar aluno: {e}")
             return False
     
     def atualizar_aluno(self, indice, dados_atualizados):
-        """Atualiza um aluno existente e salva os dados"""
+        """Atualiza um aluno existente e salva os dados no banco PostgreSQL"""
         try:
             if 0 <= indice < len(self.alunos_reais):
-                self.alunos_reais[indice].update(dados_atualizados)
-                self.salvar_dados()
-                return True
+                # Obter ID do aluno para atualizar no banco
+                aluno_atual = self.alunos_reais[indice]
+                aluno_id = aluno_atual.get('id')
+                
+                if aluno_id:
+                    # Atualizar no banco de dados PostgreSQL
+                    db_integration = get_db_integration()
+                    sucesso = db_integration.atualizar_aluno_db(aluno_id, dados_atualizados)
+                    
+                    if sucesso:
+                        # Também manter compatibilidade com sistema antigo (temporário)
+                        self.alunos_reais[indice].update(dados_atualizados)
+                        self.salvar_dados()  # Backup em JSON
+                        print(f"✅ Aluno {dados_atualizados.get('nome', 'ID:' + str(aluno_id))} atualizado no banco PostgreSQL")
+                        return True
+                    else:
+                        print("❌ Falha ao atualizar aluno no banco de dados")
+                        return False
+                else:
+                    print("❌ Aluno não possui ID para atualização no banco")
+                    # Fallback para sistema antigo
+                    self.alunos_reais[indice].update(dados_atualizados)
+                    self.salvar_dados()
+                    return True
             return False
         except Exception as e:
             print(f"❌ Erro ao atualizar aluno: {e}")
@@ -1841,60 +1823,6 @@ def alunos():
                          usuario_nome=usuario_nome,
                          nivel_usuario=nivel_usuario)
 
-@app.route('/buscar_alunos')
-@login_obrigatorio  # Reativado para funcionar com autenticação
-def buscar_alunos():
-    """Rota para busca de alunos por nome"""
-    try:
-        termo_busca = request.args.get('termo', '').strip().lower()
-        
-        # Usar função que respeita as permissões do usuário
-        todos_alunos = obter_alunos_usuario()
-        
-        if not termo_busca:
-            # Se não há termo de busca, retorna todos os alunos
-            lista_alunos = todos_alunos
-        else:
-            # Filtrar alunos baseado no termo de busca
-            lista_alunos = []
-            
-            for aluno in todos_alunos:
-                nome_aluno = aluno['nome'].lower()
-                # Busca por nome completo ou parcial
-                if termo_busca in nome_aluno:
-                    lista_alunos.append(aluno)
-        
-        # Preparar dados para retorno JSON
-        alunos_json = []
-        for i, aluno in enumerate(lista_alunos):
-            aluno_data = {
-                'id': i,
-                'id_unico': aluno.get('id_unico', f'legacy_{i}'),
-                'nome': aluno['nome'],
-                'telefone': aluno.get('telefone', 'Não informado'),
-                'email': aluno.get('email', 'Não informado'),
-                'endereco': aluno.get('endereco', 'Não informado'),
-                'data_nascimento': aluno.get('data_nascimento', 'Não informado'),
-                'atividade': aluno.get('atividade', 'Não informado'),
-                'turma': aluno.get('turma', 'Não informado'),
-                'data_matricula': aluno.get('data_matricula', 'Não informado'),
-                'status_frequencia': aluno.get('status_frequencia', 'Não informado'),
-                'observacoes': aluno.get('observacoes', '')
-            }
-            alunos_json.append(aluno_data)
-        
-        return jsonify({
-            'success': True,
-            'alunos': alunos_json,
-            'total_encontrado': len(alunos_json)
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Erro na busca: {str(e)}'
-        })
-
 @app.route('/presenca')
 @login_obrigatorio
 def presenca():
@@ -1992,17 +1920,10 @@ def frequencia_individual():
     aluno_selecionado = None
     dados_presenca = None
     
-    if aluno_id:
-        # Tentar encontrar aluno por ID único primeiro
-        aluno_selecionado = academia.encontrar_aluno_por_id(aluno_id)
-        if not aluno_selecionado:
-            # Fallback para índice numérico (para compatibilidade)
-            try:
-                aluno_id_int = int(aluno_id)
-                if 0 <= aluno_id_int < len(academia.alunos_reais):
-                    aluno_selecionado = academia.alunos_reais[aluno_id_int]
-            except ValueError:
-                pass  # ID não é numérico e não foi encontrado por ID único
+    if aluno_id and aluno_id.isdigit():
+        aluno_id = int(aluno_id)
+        if 0 <= aluno_id < len(academia.alunos_reais):
+            aluno_selecionado = academia.alunos_reais[aluno_id]
             
             # Verificar permissão para ver este aluno
             if nivel_usuario == 'usuario':
@@ -2345,25 +2266,12 @@ def cadastrar_aluno():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao cadastrar aluno: {str(e)}'})
 
-@app.route('/editar_aluno/<aluno_id>', methods=['PUT', 'POST'])
+@app.route('/editar_aluno/<int:aluno_id>', methods=['PUT', 'POST'])
 @apenas_admin_ou_master
 def editar_aluno(aluno_id):
     try:
-        # Tentar encontrar aluno por ID único primeiro
-        aluno_atual = academia.encontrar_aluno_por_id(aluno_id)
-        if aluno_atual:
-            print(f"DEBUG: Editando aluno por ID único: {aluno_atual['nome']}")
-            aluno_id_int = academia.encontrar_indice_por_id(aluno_id)
-        else:
-            # Fallback para índice numérico (para compatibilidade)
-            try:
-                aluno_id_int = int(aluno_id)
-                if aluno_id_int < 0 or aluno_id_int >= len(academia.alunos_reais):
-                    return jsonify({'success': False, 'message': 'Aluno não encontrado'})
-                aluno_atual = academia.alunos_reais[aluno_id_int]
-                print(f"DEBUG: Editando aluno por índice: {aluno_atual['nome']}")
-            except ValueError:
-                return jsonify({'success': False, 'message': 'ID de aluno inválido'})
+        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+            return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
         # Obter dados do formulário
         nome = request.form.get('nome', '').strip()
@@ -2382,26 +2290,10 @@ def editar_aluno(aluno_id):
         if not telefone or len(telefone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')) < 10:
             return jsonify({'success': False, 'message': 'Telefone deve ter pelo menos 10 dígitos'})
         
-        # Verificar se outro aluno já tem este nome (excluindo o aluno atual sendo editado)
-        print(f"DEBUG: Editando aluno ID {aluno_id}, nome: '{nome}'")
-        print(f"DEBUG: Nome atual do aluno sendo editado: '{aluno_atual['nome']}'")
-        
-        # Normalizar nomes para comparação (remover espaços extras e converter para minúsculas)
-        nome_normalizado = nome.strip().lower()
-        nome_atual_normalizado = aluno_atual['nome'].strip().lower()
-        
-        print(f"DEBUG: Nome normalizado: '{nome_normalizado}'")
-        print(f"DEBUG: Nome atual normalizado: '{nome_atual_normalizado}'")
-        
+        # Verificar se outro aluno já tem este nome
         for i, aluno in enumerate(academia.alunos_reais):
-            nome_aluno_normalizado = aluno['nome'].strip().lower()
-            print(f"DEBUG: Comparando com aluno ID {i}: '{nome_aluno_normalizado}'")
-            
-            if i != aluno_id_int and nome_aluno_normalizado == nome_normalizado:
-                print(f"DEBUG: Conflito encontrado! Aluno ID {i} tem nome '{aluno['nome']}' que é igual a '{nome}'")
+            if i != aluno_id and aluno['nome'].lower() == nome.lower():
                 return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome'})
-        
-        print(f"DEBUG: Nenhum conflito encontrado, prosseguindo com a edição")
         
         # Converter data de nascimento se fornecida
         data_nasc_formatada = data_nascimento
@@ -2415,6 +2307,7 @@ def editar_aluno(aluno_id):
                 data_nasc_formatada = data_nascimento
         
         # Preparar dados atualizados
+        aluno_atual = academia.alunos_reais[aluno_id]
         dados_atualizados = {
             'nome': nome,
             'telefone': telefone,
@@ -2427,13 +2320,13 @@ def editar_aluno(aluno_id):
         }
         
         # Atualizar e salvar
-        sucesso = academia.atualizar_aluno(aluno_id_int, dados_atualizados)
+        sucesso = academia.atualizar_aluno(aluno_id, dados_atualizados)
         
         if sucesso:
             return jsonify({
                 'success': True, 
                 'message': f'Dados de {nome} atualizados com sucesso!',
-                'aluno': academia.alunos_reais[aluno_id_int]
+                'aluno': academia.alunos_reais[aluno_id]
             })
         else:
             return jsonify({'success': False, 'message': 'Erro ao salvar alterações'})
@@ -2477,34 +2370,14 @@ def excluir_aluno(aluno_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao excluir aluno: {str(e)}'})
 
-@app.route('/obter_aluno/<aluno_id>')
+@app.route('/obter_aluno/<int:aluno_id>')
 @login_obrigatorio
 def obter_aluno(aluno_id):
     try:
-        print(f"DEBUG: obter_aluno chamado com ID: {aluno_id}")
-        print(f"DEBUG: Total de alunos: {len(academia.alunos_reais)}")
+        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+            return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
-        # Tentar encontrar aluno por ID único primeiro
-        aluno = academia.encontrar_aluno_por_id(aluno_id)
-        if aluno:
-            print(f"DEBUG: Aluno encontrado por ID único: {aluno['nome']}")
-        else:
-            # Fallback para índice numérico (para compatibilidade)
-            try:
-                aluno_id_int = int(aluno_id)
-                if aluno_id_int < 0 or aluno_id_int >= len(academia.alunos_reais):
-                    print(f"DEBUG: ID {aluno_id_int} fora do range válido (0-{len(academia.alunos_reais)-1})")
-                    return jsonify({'success': False, 'message': 'Aluno não encontrado'})
-                aluno = academia.alunos_reais[aluno_id_int]
-                print(f"DEBUG: Aluno encontrado no índice {aluno_id_int}: {aluno['nome']}")
-            except ValueError:
-                print(f"DEBUG: ID inválido: {aluno_id}")
-                return jsonify({'success': False, 'message': 'ID de aluno inválido'})
-        
-        # Listar todos os alunos para debug
-        print("DEBUG: Lista completa de alunos:")
-        for i, a in enumerate(academia.alunos_reais):
-            print(f"  [{i}] {a['nome']} (ID: {a.get('id_unico', 'N/A')})")
+        aluno = academia.alunos_reais[aluno_id]
         
         # Adicionar dados de presença se for da Informática
         dados_presenca = None
@@ -2517,12 +2390,11 @@ def obter_aluno(aluno_id):
         return jsonify({
             'success': True,
             'aluno': aluno,
-            'aluno_id': aluno.get('id_unico', aluno_id),
+            'aluno_id': aluno_id,
             'dados_presenca': dados_presenca
         })
         
     except Exception as e:
-        print(f"DEBUG: Erro em obter_aluno: {e}")
         return jsonify({'success': False, 'message': f'Erro ao obter dados do aluno: {str(e)}'})
 
 @app.route('/salvar_dados_manualmente')
@@ -3436,22 +3308,16 @@ def demo_submit():
             'message': f'Erro na demonstração: {str(e)}'
         })
 
-@app.route('/ficha_cadastro/<aluno_id>')
+@app.route('/ficha_cadastro/<int:aluno_id>')
 @login_obrigatorio
 def ficha_cadastro(aluno_id):
     """Gera ficha de cadastro individual do aluno para impressão"""
     try:
-        # Tentar encontrar aluno por ID único primeiro
-        aluno = academia.encontrar_aluno_por_id(aluno_id)
-        if not aluno:
-            # Fallback para índice numérico (para compatibilidade)
-            try:
-                aluno_id_int = int(aluno_id)
-                if aluno_id_int < 0 or aluno_id_int >= len(academia.alunos_reais):
-                    return "Aluno não encontrado", 404
-                aluno = academia.alunos_reais[aluno_id_int]
-            except ValueError:
-                return "ID de aluno inválido", 400
+        # Verificar se o aluno existe
+        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+            return "Aluno não encontrado", 404
+        
+        aluno = academia.alunos_reais[aluno_id]
         
         # Verificar permissão do usuário
         nivel_usuario = session.get('usuario_nivel', 'usuario')
@@ -3511,11 +3377,6 @@ def registrar_atividade(usuario, acao, detalhes, tipo_usuario="usuario"):
         
         with open(logs_file, 'w', encoding='utf-8') as f:
             json.dump(logs, f, ensure_ascii=False, indent=2)
-            
-            # FORÇAR SINCRONIZAÇÃO DO ARQUIVO PARA GARANTIR PERSISTÊNCIA
-            f.flush()  # Força escrita no buffer
-            import os
-            os.fsync(f.fileno())  # Força sincronização com disco
             
     except Exception as e:
         print(f"Erro ao registrar atividade: {e}")

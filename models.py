@@ -9,7 +9,26 @@ from datetime import datetime
 import os
 
 # Configuração do banco de dados
-DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///academia_amigo_povo.db')
+# Tentar carregar variáveis de ambiente primeiro
+from dotenv import load_dotenv
+load_dotenv()
+
+# Configurar URL do banco de dados com fallback para SQLite
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    # Construir URL do PostgreSQL a partir das variáveis individuais
+    db_host = os.environ.get('DB_HOST', 'localhost')
+    db_port = os.environ.get('DB_PORT', '5432')
+    db_user = os.environ.get('DB_USER', 'postgres')
+    db_password = os.environ.get('DB_PASSWORD', 'postgres')
+    db_name = os.environ.get('DB_NAME', 'academia_amigo_povo')
+    
+    if all([db_host, db_port, db_user, db_password, db_name]):
+        DATABASE_URL = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
+    else:
+        # Fallback para SQLite se PostgreSQL não estiver configurado
+        DATABASE_URL = 'sqlite:///academia_amigo_povo.db'
+        print("⚠️  PostgreSQL não configurado, usando SQLite como fallback")
 
 # Criar engine do SQLAlchemy
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
@@ -37,7 +56,7 @@ class Usuario(Base):
     
     # Relacionamentos
     turmas_responsavel = relationship("Turma", back_populates="professor")
-    presencas_registradas = relationship("Presenca", back_populates="registrador")
+    presencas_registradas = relationship("Presenca", foreign_keys="Presenca.registrado_por")
     
     __table_args__ = (
         CheckConstraint("nivel IN ('admin_master', 'admin', 'usuario')", name='check_nivel_usuario'),
@@ -123,13 +142,13 @@ class Presenca(Base):
     observacoes = Column(Text)
     tipo_registro = Column(String(20), default='MANUAL')
     data_registro = Column(DateTime, default=datetime.utcnow)
-    registrado_por = Column(String(50))
+    registrado_por = Column(Integer, ForeignKey("usuarios.id"))
     
     # Relacionamentos
     aluno = relationship("Aluno", back_populates="presencas")
     turma = relationship("Turma", back_populates="presencas")
     atividade = relationship("Atividade", back_populates="presencas")
-    registrador = relationship("Usuario", back_populates="presencas_registradas")
+    registrador = relationship("Usuario", foreign_keys=[registrado_por])
     
     __table_args__ = (
         CheckConstraint("status IN ('P', 'F', 'J')", name='check_status_presenca'),
