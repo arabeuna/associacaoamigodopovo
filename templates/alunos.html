@@ -330,21 +330,21 @@
                             <!-- Ações Admin/Admin Master -->
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('frequencia_individual', aluno_id=loop.index0) }}" class="btn btn-sm btn-outline-info" 
+                                    <a href="{{ url_for('frequencia_individual', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-info" 
                                        title="Relatório de Frequência">
                                         <i class="fas fa-calendar-check"></i>
                                     </a>
-                                    <a href="{{ url_for('ficha_cadastro', aluno_id=loop.index0) }}" class="btn btn-sm btn-outline-warning" 
+                                    <a href="{{ url_for('ficha_cadastro', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-warning" 
                                        title="Ficha de Cadastro" target="_blank">
                                         <i class="fas fa-id-card"></i>
                                     </a>
                                     <button type="button" class="btn btn-sm btn-outline-primary" 
-                                            onclick="editarAluno({{ loop.index0 }})" 
+                                            onclick="editarAluno('{{ aluno.id_unico }}')" 
                                             title="Editar aluno">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            onclick="confirmarExclusao({{ loop.index0 }}, '{{ aluno.nome }}')" 
+                                            onclick="confirmarExclusao('{{ aluno.id_unico }}', '{{ aluno.nome }}')" 
                                             title="Excluir aluno">
                                         <i class="fas fa-trash"></i>
                                     </button>
@@ -385,16 +385,15 @@
                                             title="Marcar presença">
                                         <i class="fas fa-check"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-info" 
-                                            onclick="gerenciarFrequencia('{{ aluno.nome }}')" 
-                                            title="Gerenciar frequência">
+                                    <a href="{{ url_for('frequencia_individual', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-info" 
+                                       title="Gerenciar frequência">
                                         <i class="fas fa-calendar-check"></i>
-                                    </button>
-                                    <a href="{{ url_for('frequencia_individual', aluno_id=loop.index0) }}" class="btn btn-sm btn-outline-secondary" 
+                                    </a>
+                                    <a href="{{ url_for('frequencia_individual', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-secondary" 
                                        title="Relatório de Frequência">
                                         <i class="fas fa-chart-bar"></i>
                                     </a>
-                                    <a href="{{ url_for('ficha_cadastro', aluno_id=loop.index0) }}" class="btn btn-sm btn-outline-warning" 
+                                    <a href="{{ url_for('ficha_cadastro', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-warning" 
                                        title="Ficha de Cadastro" target="_blank">
                                         <i class="fas fa-id-card"></i>
                                     </a>
@@ -420,41 +419,7 @@
     </div>
 </div>
 
-<!-- Cards de Contato Rápido (apenas para admins) -->
-{% if alunos and nivel_usuario in ['admin', 'admin_master'] %}
-<div class="row mt-4">
-    <div class="col-12">
-        <h5 class="mb-3">
-            <i class="fas fa-address-card text-primary me-2"></i>
-            Contatos Rápidos
-        </h5>
-    </div>
-    {% for aluno in alunos[:6] %}
-    <div class="col-md-4 col-lg-2 mb-3">
-        <div class="card h-100 text-center">
-            <div class="card-body p-3">
-                <div class="avatar-circle bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" 
-                     style="width: 50px; height: 50px;">
-                    {{ aluno.nome.split()[0][0] }}{{ aluno.nome.split()[-1][0] if aluno.nome.split()|length > 1 else '' }}
-                </div>
-                <h6 class="card-title mb-1" style="font-size: 0.9rem;">
-                    {{ aluno.nome.split()[0] }} {{ aluno.nome.split()[-1] if aluno.nome.split()|length > 1 else '' }}
-                </h6>
-                <div class="d-grid gap-1">
-                    <a href="tel:{{ aluno.telefone }}" class="btn btn-sm btn-outline-success">
-                        <i class="fas fa-phone me-1"></i>
-                        Ligar
-                    </a>
-                    {% if aluno.atividade and aluno.atividade != 'Não informado' %}
-                        <span class="badge bg-info small">{{ aluno.atividade }}</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
+
 
 <!-- Botões de Ação -->
 <div class="row mt-4">
@@ -977,11 +942,10 @@ $(document).ready(function() {
                     </td>
                     <td>
                         <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-primary" 
-                                    onclick="verFrequenciaIndividual('${aluno.nome}')" 
-                                    title="Ver Frequência">
+                            <a href="/frequencia_individual?aluno_id=${aluno.id_unico}" class="btn btn-outline-primary" 
+                               title="Ver Frequência">
                                 <i class="fas fa-chart-bar"></i>
-                            </button>
+                            </a>
                         </div>
                     </td>
                 </tr>
@@ -1035,17 +999,16 @@ $(document).ready(function() {
                     <td>
                         <div class="btn-group btn-group-sm" role="group">
                             <button type="button" class="btn btn-outline-primary" 
-                                    onclick="editarAluno(${aluno.id})" 
+                                    onclick="editarAluno('${aluno.id_unico}')" 
                                     title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button type="button" class="btn btn-outline-info" 
-                                    onclick="verFrequenciaIndividual('${aluno.nome}')" 
-                                    title="Ver Frequência">
+                            <a href="/frequencia_individual?aluno_id=${aluno.id_unico}" class="btn btn-outline-info" 
+                               title="Ver Frequência">
                                 <i class="fas fa-chart-bar"></i>
-                            </button>
+                            </a>
                             <button type="button" class="btn btn-outline-danger" 
-                                    onclick="confirmarExclusao(${aluno.id}, '${aluno.nome}')" 
+                                    onclick="confirmarExclusao('${aluno.id_unico}', '${aluno.nome}')" 
                                     title="Excluir">
                                 <i class="fas fa-trash"></i>
                             </button>
