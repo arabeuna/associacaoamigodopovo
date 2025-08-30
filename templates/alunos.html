@@ -105,24 +105,67 @@
     </div>
 </div>
 
+<!-- Sistema de Busca Simples -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-body">
+                <h6 class="card-title text-primary mb-3">
+                    <i class="fas fa-search me-2"></i>
+                    Buscar Alunos
+                </h6>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text bg-primary text-white">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" 
+                                   id="filtroBusca" 
+                                   class="form-control" 
+                                   placeholder="Digite o nome do aluno para buscar... (ex: José ou José Silva)"
+                                   autocomplete="off">
+                            <button class="btn btn-outline-primary" type="button" id="limparBusca" onclick="limparBuscaManual()">
+                                <i class="fas fa-times me-1"></i>
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center h-100">
+                                                         <span class="text-muted">
+                                 <i class="fas fa-info-circle me-1"></i>
+                                 Resultados: <span id="totalResultados" class="fw-bold text-primary">{{ alunos|length }}</span>
+                             </span>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Lista de Alunos -->
 <div class="card">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <i class="fas fa-list me-2"></i>
-            Lista Completa de Alunos
-        </h5>
-        <a href="{{ url_for('novo_aluno') }}" class="btn btn-light btn-sm">
-            <i class="fas fa-plus me-1"></i>
-            Novo Aluno
-        </a>
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Lista Completa de Alunos
+            </h5>
+            <a href="{{ url_for('novo_aluno') }}" class="btn btn-light btn-sm">
+                <i class="fas fa-plus me-1"></i>
+                Novo Aluno
+            </a>
+        </div>
     </div>
     <div class="card-body">
         {% if alunos %}
             <div class="table-responsive">
                 {% if nivel_usuario == 'usuario' %}
                 <!-- Tabela simplificada para professores -->
-                <table class="table table-hover table-striped">
+                <table class="table table-hover table-striped" id="tabelaAlunos">
                     <thead class="table-dark">
                         <tr>
                             <th scope="col">
@@ -139,9 +182,10 @@
                             </th>
                         </tr>
                     </thead>
+                    <tbody>
                 {% else %}
                 <!-- Tabela completa para admins -->
-                <table class="table table-hover table-striped">
+                <table class="table table-hover table-striped" id="tabelaAlunos">
                     <thead class="table-dark">
                         <tr>
                             <th scope="col">
@@ -178,8 +222,8 @@
                             </th>
                         </tr>
                     </thead>
-                {% endif %}
                     <tbody>
+                {% endif %}
                         {% for aluno in alunos %}
                         <tr>
                             <!-- Nome (sempre mostrado) -->
@@ -579,14 +623,27 @@
 </div>
 
 <script>
+// Função para limpar busca manualmente (fallback)
+function limparBuscaManual() {
+    console.log('=== FUNÇÃO LIMPAR BUSCA MANUAL CHAMADA ===');
+    $('#filtroBusca').val('');
+    buscarAlunos('');
+    console.log('Busca limpa manualmente');
+}
+
 // Função para editar aluno
 function editarAluno(alunoId) {
+    console.log('DEBUG: editarAluno chamado com ID:', alunoId);
+    
     $.ajax({
         url: `/obter_aluno/${alunoId}`,
         method: 'GET',
         success: function(response) {
+            console.log('DEBUG: Resposta recebida:', response);
+            
             if (response.success) {
                 const aluno = response.aluno;
+                console.log('DEBUG: Aluno a ser editado:', aluno);
                 
                 // Preencher formulário
                 $('#editAlunoId').val(alunoId);
@@ -615,10 +672,14 @@ function editarAluno(alunoId) {
                 // Mostrar modal
                 $('#modalEditarAluno').modal('show');
             } else {
+                console.log('DEBUG: Erro na resposta:', response.message);
                 alert('Erro ao carregar dados do aluno: ' + response.message);
             }
         },
-        error: function() {
+        error: function(xhr, status, error) {
+            console.log('DEBUG: Erro na requisição:', error);
+            console.log('DEBUG: Status:', status);
+            console.log('DEBUG: XHR:', xhr);
             alert('Erro ao carregar dados do aluno');
         }
     });
@@ -778,6 +839,234 @@ function excluirAluno() {
         }
     });
 }
+
+// ===== FUNCIONALIDADE DE BUSCA DE ALUNOS =====
+$(document).ready(function() {
+    let timeoutBusca;
+    const $filtroBusca = $('#filtroBusca');
+    const $limparBusca = $('#limparBusca');
+    const $totalResultados = $('#totalResultados');
+    const $tbody = $('#tabelaAlunos tbody');
+    
+    // Evento de clique no botão limpar
+    $limparBusca.on('click', function(e) {
+        e.preventDefault();
+        $filtroBusca.val('');
+        buscarAlunos('');
+    });
+    
+
+    
+
+    
+    // Busca em tempo real com debounce
+    $filtroBusca.on('input', function() {
+        clearTimeout(timeoutBusca);
+        const termo = $(this).val().trim();
+        
+        timeoutBusca = setTimeout(function() {
+            buscarAlunos(termo);
+        }, 300); // Aguarda 300ms após o usuário parar de digitar
+    });
+    
+
+    
+    // Busca inicial
+    buscarAlunos('');
+    
+
+    
+    // Função para buscar alunos
+    function buscarAlunos(termo) {
+        // Mostrar loading
+        const colspan = {% if nivel_usuario == 'usuario' %}3{% else %}8{% endif %};
+        
+        $tbody.html(`
+            <tr>
+                <td colspan="${colspan}" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Buscando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Buscando alunos...</p>
+                </td>
+            </tr>
+        `);
+        
+        $.ajax({
+            url: '/buscar_alunos',
+            method: 'GET',
+            data: { termo: termo },
+            success: function(response) {
+                if (response.success) {
+                    atualizarTabelaAlunos(response.alunos);
+                    $totalResultados.text(response.total_encontrado);
+                    
+                    // Feedback visual
+                    if (termo && response.total_encontrado === 0) {
+                        $tbody.html(`
+                            <tr>
+                                <td colspan="${colspan}" class="text-center py-4">
+                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted">Nenhum aluno encontrado para "<strong>${termo}</strong>"</p>
+                                    <small class="text-muted">Tente usar um termo diferente ou verificar a ortografia.</small>
+                                </td>
+                            </tr>
+                        `);
+                    }
+                } else {
+                    $tbody.html(`
+                        <tr>
+                            <td colspan="${colspan}" class="text-center py-4 text-danger">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                                <p>Erro na busca: ${response.message}</p>
+                            </td>
+                        </tr>
+                    `);
+                }
+            },
+            error: function(xhr, status, error) {
+                $tbody.html(`
+                    <tr>
+                        <td colspan="${colspan}" class="text-center py-4 text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <p>Erro ao conectar com o servidor</p>
+                            <small class="text-muted">Verifique sua conexão e tente novamente.</small>
+                        </td>
+                    </tr>
+                `);
+            }
+        });
+    }
+    
+    // Função para atualizar a tabela com os resultados da busca
+    function atualizarTabelaAlunos(alunos) {
+        const colspan = {% if nivel_usuario == 'usuario' %}3{% else %}8{% endif %};
+        
+        if (alunos.length === 0) {
+            $tbody.html(`
+                <tr>
+                    <td colspan="${colspan}" class="text-center py-4">
+                        <i class="fas fa-users fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">Nenhum aluno encontrado</p>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+        
+        let html = '';
+        
+        {% if nivel_usuario == 'usuario' %}
+        // Tabela simplificada para professores
+        alunos.forEach(function(aluno) {
+            html += `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                 style="width: 35px; height: 35px; font-size: 0.8rem;">
+                                ${aluno.nome.split(' ')[0][0]}${aluno.nome.split(' ').length > 1 ? aluno.nome.split(' ')[aluno.nome.split(' ').length - 1][0] : ''}
+                            </div>
+                            <strong>${aluno.nome}</strong>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge ${getStatusBadgeClass(aluno.status_frequencia)}">
+                            ${aluno.status_frequencia}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary" 
+                                    onclick="verFrequenciaIndividual('${aluno.nome}')" 
+                                    title="Ver Frequência">
+                                <i class="fas fa-chart-bar"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        {% else %}
+        // Tabela completa para admins
+        alunos.forEach(function(aluno) {
+            html += `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                 style="width: 35px; height: 35px; font-size: 0.8rem;">
+                                ${aluno.nome.split(' ')[0][0]}${aluno.nome.split(' ').length > 1 ? aluno.nome.split(' ')[aluno.nome.split(' ').length - 1][0] : ''}
+                            </div>
+                            <strong>${aluno.nome}</strong>
+                        </div>
+                    </td>
+                    <td>
+                        <a href="tel:${aluno.telefone}" class="text-decoration-none">
+                            <i class="fas fa-phone-alt text-success me-1"></i>
+                            ${aluno.telefone}
+                        </a>
+                    </td>
+                    <td>
+                        <i class="fas fa-map-marker-alt text-info me-1"></i>
+                        ${aluno.endereco}
+                    </td>
+                    <td>
+                        <i class="fas fa-birthday-cake text-warning me-1"></i>
+                        ${aluno.data_nascimento}
+                    </td>
+                    <td>
+                        <span class="badge bg-info">
+                            <i class="fas fa-dumbbell me-1"></i>
+                            ${aluno.atividade}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-check me-1"></i>
+                            ${aluno.data_matricula}
+                        </small>
+                    </td>
+                    <td>
+                        <span class="badge ${getStatusBadgeClass(aluno.status_frequencia)}">
+                            ${aluno.status_frequencia}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary" 
+                                    onclick="editarAluno(${aluno.id})" 
+                                    title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-info" 
+                                    onclick="verFrequenciaIndividual('${aluno.nome}')" 
+                                    title="Ver Frequência">
+                                <i class="fas fa-chart-bar"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" 
+                                    onclick="confirmarExclusao(${aluno.id}, '${aluno.nome}')" 
+                                    title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        {% endif %}
+        
+        $tbody.html(html);
+    }
+    
+    // Função auxiliar para determinar a classe do badge de status
+    function getStatusBadgeClass(status) {
+        if (status.includes('Dados disponíveis')) return 'bg-success';
+        if (status.includes('Aguardando')) return 'bg-warning';
+        if (status.includes('Sem dados')) return 'bg-secondary';
+        return 'bg-info';
+    }
+});
 </script>
 
 {% endblock %}

@@ -9,13 +9,16 @@ from dotenv import load_dotenv
 from models import SessionLocal, engine, Base
 
 # Carregar variáveis de ambiente
-# Tenta carregar .env.production primeiro (para ambiente de produção)
-if os.path.exists('.env.production'):
+# Priorizar .env local para desenvolvimento
+if os.path.exists('.env'):
+    load_dotenv('.env')
+    print("Carregando variáveis de ambiente de desenvolvimento (.env)")
+elif os.path.exists('.env.production'):
     load_dotenv('.env.production')
     print("Carregando variáveis de ambiente de produção (.env.production)")
 else:
     load_dotenv()
-    print("Carregando variáveis de ambiente de desenvolvimento (.env)")
+    print("Carregando variáveis de ambiente padrão")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'associacao_amigo_do_povo_2024_secure_key')
@@ -1806,6 +1809,59 @@ def alunos():
                          usuario_nome=usuario_nome,
                          nivel_usuario=nivel_usuario)
 
+@app.route('/buscar_alunos')
+@login_obrigatorio  # Reativado para funcionar com autenticação
+def buscar_alunos():
+    """Rota para busca de alunos por nome"""
+    try:
+        termo_busca = request.args.get('termo', '').strip().lower()
+        
+        # Usar função que respeita as permissões do usuário
+        todos_alunos = obter_alunos_usuario()
+        
+        if not termo_busca:
+            # Se não há termo de busca, retorna todos os alunos
+            lista_alunos = todos_alunos
+        else:
+            # Filtrar alunos baseado no termo de busca
+            lista_alunos = []
+            
+            for aluno in todos_alunos:
+                nome_aluno = aluno['nome'].lower()
+                # Busca por nome completo ou parcial
+                if termo_busca in nome_aluno:
+                    lista_alunos.append(aluno)
+        
+        # Preparar dados para retorno JSON
+        alunos_json = []
+        for i, aluno in enumerate(lista_alunos):
+            aluno_data = {
+                'id': i,
+                'nome': aluno['nome'],
+                'telefone': aluno.get('telefone', 'Não informado'),
+                'email': aluno.get('email', 'Não informado'),
+                'endereco': aluno.get('endereco', 'Não informado'),
+                'data_nascimento': aluno.get('data_nascimento', 'Não informado'),
+                'atividade': aluno.get('atividade', 'Não informado'),
+                'turma': aluno.get('turma', 'Não informado'),
+                'data_matricula': aluno.get('data_matricula', 'Não informado'),
+                'status_frequencia': aluno.get('status_frequencia', 'Não informado'),
+                'observacoes': aluno.get('observacoes', '')
+            }
+            alunos_json.append(aluno_data)
+        
+        return jsonify({
+            'success': True,
+            'alunos': alunos_json,
+            'total_encontrado': len(alunos_json)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro na busca: {str(e)}'
+        })
+
 @app.route('/presenca')
 @login_obrigatorio
 def presenca():
@@ -2273,10 +2329,26 @@ def editar_aluno(aluno_id):
         if not telefone or len(telefone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')) < 10:
             return jsonify({'success': False, 'message': 'Telefone deve ter pelo menos 10 dígitos'})
         
-        # Verificar se outro aluno já tem este nome
+        # Verificar se outro aluno já tem este nome (excluindo o aluno atual sendo editado)
+        print(f"DEBUG: Editando aluno ID {aluno_id}, nome: '{nome}'")
+        print(f"DEBUG: Nome atual do aluno sendo editado: '{academia.alunos_reais[aluno_id]['nome']}'")
+        
+        # Normalizar nomes para comparação (remover espaços extras e converter para minúsculas)
+        nome_normalizado = nome.strip().lower()
+        nome_atual_normalizado = academia.alunos_reais[aluno_id]['nome'].strip().lower()
+        
+        print(f"DEBUG: Nome normalizado: '{nome_normalizado}'")
+        print(f"DEBUG: Nome atual normalizado: '{nome_atual_normalizado}'")
+        
         for i, aluno in enumerate(academia.alunos_reais):
-            if i != aluno_id and aluno['nome'].lower() == nome.lower():
+            nome_aluno_normalizado = aluno['nome'].strip().lower()
+            print(f"DEBUG: Comparando com aluno ID {i}: '{nome_aluno_normalizado}'")
+            
+            if i != aluno_id and nome_aluno_normalizado == nome_normalizado:
+                print(f"DEBUG: Conflito encontrado! Aluno ID {i} tem nome '{aluno['nome']}' que é igual a '{nome}'")
                 return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome'})
+        
+        print(f"DEBUG: Nenhum conflito encontrado, prosseguindo com a edição")
         
         # Converter data de nascimento se fornecida
         data_nasc_formatada = data_nascimento
@@ -2357,10 +2429,20 @@ def excluir_aluno(aluno_id):
 @login_obrigatorio
 def obter_aluno(aluno_id):
     try:
+        print(f"DEBUG: obter_aluno chamado com ID: {aluno_id}")
+        print(f"DEBUG: Total de alunos: {len(academia.alunos_reais)}")
+        
         if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+            print(f"DEBUG: ID {aluno_id} fora do range válido (0-{len(academia.alunos_reais)-1})")
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
         aluno = academia.alunos_reais[aluno_id]
+        print(f"DEBUG: Aluno encontrado no índice {aluno_id}: {aluno['nome']}")
+        
+        # Listar todos os alunos para debug
+        print("DEBUG: Lista completa de alunos:")
+        for i, a in enumerate(academia.alunos_reais):
+            print(f"  [{i}] {a['nome']}")
         
         # Adicionar dados de presença se for da Informática
         dados_presenca = None
@@ -2378,6 +2460,7 @@ def obter_aluno(aluno_id):
         })
         
     except Exception as e:
+        print(f"DEBUG: Erro em obter_aluno: {e}")
         return jsonify({'success': False, 'message': f'Erro ao obter dados do aluno: {str(e)}'})
 
 @app.route('/salvar_dados_manualmente')

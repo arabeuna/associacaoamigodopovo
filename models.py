@@ -5,15 +5,14 @@ Modelos SQLAlchemy para o sistema da Academia Amigo do Povo
 from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, Date, Time, ForeignKey, CheckConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
-from sqlalchemy.dialects.postgresql import ARRAY
 from datetime import datetime
 import os
 
 # Configuração do banco de dados
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/academia_amigo_povo')
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///academia_amigo_povo.db')
 
 # Criar engine do SQLAlchemy
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base para os modelos
@@ -28,9 +27,9 @@ class Usuario(Base):
     senha_hash = Column(String(255), nullable=False)
     nome = Column(String(100), nullable=False)
     nivel = Column(String(20), nullable=False)
-    permissoes = Column(ARRAY(String))
+    permissoes = Column(String(500))  # JSON string for SQLite
     atividade_responsavel = Column(String(100))
-    alunos_atribuidos = Column(ARRAY(Integer))
+    alunos_atribuidos = Column(String(500))  # JSON string for SQLite
     ativo = Column(Boolean, default=True)
     data_criacao = Column(DateTime, default=datetime.utcnow)
     criado_por = Column(String(50))
@@ -54,7 +53,7 @@ class Atividade(Base):
     ativa = Column(Boolean, default=True)
     data_criacao = Column(DateTime, default=datetime.utcnow)
     criado_por = Column(String(50))
-    professores_vinculados = Column(ARRAY(Integer))
+    professores_vinculados = Column(String(500))  # JSON string for SQLite
     total_alunos = Column(Integer, default=0)
     
     # Relacionamentos
