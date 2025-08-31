@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Frequência Individual - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 text-center mb-4">
+                <i class="fas fa-calendar-check text-primary"></i>
+                Frequência Individual
+            </h1>
+            <p class="text-muted text-center">Visualize e gerencie a frequência individual dos alunos</p>
+        </div>
+    </div>
+
+    <!-- Seletor de Aluno -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-graduate me-2"></i>
+                        Selecionar Aluno
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('frequencia_individual') }}" class="row g-3">
+                        <div class="col-md-8">
+                            <select name="aluno_id" class="form-select" onchange="this.form.submit()">
+                                <option value="">-- Selecione um aluno --</option>
+                                {% for aluno in alunos %}
+                                <option value="{{ aluno.id_unico }}" 
+                                        {% if aluno_id == aluno.id_unico|string %}selected{% endif %}>
+                                    {{ aluno.nome }} - {{ aluno.atividade }} ({{ aluno.turma }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-2"></i>
+                                Visualizar Frequência
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações do Aluno Selecionado -->
+    {% if aluno_selecionado %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Informações do Aluno
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <p><strong>Nome:</strong><br>{{ aluno_selecionado.nome }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Atividade:</strong><br>{{ aluno_selecionado.atividade }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Turma:</strong><br>{{ aluno_selecionado.turma }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Status:</strong><br>
+                                <span class="badge bg-{{ 'success' if aluno_selecionado.status_frequencia == 'Dados disponíveis' else 'warning' }}">
+                                    {{ aluno_selecionado.status_frequencia }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dados de Frequência -->
+    {% if dados_presenca %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Histórico de Frequência
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if dados_presenca.registros %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Horário</th>
+                                    <th>Status</th>
+                                    <th>Observações</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for registro in dados_presenca.registros %}
+                                <tr>
+                                    <td>{{ registro.data }}</td>
+                                    <td>{{ registro.horario }}</td>
+                                    <td>
+                                        {% if registro.status == 'P' %}
+                                            <span class="badge bg-success">Presente</span>
+                                        {% elif registro.status == 'F' %}
+                                            <span class="badge bg-danger">Faltou</span>
+                                        {% elif registro.status == 'J' %}
+                                            <span class="badge bg-warning">Justificada</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ registro.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ registro.observacoes or '-' }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="editarPresenca('{{ registro.data }}', '{{ registro.horario }}', '{{ registro.status }}', '{{ registro.observacoes or '' }}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Nenhum registro de frequência encontrado para este aluno.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas de Frequência -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-calendar-check fa-2x text-success mb-2"></i>
+                    <h4>{{ dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length }}</h4>
+                    <p class="text-muted mb-0">Presenças</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-calendar-times fa-2x text-danger mb-2"></i>
+                    <h4>{{ dados_presenca.registros|selectattr('status', 'equalto', 'F')|list|length }}</h4>
+                    <p class="text-muted mb-0">Faltas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-calendar-minus fa-2x text-warning mb-2"></i>
+                    <h4>{{ dados_presenca.registros|selectattr('status', 'equalto', 'J')|list|length }}</h4>
+                    <p class="text-muted mb-0">Justificadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-percentage fa-2x text-info mb-2"></i>
+                    <h4>
+                        {% set total = dados_presenca.registros|length %}
+                        {% set presentes = dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length %}
+                        {% if total > 0 %}
+                            {{ ((presentes / total) * 100)|round(1) }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </h4>
+                    <p class="text-muted mb-0">Taxa de Presença</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulário para Marcar Presença -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Marcar Nova Presença
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="formPresenca" method="POST" action="{{ url_for('marcar_presenca_detalhada') }}">
+                        <input type="hidden" name="nome_aluno" value="{{ aluno_selecionado.nome }}">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="data_presenca" class="form-label">Data</label>
+                                <input type="date" class="form-control" id="data_presenca" name="data_presenca" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="horario_presenca" class="form-label">Horário</label>
+                                <input type="time" class="form-control" id="horario_presenca" name="horario_presenca" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="turma_presenca" class="form-label">Turma/Horário</label>
+                                <input type="text" class="form-control" id="turma_presenca" name="turma_presenca" value="{{ aluno_selecionado.turma }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="observacoes_presenca" class="form-label">Observações</label>
+                                <input type="text" class="form-control" id="observacoes_presenca" name="observacoes_presenca">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-2"></i>
+                                    Salvar Presença
+                                </button>
+                                <button type="button" class="btn btn-secondary ms-2" onclick="limparFormulario()">
+                                    <i class="fas fa-eraser me-2"></i>
+                                    Limpar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Mensagem quando nenhum aluno está selecionado -->
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle fa-2x mb-3"></i>
+                <h5>Selecione um aluno para visualizar sua frequência individual</h5>
+                <p class="mb-0">Use o seletor acima para escolher um aluno e ver seus dados de frequência.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para Editar Presença -->
+<div class="modal fade" id="modalEditarPresenca" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Presença</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarPresenca">
+                    <div class="mb-3">
+                        <label for="edit_data" class="form-label">Data</label>
+                        <input type="date" class="form-control" id="edit_data" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_horario" class="form-label">Horário</label>
+                        <input type="time" class="form-control" id="edit_horario" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_status" class="form-label">Status</label>
+                        <select class="form-select" id="edit_status" required>
+                            <option value="P">Presente</option>
+                            <option value="F">Faltou</option>
+                            <option value="J">Justificada</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_observacoes" class="form-label">Observações</label>
+                        <input type="text" class="form-control" id="edit_observacoes">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarEdicao()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Definir data atual como padrão
+document.addEventListener('DOMContentLoaded', function() {
+    const hoje = new Date().toISOString().split('T')[0];
+    const dataInput = document.getElementById('data_presenca');
+    if (dataInput) {
+        dataInput.value = hoje;
+    }
+});
+
+// Função para editar presença
+function editarPresenca(data, horario, status, observacoes) {
+    document.getElementById('edit_data').value = data;
+    document.getElementById('edit_horario').value = horario;
+    document.getElementById('edit_status').value = status;
+    document.getElementById('edit_observacoes').value = observacoes;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarPresenca'));
+    modal.show();
+}
+
+// Função para salvar edição
+function salvarEdicao() {
+    // Implementar lógica para salvar edição
+    alert('Funcionalidade de edição será implementada em breve.');
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarPresenca'));
+    modal.hide();
+}
+
+// Função para limpar formulário
+function limparFormulario() {
+    document.getElementById('formPresenca').reset();
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('data_presenca').value = hoje;
+}
+
+// Submissão do formulário de presença
+document.getElementById('formPresenca').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('{{ url_for("marcar_presenca_detalhada") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Presença registrada com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro ao registrar presença: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao registrar presença. Tente novamente.');
+    });
+});
+</script>
+{% endblock %}

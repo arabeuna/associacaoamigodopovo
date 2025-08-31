@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}Busca Avançada - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 text-center mb-4">
+                <i class="fas fa-search text-primary"></i>
+                Busca Avançada
+            </h1>
+            <p class="text-muted text-center">Encontre alunos usando critérios específicos de busca</p>
+        </div>
+    </div>
+
+    <!-- Filtros de Busca -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>
+                        Critérios de Busca
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" id="formBuscaAvancada">
+                        <!-- Informações Básicas -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-user me-2"></i>
+                                    Informações Básicas
+                                </h6>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="nome" class="form-label">Nome (parcial)</label>
+                                <input type="text" class="form-control" id="nome" name="nome" placeholder="Digite parte do nome">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="cpf" class="form-label">CPF</label>
+                                <input type="text" class="form-control" id="cpf" name="cpf" placeholder="000.000.000-00">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="idade_min" class="form-label">Faixa de Idade</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" id="idade_min" name="idade_min" placeholder="Min" min="0" max="120">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" id="idade_max" name="idade_max" placeholder="Max" min="0" max="120">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="sexo" class="form-label">Sexo</label>
+                                <select class="form-select" id="sexo" name="sexo">
+                                    <option value="">Todos</option>
+                                    <option value="M">Masculino</option>
+                                    <option value="F">Feminino</option>
+                                    <option value="O">Outro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="estado_civil" class="form-label">Estado Civil</label>
+                                <select class="form-select" id="estado_civil" name="estado_civil">
+                                    <option value="">Todos</option>
+                                    <option value="Solteiro">Solteiro</option>
+                                    <option value="Casado">Casado</option>
+                                    <option value="Divorciado">Divorciado</option>
+                                    <option value="Viúvo">Viúvo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="data_cadastro_inicio" class="form-label">Data de Cadastro</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input type="date" class="form-control" id="data_cadastro_inicio" name="data_cadastro_inicio">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="date" class="form-control" id="data_cadastro_fim" name="data_cadastro_fim">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Atividade e Turma -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-dumbbell me-2"></i>
+                                    Atividade e Turma
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="atividade" class="form-label">Atividade</label>
+                                <select class="form-select" id="atividade" name="atividade">
+                                    <option value="">Todas</option>
+                                    <option value="Futebol">Futebol</option>
+                                    <option value="Vôlei">Vôlei</option>
+                                    <option value="Basquete">Basquete</option>
+                                    <option value="Jiu-Jitsu">Jiu-Jitsu</option>
+                                    <option value="Capoeira">Capoeira</option>
+                                    <option value="Musculação">Musculação</option>
+                                    <option value="Aeróbico">Aeróbico</option>
+                                    <option value="Dança">Dança</option>
+                                    <option value="Yoga">Yoga</option>
+                                    <option value="Pilates">Pilates</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="turma" class="form-label">Turma/Horário</label>
+                                <select class="form-select" id="turma" name="turma">
+                                    <option value="">Todas</option>
+                                    <option value="Manhã">Manhã</option>
+                                    <option value="Tarde">Tarde</option>
+                                    <option value="Noite">Noite</option>
+                                    <option value="Sábado">Sábado</option>
+                                    <option value="Domingo">Domingo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="">Todos</option>
+                                    <option value="Ativo">Ativo</option>
+                                    <option value="Inativo">Inativo</option>
+                                    <option value="Suspenso">Suspenso</option>
+                                    <option value="Transferido">Transferido</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Localização -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    Localização
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="bairro" class="form-label">Bairro</label>
+                                <input type="text" class="form-control" id="bairro" name="bairro" placeholder="Nome do bairro">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="cidade" class="form-label">Cidade</label>
+                                <input type="text" class="form-control" id="cidade" name="cidade" placeholder="Nome da cidade">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="estado" class="form-label">Estado</label>
+                                <select class="form-select" id="estado" name="estado">
+                                    <option value="">Todos</option>
+                                    <option value="AC">Acre</option>
+                                    <option value="AL">Alagoas</option>
+                                    <option value="AP">Amapá</option>
+                                    <option value="AM">Amazonas</option>
+                                    <option value="BA">Bahia</option>
+                                    <option value="CE">Ceará</option>
+                                    <option value="DF">Distrito Federal</option>
+                                    <option value="ES">Espírito Santo</option>
+                                    <option value="GO">Goiás</option>
+                                    <option value="MA">Maranhão</option>
+                                    <option value="MT">Mato Grosso</option>
+                                    <option value="MS">Mato Grosso do Sul</option>
+                                    <option value="MG">Minas Gerais</option>
+                                    <option value="PA">Pará</option>
+                                    <option value="PB">Paraíba</option>
+                                    <option value="PR">Paraná</option>
+                                    <option value="PE">Pernambuco</option>
+                                    <option value="PI">Piauí</option>
+                                    <option value="RJ">Rio de Janeiro</option>
+                                    <option value="RN">Rio Grande do Norte</option>
+                                    <option value="RS">Rio Grande do Sul</option>
+                                    <option value="RO">Rondônia</option>
+                                    <option value="RR">Roraima</option>
+                                    <option value="SC">Santa Catarina</option>
+                                    <option value="SP">São Paulo</option>
+                                    <option value="SE">Sergipe</option>
+                                    <option value="TO">Tocantins</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Frequência -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-calendar-check me-2"></i>
+                                    Frequência
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="taxa_frequencia_min" class="form-label">Taxa de Frequência</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" id="taxa_frequencia_min" name="taxa_frequencia_min" placeholder="Min %" min="0" max="100">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" id="taxa_frequencia_max" name="taxa_frequencia_max" placeholder="Max %" min="0" max="100">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="ultima_presenca" class="form-label">Última Presença</label>
+                                <select class="form-select" id="ultima_presenca" name="ultima_presenca">
+                                    <option value="">Qualquer data</option>
+                                    <option value="hoje">Hoje</option>
+                                    <option value="semana">Esta semana</option>
+                                    <option value="mes">Este mês</option>
+                                    <option value="30_dias">Últimos 30 dias</option>
+                                    <option value="60_dias">Últimos 60 dias</option>
+                                    <option value="90_dias">Últimos 90 dias</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="status_frequencia" class="form-label">Status da Frequência</label>
+                                <select class="form-select" id="status_frequencia" name="status_frequencia">
+                                    <option value="">Todos</option>
+                                    <option value="Dados disponíveis">Dados disponíveis</option>
+                                    <option value="Aguardando dados">Aguardando dados</option>
+                                    <option value="Sem dados">Sem dados</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Botões de Ação -->
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                <button type="submit" class="btn btn-lg btn-primary">
+                                    <i class="fas fa-search me-2"></i>
+                                    Realizar Busca
+                                </button>
+                                <button type="button" class="btn btn-lg btn-secondary ms-3" onclick="limparFiltros()">
+                                    <i class="fas fa-eraser me-2"></i>
+                                    Limpar Filtros
+                                </button>
+                                <button type="button" class="btn btn-lg btn-success ms-3" onclick="salvarBusca()">
+                                    <i class="fas fa-save me-2"></i>
+                                    Salvar Busca
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados da Busca -->
+    <div class="row mb-4" id="resultadosBusca" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Resultados da Busca
+                    </h5>
+                    <div>
+                        <span class="badge bg-primary" id="totalResultados">0 resultados</span>
+                        <button class="btn btn-sm btn-outline-success ms-2" onclick="exportarResultados()">
+                            <i class="fas fa-download me-1"></i>
+                            Exportar
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="tabelaResultados">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Idade</th>
+                                    <th>Atividade</th>
+                                    <th>Turma</th>
+                                    <th>Status</th>
+                                    <th>Taxa Frequência</th>
+                                    <th>Última Presença</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Resultados serão preenchidos via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Buscas Salvas -->
+    <div class="row mb-4" id="buscasSalvas" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bookmark me-2"></i>
+                        Buscas Salvas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="listaBuscasSalvas">
+                        <!-- Buscas salvas serão preenchidas via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botões de Navegação -->
+    <div class="row">
+        <div class="col-12 text-center">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-lg btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>
+                Voltar ao Dashboard
+            </a>
+            <a href="{{ url_for('alunos') }}" class="btn btn-lg btn-outline-secondary ms-3">
+                <i class="fas fa-users me-2"></i>
+                Ver Todos os Alunos
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Máscaras para campos
+document.addEventListener('DOMContentLoaded', function() {
+    // Máscara para CPF
+    const cpfInput = document.getElementById('cpf');
+    if (cpfInput) {
+        cpfInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                e.target.value = value;
+            }
+        });
+    }
+
+    // Definir datas padrão
+    const hoje = new Date();
+    const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    
+    document.getElementById('data_cadastro_inicio').value = dataInicio.toISOString().split('T')[0];
+    document.getElementById('data_cadastro_fim').value = hoje.toISOString().split('T')[0];
+
+    // Carregar buscas salvas
+    carregarBuscasSalvas();
+});
+
+// Realizar busca
+document.getElementById('formBuscaAvancada').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Coletar dados do formulário
+    const dadosBusca = new FormData(this);
+    const parametros = new URLSearchParams();
+    
+    for (let [key, value] of dadosBusca.entries()) {
+        if (value) {
+            parametros.append(key, value);
+        }
+    }
+    
+    // Simular busca (aqui você implementaria a chamada real para o backend)
+    realizarBusca(parametros);
+});
+
+// Função para realizar busca
+function realizarBusca(parametros) {
+    // Simular dados de resultado
+    const resultadosExemplo = [
+        {
+            nome: 'João Silva',
+            idade: 25,
+            atividade: 'Futebol',
+            turma: 'Manhã',
+            status: 'Ativo',
+            taxa_frequencia: 85,
+            ultima_presenca: '2024-08-30'
+        },
+        {
+            nome: 'Maria Santos',
+            idade: 30,
+            atividade: 'Vôlei',
+            turma: 'Tarde',
+            status: 'Ativo',
+            taxa_frequencia: 92,
+            ultima_presenca: '2024-08-31'
+        }
+    ];
+    
+    exibirResultados(resultadosExemplo);
+}
+
+// Exibir resultados da busca
+function exibirResultados(resultados) {
+    const tbody = document.querySelector('#tabelaResultados tbody');
+    tbody.innerHTML = '';
+    
+    resultados.forEach(aluno => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${aluno.nome}</td>
+            <td>${aluno.idade} anos</td>
+            <td>${aluno.atividade}</td>
+            <td>${aluno.turma}</td>
+            <td><span class="badge bg-success">${aluno.status}</span></td>
+            <td>${aluno.taxa_frequencia}%</td>
+            <td>${formatarData(aluno.ultima_presenca)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="verDetalhes('${aluno.nome}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-success" onclick="editarAluno('${aluno.nome}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    document.getElementById('totalResultados').textContent = `${resultados.length} resultados`;
+    document.getElementById('resultadosBusca').style.display = 'block';
+}
+
+// Limpar filtros
+function limparFiltros() {
+    document.getElementById('formBuscaAvancada').reset();
+    
+    // Redefinir datas padrão
+    const hoje = new Date();
+    const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    
+    document.getElementById('data_cadastro_inicio').value = dataInicio.toISOString().split('T')[0];
+    document.getElementById('data_cadastro_fim').value = hoje.toISOString().split('T')[0];
+    
+    // Ocultar resultados
+    document.getElementById('resultadosBusca').style.display = 'none';
+}
+
+// Salvar busca
+function salvarBusca() {
+    const nomeBusca = prompt('Digite um nome para salvar esta busca:');
+    if (nomeBusca) {
+        // Aqui você implementaria a lógica para salvar a busca
+        alert(`Busca "${nomeBusca}" salva com sucesso!`);
+        carregarBuscasSalvas();
+    }
+}
+
+// Carregar buscas salvas
+function carregarBuscasSalvas() {
+    // Simular buscas salvas
+    const buscasSalvas = [
+        { nome: 'Alunos Ativos Futebol', descricao: 'Alunos ativos na modalidade futebol' },
+        { nome: 'Frequência Baixa', descricao: 'Alunos com frequência abaixo de 70%' },
+        { nome: 'Novos Cadastros', descricao: 'Alunos cadastrados este mês' }
+    ];
+    
+    const container = document.getElementById('listaBuscasSalvas');
+    container.innerHTML = '';
+    
+    buscasSalvas.forEach(busca => {
+        const card = document.createElement('div');
+        card.className = 'col-md-4 mb-3';
+        card.innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">${busca.nome}</h6>
+                    <p class="card-text text-muted">${busca.descricao}</p>
+                    <button class="btn btn-sm btn-primary" onclick="executarBuscaSalva('${busca.nome}')">
+                        <i class="fas fa-play me-1"></i>
+                        Executar
+                    </button>
+                    <button class="btn btn-sm btn-danger ms-2" onclick="excluirBusca('${busca.nome}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+    
+    document.getElementById('buscasSalvas').style.display = 'block';
+}
+
+// Executar busca salva
+function executarBuscaSalva(nomeBusca) {
+    alert(`Executando busca salva: ${nomeBusca}`);
+    // Aqui você implementaria a lógica para executar a busca salva
+}
+
+// Excluir busca salva
+function excluirBusca(nomeBusca) {
+    if (confirm(`Deseja excluir a busca "${nomeBusca}"?`)) {
+        alert(`Busca "${nomeBusca}" excluída com sucesso!`);
+        carregarBuscasSalvas();
+    }
+}
+
+// Exportar resultados
+function exportarResultados() {
+    alert('Funcionalidade de exportação será implementada em breve.');
+}
+
+// Ver detalhes do aluno
+function verDetalhes(nome) {
+    alert(`Visualizando detalhes de: ${nome}`);
+    // Aqui você implementaria a lógica para ver detalhes do aluno
+}
+
+// Editar aluno
+function editarAluno(nome) {
+    alert(`Editando aluno: ${nome}`);
+    // Aqui você implementaria a lógica para editar o aluno
+}
+
+// Formatar data
+function formatarData(dataString) {
+    const data = new Date(dataString);
+    return data.toLocaleDateString('pt-BR');
+}
+</script>
+{% endblock %}

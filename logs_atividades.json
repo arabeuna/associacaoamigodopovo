@@ -270,5 +270,29 @@
     "tipo_usuario": "admin",
     "acao": "Fez Login",
     "detalhes": "Usuário Administrador Geral fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-31T14:20:42.339897",
+    "data_hora": "31/08/2025 às 14:20:42",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Admin Master fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-31T14:41:10.717132",
+    "data_hora": "31/08/2025 às 14:41:10",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Admin Master fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-31T16:28:27.411032",
+    "data_hora": "31/08/2025 às 16:28:27",
+    "usuario": "admin_master",
+    "tipo_usuario": "admin_master",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Admin Master fez login no sistema"
   }
 ]

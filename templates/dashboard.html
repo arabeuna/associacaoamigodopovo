@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-chart-line me-2"></i>
+                Dashboard
+            </h1>
+            <p class="text-muted">Bem-vindo, {{ usuario_nome }}!</p>
+        </div>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h3 class="card-title">{{ stats.total_alunos }}</h3>
+                    <p class="card-text">Total de Alunos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h3 class="card-title">{{ stats.presencas_hoje }}</h3>
+                    <p class="card-text">Presenças Hoje</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-week fa-2x mb-2"></i>
+                    <h3 class="card-title">{{ stats.presencas_semana }}</h3>
+                    <p class="card-text">Presenças na Semana</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-check fa-2x mb-2"></i>
+                    <h3 class="card-title">{{ stats.alunos_ativos }}</h3>
+                    <p class="card-text">Alunos Ativos</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações Rápidas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Ações Rápidas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('alunos') }}" class="btn btn-primary w-100">
+                                <i class="fas fa-users me-2"></i>
+                                Gerenciar Alunos
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('presenca') }}" class="btn btn-success w-100">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Registrar Presença
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('frequencia_individual') }}" class="btn btn-info w-100">
+                                <i class="fas fa-calendar-check me-2"></i>
+                                Frequência Individual
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('relatorios') }}" class="btn btn-warning w-100">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                Relatórios
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Presenças de Hoje -->
+    {% if presencas_hoje %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-day me-2"></i>
+                        Presenças Registradas Hoje
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Atividade</th>
+                                    <th>Horário</th>
+                                    <th>Observações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for presenca in presencas_hoje %}
+                                <tr>
+                                    <td>{{ presenca.Nome }}</td>
+                                    <td>{{ presenca.Atividade }}</td>
+                                    <td>{{ presenca.Horário }}</td>
+                                    <td>{{ presenca.Observações }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Informações do Sistema -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Informações do Sistema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Usuário:</strong> {{ usuario_nome }}</p>
+                            <p><strong>Nível de Acesso:</strong> 
+                                {% if nivel_usuario == 'admin_master' %}
+                                    <span class="badge bg-danger">Admin Master</span>
+                                {% elif nivel_usuario == 'admin' %}
+                                    <span class="badge bg-warning">Administrador</span>
+                                {% else %}
+                                    <span class="badge bg-info">Usuário</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Data:</strong> <span id="data-atual"></span></p>
+                            <p><strong>Hora:</strong> <span id="hora-atual"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Função para atualizar data e hora
+    function atualizarDataHora() {
+        const agora = new Date();
+        const dataFormatada = agora.toLocaleDateString('pt-BR');
+        const horaFormatada = agora.toLocaleTimeString('pt-BR');
+        
+        document.getElementById('data-atual').textContent = dataFormatada;
+        document.getElementById('hora-atual').textContent = horaFormatada;
+    }
+    
+    // Atualizar data e hora a cada segundo
+    atualizarDataHora();
+    setInterval(atualizarDataHora, 1000);
+    
+    // Atualizar dashboard a cada 5 minutos
+    setInterval(function() {
+        location.reload();
+    }, 300000);
+</script>
+{% endblock %}

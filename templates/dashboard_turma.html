@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+{% block title %}{{ turma.nome }} - Dashboard - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Cabeçalho da Turma -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-users text-success me-2"></i>{{ turma.nome }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Dashboard da Turma • {{ turma.atividade }} • Usuário: {{ usuario_nome }}
+                        {% if nivel_usuario == 'usuario' %}
+                            <span class="badge bg-info ms-2">Professor</span>
+                        {% elif nivel_usuario == 'admin' %}
+                            <span class="badge bg-warning ms-2">Administrador</span>
+                        {% elif nivel_usuario == 'admin_master' %}
+                            <span class="badge bg-danger ms-2">Admin Master</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="text-end">
+                    <a href="{{ url_for('gerenciar_turmas') }}" class="btn btn-outline-success me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Voltar
+                    </a>
+                    <a href="{{ url_for('gerenciar_atividades') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-dumbbell me-2"></i>Gerenciar Atividades
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações da Turma -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações da Turma</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Nome da Turma:</strong> {{ turma.nome }}</p>
+                            <p><strong>Atividade:</strong> {{ turma.atividade }}</p>
+                            <p><strong>Professor Responsável:</strong> {{ turma.professor_responsavel or 'Não atribuído' }}</p>
+                            <p><strong>Capacidade Máxima:</strong> {{ turma.capacidade_maxima or 'Ilimitada' }} alunos</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Horário:</strong> {{ turma.horario or 'Não definido' }}</p>
+                            <p><strong>Dias da Semana:</strong> {{ turma.dias_semana or 'Não definidos' }}</p>
+                            <p><strong>Data de Criação:</strong> {{ turma.data_criacao or 'Não informada' }}</p>
+                            <p><strong>Status:</strong> 
+                                {% if turma.ativa %}
+                                    <span class="badge bg-success">Ativa</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inativa</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas Principais -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h5 class="card-title" id="total-alunos-turma">{{ stats.total_alunos if stats else 0 }}</h5>
+                    <p class="card-text">Alunos na Turma</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                    <h5 class="card-title" id="presencas-hoje-turma">0</h5>
+                    <p class="card-text">Presenças Hoje</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                    <h5 class="card-title" id="frequencia-media-turma">{{ "%.1f"|format(stats.frequencia_media * 100 if stats and stats.frequencia_media else 0) }}%</h5>
+                    <p class="card-text">Frequência Média</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x mb-2"></i>
+                    <h5 class="card-title" id="ocupacao-turma">
+                        {% if turma.capacidade_maxima and stats.total_alunos %}
+                            {{ "%.0f"|format((stats.total_alunos / turma.capacidade_maxima) * 100) }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </h5>
+                    <p class="card-text">Ocupação da Turma</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos e Estatísticas Detalhadas -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Distribuição por Gênero</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="generoChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Frequência por Aluno</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="frequenciaAlunoChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Alunos da Turma -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-user-graduate me-2"></i>Alunos da Turma</h5>
+                    <div>
+                        <span class="badge bg-success me-2">{{ stats.total_alunos if stats else 0 }} alunos</span>
+                        <button class="btn btn-sm btn-outline-primary" onclick="adicionarAlunoTurma()">
+                            <i class="fas fa-plus me-1"></i>Adicionar Aluno
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Idade</th>
+                                    <th>Telefone</th>
+                                    <th>Data Matrícula</th>
+                                    <th>Frequência</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alunosTurmaTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>Carregando alunos...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendário de Aulas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Calendário de Aulas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div id="calendarioAulas">
+                                <!-- Calendário será renderizado aqui -->
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-calendar fa-3x mb-3"></i>
+                                    <p>Calendário de aulas em desenvolvimento</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6>Próximas Aulas</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <i class="fas fa-calendar-day text-success me-2"></i>
+                                            <strong>Hoje</strong><br>
+                                            <small>{{ turma.horario or 'Horário não definido' }}</small>
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-calendar-day text-primary me-2"></i>
+                                            <strong>Amanhã</strong><br>
+                                            <small>{{ turma.horario or 'Horário não definido' }}</small>
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-calendar-day text-info me-2"></i>
+                                            <strong>Próxima Semana</strong><br>
+                                            <small>{{ turma.dias_semana or 'Dias não definidos' }}</small>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações Rápidas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Ações Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('presenca') }}" class="btn btn-success">
+                            <i class="fas fa-calendar-check me-2"></i>Registrar Presenças
+                        </a>
+                        <a href="{{ url_for('novo_aluno') }}" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>Novo Aluno
+                        </a>
+                        <a href="{{ url_for('relatorios') }}" class="btn btn-info">
+                            <i class="fas fa-chart-bar me-2"></i>Relatórios
+                        </a>
+                        <button class="btn btn-warning" onclick="gerarRelatorioTurma()">
+                            <i class="fas fa-file-excel me-2"></i>Relatório da Turma
+                        </button>
+                        {% if nivel_usuario in ['admin', 'admin_master'] %}
+                        <button class="btn btn-outline-danger" onclick="editarTurma()">
+                            <i class="fas fa-edit me-2"></i>Editar Turma
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegação -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-home me-2"></i>Dashboard Principal
+                </a>
+                <div>
+                    <a href="{{ url_for('gerenciar_turmas') }}" class="btn btn-outline-success me-2">
+                        <i class="fas fa-users me-2"></i>Gerenciar Turmas
+                    </a>
+                    <a href="{{ url_for('gerenciar_atividades') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-dumbbell me-2"></i>Gerenciar Atividades
+                    </a>
+                    <a href="{{ url_for('gerenciar_colaboradores') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-user-tie me-2"></i>Gerenciar Colaboradores
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Adicionar Aluno -->
+<div class="modal fade" id="adicionarAlunoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adicionar Aluno à Turma</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="buscaAluno" class="form-label">Buscar Aluno:</label>
+                    <input type="text" class="form-control" id="buscaAluno" placeholder="Digite o nome do aluno...">
+                </div>
+                <div id="resultadosBusca" class="mb-3">
+                    <!-- Resultados da busca aparecerão aqui -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarAdicaoAluno()">Adicionar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let generoChart, frequenciaAlunoChart;
+let alunosTurma = [];
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarGraficos();
+    carregarAlunosTurma();
+    atualizarEstatisticas();
+});
+
+// Inicializar gráficos
+function inicializarGraficos() {
+    // Gráfico de distribuição por gênero
+    const ctxGenero = document.getElementById('generoChart').getContext('2d');
+    generoChart = new Chart(ctxGenero, {
+        type: 'doughnut',
+        data: {
+            labels: ['Masculino', 'Feminino'],
+            datasets: [{
+                data: [60, 40],
+                backgroundColor: ['#36A2EB', '#FF6384'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Gráfico de frequência por aluno
+    const ctxFreq = document.getElementById('frequenciaAlunoChart').getContext('2d');
+    frequenciaAlunoChart = new Chart(ctxFreq, {
+        type: 'bar',
+        data: {
+            labels: ['Aluno 1', 'Aluno 2', 'Aluno 3', 'Aluno 4', 'Aluno 5'],
+            datasets: [{
+                label: 'Frequência (%)',
+                data: [95, 87, 92, 78, 89],
+                backgroundColor: '#28a745',
+                borderColor: '#20c997',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+// Carregar alunos da turma
+function carregarAlunosTurma() {
+    // Simular carregamento de dados
+    setTimeout(() => {
+        alunosTurma = [
+            {
+                nome: 'João Silva',
+                idade: 15,
+                telefone: '(11) 99999-9999',
+                data_matricula: '15/01/2024',
+                frequencia: 95,
+                status: 'Ativo'
+            },
+            {
+                nome: 'Maria Santos',
+                idade: 14,
+                telefone: '(11) 88888-8888',
+                data_matricula: '20/01/2024',
+                frequencia: 87,
+                status: 'Ativo'
+            }
+        ];
+        
+        renderizarTabelaAlunos();
+    }, 1000);
+}
+
+// Renderizar tabela de alunos
+function renderizarTabelaAlunos() {
+    const tbody = document.getElementById('alunosTurmaTableBody');
+    
+    if (alunosTurma.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    <i class="fas fa-inbox me-2"></i>Nenhum aluno encontrado nesta turma
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = alunosTurma.map(aluno => `
+        <tr>
+            <td><strong>${aluno.nome}</strong></td>
+            <td>${aluno.idade} anos</td>
+            <td>${aluno.telefone}</td>
+            <td>${aluno.data_matricula}</td>
+            <td>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar bg-success" style="width: ${aluno.frequencia}%">
+                        ${aluno.frequencia}%
+                    </div>
+                </div>
+            </td>
+            <td>
+                <span class="badge bg-success">${aluno.status}</span>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-info" onclick="verDetalhesAluno('${aluno.nome}')" title="Ver Detalhes">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="editarAluno('${aluno.nome}')" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="removerAluno('${aluno.nome}')" title="Remover">
+                        <i class="fas fa-user-minus"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Atualizar estatísticas
+function atualizarEstatisticas() {
+    // Atualizar contadores
+    document.getElementById('total-alunos-turma').textContent = alunosTurma.length;
+    document.getElementById('presencas-hoje-turma').textContent = Math.floor(alunosTurma.length * 0.8); // Simulação
+}
+
+// Adicionar aluno à turma
+function adicionarAlunoTurma() {
+    const modal = new bootstrap.Modal(document.getElementById('adicionarAlunoModal'));
+    modal.show();
+}
+
+// Confirmar adição de aluno
+function confirmarAdicaoAluno() {
+    mostrarAlerta('Aluno adicionado à turma com sucesso!', 'success');
+    const modal = bootstrap.Modal.getInstance(document.getElementById('adicionarAlunoModal'));
+    modal.hide();
+}
+
+// Ver detalhes do aluno
+function verDetalhesAluno(nome) {
+    mostrarAlerta(`Ver detalhes de ${nome} - Funcionalidade em desenvolvimento`, 'info');
+}
+
+// Editar aluno
+function editarAluno(nome) {
+    mostrarAlerta(`Editar ${nome} - Funcionalidade em desenvolvimento`, 'info');
+}
+
+// Remover aluno
+function removerAluno(nome) {
+    if (confirm(`Deseja realmente remover ${nome} desta turma?`)) {
+        alunosTurma = alunosTurma.filter(a => a.nome !== nome);
+        renderizarTabelaAlunos();
+        atualizarEstatisticas();
+        mostrarAlerta(`${nome} removido da turma com sucesso!`, 'success');
+    }
+}
+
+// Gerar relatório da turma
+function gerarRelatorioTurma() {
+    mostrarConfirmacao(
+        'Gerar relatório da turma?',
+        `Será gerado um relatório completo de "${turma.nome}"`,
+        () => {
+            mostrarAlerta('Relatório da turma gerado com sucesso!', 'success');
+        }
+    );
+}
+
+// Editar turma
+function editarTurma() {
+    mostrarAlerta('Editar turma - Funcionalidade em desenvolvimento', 'info');
+}
+
+// Funções auxiliares
+function mostrarAlerta(mensagem, tipo) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function mostrarConfirmacao(titulo, mensagem, callback) {
+    if (confirm(`${titulo}\n\n${mensagem}`)) {
+        callback();
+    }
+}
+
+// Atualizar estatísticas a cada 5 minutos
+setInterval(atualizarEstatisticas, 300000);
+</script>
+{% endblock %}

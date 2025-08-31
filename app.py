@@ -3,10 +3,11 @@ from datetime import datetime, timedelta
 import os
 import hashlib
 import json
+import tempfile
 from werkzeug.utils import secure_filename
 import io
 from dotenv import load_dotenv
-from models import SessionLocal, engine, Base, Aluno, Atividade, Turma, Usuario, Presenca
+from models import SessionLocal, engine, Base, Aluno, Atividade, Turma, Usuario, Presenca, get_db
 from database_integration import get_db_integration
 
 # Carregar variáveis de ambiente
@@ -23,16 +24,17 @@ app.secret_key = os.environ.get('SECRET_KEY', 'associacao_amigo_do_povo_2024_sec
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
+# Configuração adicional para sessões
+app.config['SESSION_FILE_DIR'] = tempfile.gettempdir()
+app.config['SESSION_FILE_THRESHOLD'] = 500
+app.config['SESSION_FILE_MODE'] = 384
+
 # Inicializar banco de dados
 try:
     Base.metadata.create_all(bind=engine)
     print("Tabelas do banco de dados criadas/verificadas com sucesso!")
 except Exception as e:
     print(f"Erro ao inicializar banco de dados: {e}")
-
-# Função para obter sessão do banco de dados
-def get_db():
-    return SessionLocal()
 
 # Função para fechar sessão do banco de dados
 def close_db(db):
@@ -1603,7 +1605,13 @@ class SistemaAcademia:
             return None
 
 # Sistema global
-academia = SistemaAcademia()
+try:
+    academia = SistemaAcademia()
+    print("✅ Sistema Academia inicializado com sucesso")
+except Exception as e:
+    print(f"❌ Erro ao inicializar Sistema Academia: {e}")
+    # Criar instância básica em caso de erro
+    academia = None
 
 def verificar_login():
     return 'usuario_logado' in session
@@ -1833,6 +1841,18 @@ def dashboard():
     usuario_logado = session.get('usuario_logado')
     usuario_nome = session.get('usuario_nome', 'Usuário')
     
+    # Verificar se a variável academia está inicializada
+    if academia is None:
+        flash('Erro no sistema: Academia não inicializada. Entre em contato com o administrador.', 'error')
+        return render_template('dashboard.html', 
+                             stats={'total_alunos': 0, 'presencas_hoje': 0, 'presencas_semana': 0, 'alunos_ativos': 0},
+                             presencas_hoje=[],
+                             usuario_nome=usuario_nome,
+                             nivel_usuario=nivel_usuario)
+    
+    if not hasattr(academia, 'dados_presenca') or academia.dados_presenca is None:
+        academia.dados_presenca = {}
+    
     # Para professores/usuários, redirecionar para dashboard da sua atividade
     if nivel_usuario == 'usuario' and usuario_logado in USUARIOS:
         atividade_responsavel = USUARIOS[usuario_logado].get('atividade_responsavel')
@@ -1850,27 +1870,36 @@ def dashboard():
     
     else:
         # Para admin e admin_master, mostrar dados completos
-        stats = academia.get_estatisticas()
+        try:
+            stats = academia.get_estatisticas()
+        except Exception as e:
+            print(f"❌ Erro ao obter estatísticas: {e}")
+            stats = {'total_alunos': 0, 'presencas_hoje': 0, 'presencas_semana': 0, 'alunos_ativos': 0}
     
     # Obter presenças de hoje
     data_hoje = datetime.now().strftime('%d/%m/%Y')
     presencas_hoje = []
     
-    for nome, dados in academia.dados_presenca.items():
-        for registro in dados['registros']:
-            if registro.get('data') == data_hoje and registro.get('status') == 'P':
-                presencas_hoje.append({
-                    'Nome': nome,
-                    'Horário': registro.get('horario', ''),
-                    'Atividade': dados.get('atividade', ''),
-                    'Observações': 'Presença registrada'
-                })
+    try:
+        for nome, dados in academia.dados_presenca.items():
+            if isinstance(dados, dict) and 'registros' in dados:
+                for registro in dados['registros']:
+                    if isinstance(registro, dict) and registro.get('data') == data_hoje and registro.get('status') == 'P':
+                        presencas_hoje.append({
+                            'Nome': nome,
+                            'Horário': registro.get('horario', ''),
+                            'Atividade': dados.get('atividade', ''),
+                            'Observações': 'Presença registrada'
+                        })
+    except Exception as e:
+        print(f"❌ Erro ao processar presenças: {e}")
+        presencas_hoje = []
     
-        return render_template('dashboard.html', 
-                             stats=stats, 
-                             presencas_hoje=presencas_hoje, 
-                             usuario_nome=usuario_nome,
-                             nivel_usuario=nivel_usuario)
+    return render_template('dashboard.html', 
+                         stats=stats, 
+                         presencas_hoje=presencas_hoje, 
+                         usuario_nome=usuario_nome,
+                         nivel_usuario=nivel_usuario)
 
 @app.route('/alunos')
 @login_obrigatorio
@@ -2680,18 +2709,17 @@ def backup_planilhas():
 def gerenciar_colaboradores():
     """Página de gerenciamento de colaboradores - apenas Admin Master"""
     usuario_nome = session.get('usuario_nome', 'Usuário')
-    colaboradores = []
+    colaboradores = {}
     
     # Listar todos os usuários exceto Admin Masters
     for username, dados in USUARIOS.items():
         if dados.get('nivel') != 'admin_master':
             colaborador = dados.copy()
-            colaborador['username'] = username
             # Não incluir senha hash na resposta
             colaborador.pop('senha', None)
-            colaboradores.append(colaborador)
+            colaboradores[username] = colaborador
     
-    atividades = academia.get_atividades_disponiveis()
+    atividades = academia.get_atividades_disponiveis() if academia else []
     
     return render_template('gerenciar_colaboradores.html', 
                          colaboradores=colaboradores,

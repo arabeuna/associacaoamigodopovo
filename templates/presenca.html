@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}Presença - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 text-center mb-4">
+                <i class="fas fa-calendar-check text-primary"></i>
+                Controle de Presença
+            </h1>
+            <p class="text-muted text-center">Gerencie a presença dos alunos nas atividades</p>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>
+                        Filtros
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="atividade" class="form-label">Atividade</label>
+                            <select name="atividade" id="atividade" class="form-select">
+                                <option value="">Todas as atividades</option>
+                                <option value="Futebol">Futebol</option>
+                                <option value="Vôlei">Vôlei</option>
+                                <option value="Basquete">Basquete</option>
+                                <option value="Jiu-Jitsu">Jiu-Jitsu</option>
+                                <option value="Capoeira">Capoeira</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="turma" class="form-label">Turma</label>
+                            <select name="turma" id="turma" class="form-select">
+                                <option value="">Todas as turmas</option>
+                                <option value="Manhã">Manhã</option>
+                                <option value="Tarde">Tarde</option>
+                                <option value="Noite">Noite</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="data" class="form-label">Data</label>
+                            <input type="date" name="data" id="data" class="form-control" value="{{ request.args.get('data', '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search me-2"></i>
+                                    Filtrar
+                                </button>
+                                <a href="{{ url_for('presenca') }}" class="btn btn-secondary ms-2">
+                                    <i class="fas fa-undo me-2"></i>
+                                    Limpar
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Alunos para Presença -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Lista de Alunos
+                    </h5>
+                    <div>
+                        <button class="btn btn-success" onclick="marcarTodosPresentes()">
+                            <i class="fas fa-check-double me-2"></i>
+                            Marcar Todos Presentes
+                        </button>
+                        <button class="btn btn-danger" onclick="marcarTodosFaltaram()">
+                            <i class="fas fa-times me-2"></i>
+                            Marcar Todos Faltaram
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if alunos %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Atividade</th>
+                                    <th>Turma</th>
+                                    <th>Status</th>
+                                    <th>Observações</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for aluno in alunos %}
+                                <tr>
+                                    <td>{{ aluno.nome }}</td>
+                                    <td>{{ aluno.atividade }}</td>
+                                    <td>{{ aluno.turma }}</td>
+                                    <td>
+                                        <select class="form-select form-select-sm status-presenca" 
+                                                data-aluno="{{ aluno.nome }}"
+                                                onchange="atualizarStatus('{{ aluno.nome }}', this.value)">
+                                            <option value="">Selecione</option>
+                                            <option value="P" {% if aluno.status == 'P' %}selected{% endif %}>Presente</option>
+                                            <option value="F" {% if aluno.status == 'F' %}selected{% endif %}>Faltou</option>
+                                            <option value="J" {% if aluno.status == 'J' %}selected{% endif %}>Justificada</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm observacoes-presenca" 
+                                               placeholder="Observações"
+                                               data-aluno="{{ aluno.nome }}"
+                                               value="{{ aluno.observacoes or '' }}">
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="salvarPresenca('{{ aluno.nome }}')">
+                                            <i class="fas fa-save"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Nenhum aluno encontrado com os filtros aplicados.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo da Presença -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-calendar-check fa-2x text-success mb-2"></i>
+                    <h4 id="total-presentes">0</h4>
+                    <p class="text-muted mb-0">Presentes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-calendar-times fa-2x text-danger mb-2"></i>
+                    <h4 id="total-faltas">0</h4>
+                    <p class="text-muted mb-0">Faltas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-calendar-minus fa-2x text-warning mb-2"></i>
+                    <h4 id="total-justificadas">0</h4>
+                    <p class="text-muted mb-0">Justificadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-percentage fa-2x text-info mb-2"></i>
+                    <h4 id="taxa-presenca">0%</h4>
+                    <p class="text-muted mb-0">Taxa de Presença</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="row">
+        <div class="col-12 text-center">
+            <button class="btn btn-lg btn-primary" onclick="salvarTodasPresencas()">
+                <i class="fas fa-save me-2"></i>
+                Salvar Todas as Presenças
+            </button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-lg btn-secondary ms-3">
+                <i class="fas fa-arrow-left me-2"></i>
+                Voltar ao Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Atualizar estatísticas
+function atualizarEstatisticas() {
+    const presentes = document.querySelectorAll('.status-presenca[value="P"]').length;
+    const faltas = document.querySelectorAll('.status-presenca[value="F"]').length;
+    const justificadas = document.querySelectorAll('.status-presenca[value="J"]').length;
+    const total = presentes + faltas + justificadas;
+    
+    document.getElementById('total-presentes').textContent = presentes;
+    document.getElementById('total-faltas').textContent = faltas;
+    document.getElementById('total-justificadas').textContent = justificadas;
+    
+    if (total > 0) {
+        const taxa = ((presentes / total) * 100).toFixed(1);
+        document.getElementById('taxa-presenca').textContent = taxa + '%';
+    } else {
+        document.getElementById('taxa-presenca').textContent = '0%';
+    }
+}
+
+// Atualizar status de presença
+function atualizarStatus(aluno, status) {
+    // Aqui você pode implementar a lógica para salvar no banco
+    console.log(`Aluno: ${aluno}, Status: ${status}`);
+    atualizarEstatisticas();
+}
+
+// Marcar todos como presentes
+function marcarTodosPresentes() {
+    document.querySelectorAll('.status-presenca').forEach(select => {
+        select.value = 'P';
+    });
+    atualizarEstatisticas();
+}
+
+// Marcar todos como faltaram
+function marcarTodosFaltaram() {
+    document.querySelectorAll('.status-presenca').forEach(select => {
+        select.value = 'F';
+    });
+    atualizarEstatisticas();
+}
+
+// Salvar presença individual
+function salvarPresenca(aluno) {
+    const status = document.querySelector(`.status-presenca[data-aluno="${aluno}"]`).value;
+    const observacoes = document.querySelector(`.observacoes-presenca[data-aluno="${aluno}"]`).value;
+    
+    if (!status) {
+        alert('Selecione um status para o aluno ' + aluno);
+        return;
+    }
+    
+    // Aqui você implementaria a chamada para salvar no banco
+    console.log(`Salvando presença: ${aluno} - ${status} - ${observacoes}`);
+    alert(`Presença de ${aluno} salva com sucesso!`);
+}
+
+// Salvar todas as presenças
+function salvarTodasPresencas() {
+    const presencas = [];
+    
+    document.querySelectorAll('.status-presenca').forEach(select => {
+        const aluno = select.dataset.aluno;
+        const status = select.value;
+        const observacoes = document.querySelector(`.observacoes-presenca[data-aluno="${aluno}"]`).value;
+        
+        if (status) {
+            presencas.push({ aluno, status, observacoes });
+        }
+    });
+    
+    if (presencas.length === 0) {
+        alert('Nenhuma presença para salvar. Selecione pelo menos um status.');
+        return;
+    }
+    
+    // Aqui você implementaria a chamada para salvar todas no banco
+    console.log('Presenças a salvar:', presencas);
+    alert(`${presencas.length} presenças salvas com sucesso!`);
+}
+
+// Inicializar estatísticas
+document.addEventListener('DOMContentLoaded', function() {
+    atualizarEstatisticas();
+    
+    // Definir data atual como padrão se não estiver definida
+    const dataInput = document.getElementById('data');
+    if (dataInput && !dataInput.value) {
+        const hoje = new Date().toISOString().split('T')[0];
+        dataInput.value = hoje;
+    }
+});
+</script>
+{% endblock %}

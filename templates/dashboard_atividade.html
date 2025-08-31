@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+{% block title %}{{ nome_atividade }} - Dashboard - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Cabeçalho da Atividade -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-dumbbell text-primary me-2"></i>{{ nome_atividade }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Dashboard da Atividade • Usuário: {{ usuario_nome }}
+                        {% if nivel_usuario == 'usuario' %}
+                            <span class="badge bg-info ms-2">Professor</span>
+                        {% elif nivel_usuario == 'admin' %}
+                            <span class="badge bg-warning ms-2">Administrador</span>
+                        {% elif nivel_usuario == 'admin_master' %}
+                            <span class="badge bg-danger ms-2">Admin Master</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="text-end">
+                    <a href="{{ url_for('gerenciar_atividades') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Voltar
+                    </a>
+                    <a href="{{ url_for('gerenciar_turmas') }}" class="btn btn-outline-success">
+                        <i class="fas fa-users me-2"></i>Gerenciar Turmas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações da Atividade -->
+    {% if atividade %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações da Atividade</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Nome:</strong> {{ atividade.nome }}</p>
+                            <p><strong>Descrição:</strong> {{ atividade.descricao or 'Não informada' }}</p>
+                            <p><strong>Professor:</strong> {{ atividade.professor or 'Não atribuído' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Data de Criação:</strong> {{ atividade.data_criacao or 'Não informada' }}</p>
+                            <p><strong>Criado por:</strong> {{ atividade.criado_por or 'Sistema' }}</p>
+                            <p><strong>Status:</strong> 
+                                {% if atividade.ativa %}
+                                    <span class="badge bg-success">Ativa</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inativa</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Estatísticas Principais -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h5 class="card-title" id="total-alunos">{{ stats.total_alunos if stats else 0 }}</h5>
+                    <p class="card-text">Total de Alunos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                    <h5 class="card-title" id="presencas-hoje">{{ presencas_hoje|length if presencas_hoje else 0 }}</h5>
+                    <p class="card-text">Presenças Hoje</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                    <h5 class="card-title" id="frequencia-media">{{ "%.1f"|format(stats.frequencia_media * 100 if stats and stats.frequencia_media else 0) }}%</h5>
+                    <p class="card-text">Frequência Média</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h5 class="card-title" id="ultima-atividade">{{ stats.ultima_atividade if stats and stats.ultima_atividade else 'N/A' }}</h5>
+                    <p class="card-text">Última Atividade</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos e Estatísticas Detalhadas -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Distribuição por Idade</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="idadeChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Frequência por Mês</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="frequenciaChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Presenças de Hoje -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Presenças de Hoje</h5>
+                    <span class="badge bg-success">{{ presencas_hoje|length if presencas_hoje else 0 }} alunos presentes</span>
+                </div>
+                <div class="card-body">
+                    {% if presencas_hoje %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Nome do Aluno</th>
+                                    <th>Horário</th>
+                                    <th>Atividade</th>
+                                    <th>Observações</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for presenca in presencas_hoje %}
+                                <tr>
+                                    <td><strong>{{ presenca.Nome }}</strong></td>
+                                    <td>{{ presenca.Horário or 'N/A' }}</td>
+                                    <td><span class="badge bg-primary">{{ presenca.Atividade }}</span></td>
+                                    <td>{{ presenca.Observacoes }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-info" onclick="verDetalhesAluno('{{ presenca.Nome }}')" title="Ver Detalhes">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="editarPresenca('{{ presenca.Nome }}')" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                        <p>Nenhuma presença registrada hoje para esta atividade.</p>
+                        <a href="{{ url_for('presenca') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Registrar Presenças
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações Rápidas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Ações Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('presenca') }}" class="btn btn-success">
+                            <i class="fas fa-calendar-check me-2"></i>Registrar Presenças
+                        </a>
+                        <a href="{{ url_for('novo_aluno') }}" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>Novo Aluno
+                        </a>
+                        <a href="{{ url_for('relatorios') }}" class="btn btn-info">
+                            <i class="fas fa-chart-bar me-2"></i>Relatórios
+                        </a>
+                        <a href="{{ url_for('busca_avancada') }}" class="btn btn-warning">
+                            <i class="fas fa-search me-2"></i>Busca Avançada
+                        </a>
+                        {% if nivel_usuario in ['admin', 'admin_master'] %}
+                        <button class="btn btn-outline-danger" onclick="gerarRelatorioAtividade()">
+                            <i class="fas fa-file-excel me-2"></i>Exportar Dados
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegação -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-home me-2"></i>Dashboard Principal
+                </a>
+                <div>
+                    <a href="{{ url_for('gerenciar_atividades') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-dumbbell me-2"></i>Gerenciar Atividades
+                    </a>
+                    <a href="{{ url_for('gerenciar_turmas') }}" class="btn btn-outline-success me-2">
+                        <i class="fas fa-users me-2"></i>Gerenciar Turmas
+                    </a>
+                    <a href="{{ url_for('gerenciar_colaboradores') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-user-tie me-2"></i>Gerenciar Colaboradores
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalhes do Aluno -->
+<div class="modal fade" id="alunoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalhes do Aluno</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="alunoModalBody">
+                <!-- Conteúdo dinâmico -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" onclick="editarAluno()">Editar Aluno</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let idadeChart, frequenciaChart;
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarGraficos();
+    atualizarEstatisticas();
+});
+
+// Inicializar gráficos
+function inicializarGraficos() {
+    // Gráfico de distribuição por idade
+    const ctxIdade = document.getElementById('idadeChart').getContext('2d');
+    idadeChart = new Chart(ctxIdade, {
+        type: 'pie',
+        data: {
+            labels: ['5-10 anos', '11-15 anos', '16-20 anos', '21+ anos'],
+            datasets: [{
+                data: [30, 45, 20, 5],
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Gráfico de frequência por mês
+    const ctxFreq = document.getElementById('frequenciaChart').getContext('2d');
+    frequenciaChart = new Chart(ctxFreq, {
+        type: 'bar',
+        data: {
+            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+            datasets: [{
+                label: 'Frequência (%)',
+                data: [85, 78, 92, 88, 90, 87],
+                backgroundColor: '#36A2EB',
+                borderColor: '#2693e6',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+// Atualizar estatísticas
+function atualizarEstatisticas() {
+    // Aqui você pode fazer uma chamada AJAX para atualizar as estatísticas em tempo real
+    // Por enquanto, vamos apenas atualizar os valores estáticos
+    console.log('Estatísticas atualizadas');
+}
+
+// Ver detalhes do aluno
+function verDetalhesAluno(nome) {
+    // Aqui você pode fazer uma chamada AJAX para buscar os detalhes do aluno
+    const modalBody = document.getElementById('alunoModalBody');
+    modalBody.innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Carregando detalhes de ${nome}...</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('alunoModal'));
+    modal.show();
+    
+    // Simular carregamento de dados
+    setTimeout(() => {
+        modalBody.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Informações Pessoais</h6>
+                    <p><strong>Nome:</strong> ${nome}</p>
+                    <p><strong>Atividade:</strong> {{ nome_atividade }}</p>
+                    <p><strong>Data de Cadastro:</strong> 15/01/2024</p>
+                    <p><strong>Status:</strong> <span class="badge bg-success">Ativo</span></p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Estatísticas</h6>
+                    <p><strong>Frequência:</strong> 87%</p>
+                    <p><strong>Total de Aulas:</strong> 45</p>
+                    <p><strong>Última Presença:</strong> Hoje</p>
+                    <p><strong>Observações:</strong> Aluno dedicado</p>
+                </div>
+            </div>
+        `;
+    }, 1000);
+}
+
+// Editar presença
+function editarPresenca(nome) {
+    mostrarAlerta(`Editar presença de ${nome} - Funcionalidade em desenvolvimento`, 'info');
+}
+
+// Editar aluno
+function editarAluno() {
+    mostrarAlerta('Editar aluno - Funcionalidade em desenvolvimento', 'info');
+}
+
+// Gerar relatório da atividade
+function gerarRelatorioAtividade() {
+    mostrarConfirmacao(
+        'Gerar relatório da atividade?',
+        `Será gerado um relatório completo de "${nome_atividade}"`,
+        () => {
+            // Implementar geração de relatório
+            mostrarAlerta('Relatório gerado com sucesso!', 'success');
+        }
+    );
+}
+
+// Funções auxiliares
+function mostrarAlerta(mensagem, tipo) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function mostrarConfirmacao(titulo, mensagem, callback) {
+    if (confirm(`${titulo}\n\n${mensagem}`)) {
+        callback();
+    }
+}
+
+// Atualizar estatísticas a cada 5 minutos
+setInterval(atualizarEstatisticas, 300000);
+</script>
+{% endblock %}

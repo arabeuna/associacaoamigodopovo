@@ -1,0 +1,569 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Colaboradores - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 text-center mb-4">
+                <i class="fas fa-users-cog text-primary"></i>
+                Gerenciar Colaboradores
+            </h1>
+            <p class="text-muted text-center">Gerencie os colaboradores e suas permissões no sistema</p>
+        </div>
+    </div>
+
+    <!-- Estatísticas dos Colaboradores -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                    <h4 id="total-colaboradores">{{ colaboradores|length }}</h4>
+                    <p class="text-muted mb-0">Total de Colaboradores</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-user-shield fa-2x text-success mb-2"></i>
+                    <h4 id="admin-masters">0</h4>
+                    <p class="text-muted mb-0">Admin Masters</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-chalkboard-teacher fa-2x text-info mb-2"></i>
+                    <h4 id="professores">0</h4>
+                    <p class="text-muted mb-0">Professores</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-user-check fa-2x text-warning mb-2"></i>
+                    <h4 id="usuarios-ativos">0</h4>
+                    <p class="text-muted mb-0">Usuários Ativos</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botão para Novo Colaborador -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <button class="btn btn-lg btn-success" data-bs-toggle="modal" data-bs-target="#modalNovoColaborador">
+                <i class="fas fa-plus me-2"></i>
+                Novo Colaborador
+            </button>
+        </div>
+    </div>
+
+    <!-- Lista de Colaboradores -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Colaboradores Cadastrados
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if colaboradores %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Nome</th>
+                                    <th>Nível</th>
+                                    <th>Atividade Responsável</th>
+                                    <th>Permissões</th>
+                                    <th>Status</th>
+                                    <th>Último Acesso</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usuario, dados in colaboradores.items() %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ usuario }}</strong>
+                                    </td>
+                                    <td>{{ dados.nome }}</td>
+                                    <td>
+                                        {% if dados.nivel == 'admin_master' %}
+                                            <span class="badge bg-danger">Admin Master</span>
+                                        {% elif dados.nivel == 'admin' %}
+                                            <span class="badge bg-warning">Admin</span>
+                                        {% elif dados.nivel == 'professor' %}
+                                            <span class="badge bg-info">Professor</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ dados.nivel }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if dados.atividade_responsavel %}
+                                            <span class="badge bg-primary">{{ dados.atividade_responsavel }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Nenhuma</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if dados.permissoes %}
+                                            {% for permissao in dados.permissoes %}
+                                            <span class="badge bg-light text-dark me-1">{{ permissao }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">Sem permissões</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if dados.ativo %}
+                                            <span class="badge bg-success">Ativo</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inativo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if dados.ultimo_acesso %}
+                                            {{ dados.ultimo_acesso }}
+                                        {% else %}
+                                            <span class="text-muted">Nunca acessou</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    onclick="editarColaborador('{{ usuario }}')"
+                                                    title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    onclick="verDetalhesColaborador('{{ usuario }}')"
+                                                    title="Ver Detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    onclick="gerenciarPermissoes('{{ usuario }}')"
+                                                    title="Gerenciar Permissões">
+                                                <i class="fas fa-key"></i>
+                                            </button>
+                                            {% if dados.ativo %}
+                                            <button class="btn btn-sm btn-outline-warning" 
+                                                    onclick="desativarColaborador('{{ usuario }}')"
+                                                    title="Desativar">
+                                                <i class="fas fa-pause"></i>
+                                            </button>
+                                            {% else %}
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    onclick="ativarColaborador('{{ usuario }}')"
+                                                    title="Ativar">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            {% endif %}
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="excluirColaborador('{{ usuario }}')"
+                                                    title="Excluir"
+                                                    {% if dados.nivel == 'admin_master' %}disabled{% endif %}>
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Nenhum colaborador cadastrado no sistema.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botões de Navegação -->
+    <div class="row">
+        <div class="col-12 text-center">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-lg btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>
+                Voltar ao Dashboard
+            </a>
+            <a href="{{ url_for('gerenciar_atividades') }}" class="btn btn-lg btn-outline-secondary ms-3">
+                <i class="fas fa-dumbbell me-2"></i>
+                Gerenciar Atividades
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Colaborador -->
+<div class="modal fade" id="modalNovoColaborador" tabindex="-1" aria-labelledby="modalNovoColaboradorLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalNovoColaboradorLabel">
+                    <i class="fas fa-plus me-2"></i>
+                    Novo Colaborador
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formNovoColaborador" method="POST" action="{{ url_for('criar_colaborador') }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="usuario" class="form-label">Usuário *</label>
+                            <input type="text" class="form-control" id="usuario" name="usuario" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="nome" class="form-label">Nome Completo *</label>
+                            <input type="text" class="form-control" id="nome" name="nome" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">E-mail *</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="telefone" class="form-label">Telefone</label>
+                            <input type="tel" class="form-control" id="telefone" name="telefone">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="nivel" class="form-label">Nível de Acesso *</label>
+                            <select class="form-select" id="nivel" name="nivel" required onchange="toggleAtividadeResponsavel()">
+                                <option value="">Selecione um nível</option>
+                                <option value="admin_master">Admin Master</option>
+                                <option value="admin">Admin</option>
+                                <option value="professor">Professor</option>
+                                <option value="usuario">Usuário</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="div_atividade_responsavel" style="display: none;">
+                            <label for="atividade_responsavel" class="form-label">Atividade Responsável</label>
+                            <select class="form-select" id="atividade_responsavel" name="atividade_responsavel">
+                                <option value="">Selecione uma atividade</option>
+                                <option value="Informática">Informática</option>
+                                <option value="Dança">Dança</option>
+                                <option value="Capoeira">Capoeira</option>
+                                <option value="Natação">Natação</option>
+                                <option value="Funcional">Funcional</option>
+                                <option value="Karatê">Karatê</option>
+                                <option value="Hidroginastica">Hidroginástica</option>
+                                <option value="Fisioterapia">Fisioterapia</option>
+                                <option value="Bombeiro mirim">Bombeiro Mirim</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="senha" class="form-label">Senha *</label>
+                            <input type="password" class="form-control" id="senha" name="senha" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="confirmar_senha" class="form-label">Confirmar Senha *</label>
+                            <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Permissões</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="perm_consultar_alunos" name="permissoes" value="consultar_meus_alunos">
+                                        <label class="form-check-label" for="perm_consultar_alunos">Consultar Meus Alunos</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="perm_gerenciar_frequencia" name="permissoes" value="gerenciar_frequencia_meus_alunos">
+                                        <label class="form-check-label" for="perm_gerenciar_frequencia">Gerenciar Frequência</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="perm_gerenciar_atividades" name="permissoes" value="gerenciar_atividades">
+                                        <label class="form-check-label" for="perm_gerenciar_atividades">Gerenciar Atividades</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="perm_gerenciar_turmas" name="permissoes" value="gerenciar_turmas">
+                                        <label class="form-check-label" for="perm_gerenciar_turmas">Gerenciar Turmas</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="perm_gerenciar_colaboradores" name="permissoes" value="gerenciar_colaboradores">
+                                        <label class="form-check-label" for="perm_gerenciar_colaboradores">Gerenciar Colaboradores</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="perm_relatorios" name="permissoes" value="gerenciar_relatorios">
+                                        <label class="form-check-label" for="perm_relatorios">Relatórios</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="observacoes_colaborador" class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes_colaborador" name="observacoes" rows="2" 
+                                      placeholder="Observações sobre o colaborador"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>
+                        Cadastrar Colaborador
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Colaborador -->
+<div class="modal fade" id="modalEditarColaborador" tabindex="-1" aria-labelledby="modalEditarColaboradorLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEditarColaboradorLabel">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Colaborador
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditarColaborador" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" id="edit_usuario_antigo" name="usuario_antigo">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="edit_usuario" class="form-label">Usuário *</label>
+                            <input type="text" class="form-control" id="edit_usuario" name="usuario" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_nome" class="form-label">Nome Completo *</label>
+                            <input type="text" class="form-control" id="edit_nome" name="nome" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_email" class="form-label">E-mail *</label>
+                            <input type="email" class="form-control" id="edit_email" name="email" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_nivel" class="form-label">Nível de Acesso *</label>
+                            <select class="form-select" id="edit_nivel" name="nivel" required onchange="toggleEditAtividadeResponsavel()">
+                                <option value="">Selecione um nível</option>
+                                <option value="admin_master">Admin Master</option>
+                                <option value="admin">Admin</option>
+                                <option value="professor">Professor</option>
+                                <option value="usuario">Usuário</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="edit_div_atividade_responsavel" style="display: none;">
+                            <label for="edit_atividade_responsavel" class="form-label">Atividade Responsável</label>
+                            <select class="form-select" id="edit_atividade_responsavel" name="atividade_responsavel">
+                                <option value="">Selecione uma atividade</option>
+                                <option value="Informática">Informática</option>
+                                <option value="Dança">Dança</option>
+                                <option value="Capoeira">Capoeira</option>
+                                <option value="Natação">Natação</option>
+                                <option value="Funcional">Funcional</option>
+                                <option value="Karatê">Karatê</option>
+                                <option value="Hidroginastica">Hidroginástica</option>
+                                <option value="Fisioterapia">Fisioterapia</option>
+                                <option value="Bombeiro mirim">Bombeiro Mirim</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_status" class="form-label">Status</label>
+                            <select class="form-select" id="edit_status" name="status">
+                                <option value="true">Ativo</option>
+                                <option value="false">Inativo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Atualizar estatísticas
+function atualizarEstatisticas() {
+    const totalColaboradores = {{ colaboradores|length }};
+    const adminMasters = document.querySelectorAll('.badge.bg-danger').length;
+    const professores = document.querySelectorAll('.badge.bg-info').length;
+    const usuariosAtivos = document.querySelectorAll('.badge.bg-success').length;
+    
+    document.getElementById('total-colaboradores').textContent = totalColaboradores;
+    document.getElementById('admin-masters').textContent = adminMasters;
+    document.getElementById('professores').textContent = professores;
+    document.getElementById('usuarios-ativos').textContent = usuariosAtivos;
+}
+
+// Toggle campo de atividade responsável
+function toggleAtividadeResponsavel() {
+    const nivel = document.getElementById('nivel').value;
+    const divAtividade = document.getElementById('div_atividade_responsavel');
+    
+    if (nivel === 'professor' || nivel === 'usuario') {
+        divAtividade.style.display = 'block';
+        document.getElementById('atividade_responsavel').required = true;
+    } else {
+        divAtividade.style.display = 'none';
+        document.getElementById('atividade_responsavel').required = false;
+        document.getElementById('atividade_responsavel').value = '';
+    }
+}
+
+// Toggle campo de atividade responsável no modal de edição
+function toggleEditAtividadeResponsavel() {
+    const nivel = document.getElementById('edit_nivel').value;
+    const divAtividade = document.getElementById('edit_div_atividade_responsavel');
+    
+    if (nivel === 'professor' || nivel === 'usuario') {
+        divAtividade.style.display = 'block';
+    } else {
+        divAtividade.style.display = 'none';
+        document.getElementById('edit_atividade_responsavel').value = '';
+    }
+}
+
+// Editar colaborador
+function editarColaborador(usuario) {
+    // Buscar dados do colaborador
+    const colaborador = colaboradoresData[usuario];
+    if (!colaborador) {
+        alert('Colaborador não encontrado!');
+        return;
+    }
+    
+    // Preencher campos do modal
+    document.getElementById('edit_usuario_antigo').value = usuario;
+    document.getElementById('edit_usuario').value = usuario;
+    document.getElementById('edit_nome').value = colaborador.nome || '';
+    document.getElementById('edit_email').value = colaborador.email || usuario + '@email.com';
+    document.getElementById('edit_nivel').value = colaborador.nivel || 'usuario';
+    document.getElementById('edit_status').value = colaborador.ativo ? 'Ativo' : 'Inativo';
+    document.getElementById('edit_atividade_responsavel').value = colaborador.atividade_responsavel || '';
+    
+    // Mostrar/ocultar campo de atividade baseado no nível
+    toggleEditAtividadeResponsavel();
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarColaborador'));
+    modal.show();
+}
+
+// Ver detalhes do colaborador
+function verDetalhesColaborador(usuario) {
+    alert(`Visualizando detalhes do colaborador: ${usuario}`);
+    // Aqui você implementaria a lógica para mostrar detalhes
+}
+
+// Gerenciar permissões do colaborador
+function gerenciarPermissoes(usuario) {
+    alert(`Gerenciando permissões do colaborador: ${usuario}`);
+    // Aqui você implementaria a lógica para gerenciar permissões
+}
+
+// Ativar colaborador
+function ativarColaborador(usuario) {
+    if (confirm(`Deseja ativar o colaborador "${usuario}"?`)) {
+        // Aqui você implementaria a lógica para ativar
+        alert(`Colaborador "${usuario}" ativado com sucesso!`);
+        location.reload();
+    }
+}
+
+// Desativar colaborador
+function desativarColaborador(usuario) {
+    if (confirm(`Deseja desativar o colaborador "${usuario}"?`)) {
+        // Aqui você implementaria a lógica para desativar
+        alert(`Colaborador "${usuario}" desativado com sucesso!`);
+        location.reload();
+    }
+}
+
+// Excluir colaborador
+function excluirColaborador(usuario) {
+    if (confirm(`ATENÇÃO: Deseja realmente excluir o colaborador "${usuario}"?\n\nEsta ação não pode ser desfeita.`)) {
+        // Aqui você implementaria a lógica para excluir
+        alert(`Colaborador "${usuario}" excluído com sucesso!`);
+        location.reload();
+    }
+}
+
+// Validação do formulário de novo colaborador
+document.getElementById('formNovoColaborador').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const usuario = document.getElementById('usuario').value.trim();
+    const nome = document.getElementById('nome').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const nivel = document.getElementById('nivel').value;
+    const senha = document.getElementById('senha').value;
+    const confirmarSenha = document.getElementById('confirmar_senha').value;
+    
+    if (!usuario || !nome || !email || !nivel || !senha || !confirmarSenha) {
+        alert('Por favor, preencha todos os campos obrigatórios.');
+        return;
+    }
+    
+    if (senha !== confirmarSenha) {
+        alert('As senhas não coincidem. Verifique e tente novamente.');
+        return;
+    }
+    
+    if (senha.length < 6) {
+        alert('A senha deve ter pelo menos 6 caracteres.');
+        return;
+    }
+    
+    // Verificar se o usuário já existe
+    const colaboradoresExistentes = Array.from(document.querySelectorAll('tbody tr')).map(row => {
+        return row.querySelector('td:first-child strong').textContent;
+    });
+    
+    if (colaboradoresExistentes.includes(usuario)) {
+        alert('Já existe um colaborador com este usuário. Escolha outro usuário.');
+        return;
+    }
+    
+    // Se tudo estiver ok, enviar formulário
+    alert('Formulário válido! Enviando dados...');
+    this.submit();
+});
+
+// Dados dos colaboradores para edição
+const colaboradoresData = {{ colaboradores|tojson }};
+
+// Inicializar estatísticas
+document.addEventListener('DOMContentLoaded', function() {
+    atualizarEstatisticas();
+});
+</script>
+{% endblock %}

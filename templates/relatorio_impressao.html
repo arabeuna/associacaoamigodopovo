@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório para Impressão - Associação Amigo do Povo</title>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 20px; }
+            .page-break { page-break-before: always; }
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            background: white;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        
+        .info-section {
+            margin-bottom: 30px;
+        }
+        
+        .info-section h2 {
+            color: #007bff;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .filtros-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .filtro-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .filtro-label {
+            font-weight: bold;
+            color: #495057;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .filtro-valor {
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .estatisticas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .estatistica-card {
+            background: #007bff;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .estatistica-valor {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .estatistica-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+        
+        .resultados-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            font-size: 12px;
+        }
+        
+        .resultados-table th {
+            background: #007bff;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #0056b3;
+        }
+        
+        .resultados-table td {
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        
+        .resultados-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .resultados-table tr:hover {
+            background: #e9ecef;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .page-info {
+            text-align: right;
+            font-size: 10px;
+            color: #999;
+            margin-bottom: 20px;
+        }
+        
+        .no-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .btn-print {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-print:hover {
+            background: #0056b3;
+        }
+        
+        .btn-back {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-back:hover {
+            background: #545b62;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-ativo { background: #d4edda; color: #155724; }
+        .status-inativo { background: #f8d7da; color: #721c24; }
+        .status-pendente { background: #fff3cd; color: #856404; }
+        
+        .observacoes {
+            max-width: 200px;
+            word-wrap: break-word;
+        }
+        
+        @media screen and (max-width: 768px) {
+            .filtros-grid, .estatisticas-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .resultados-table {
+                font-size: 10px;
+            }
+            
+            .resultados-table th, .resultados-table td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Botões de controle (não aparecem na impressão) -->
+    <div class="no-print">
+        <a href="javascript:history.back()" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+        <button onclick="window.print()" class="btn-print">
+            <i class="fas fa-print"></i> Imprimir
+        </button>
+    </div>
+
+    <!-- Informações da página -->
+    <div class="page-info">
+        Gerado em: {{ moment().format('DD/MM/YYYY HH:mm') }}
+    </div>
+
+    <!-- Cabeçalho -->
+    <div class="header">
+        <h1>ASSOCIAÇÃO AMIGO DO POVO</h1>
+        <div class="subtitle">Relatório de Atividades e Alunos</div>
+    </div>
+
+    <!-- Seção de Filtros Aplicados -->
+    {% if filtros %}
+    <div class="info-section">
+        <h2><i class="fas fa-filter"></i> Filtros Aplicados</h2>
+        <div class="filtros-grid">
+            {% for chave, valor in filtros.items() %}
+            {% if valor %}
+            <div class="filtro-item">
+                <div class="filtro-label">{{ chave|title }}</div>
+                <div class="filtro-valor">{{ valor }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Seção de Estatísticas -->
+    {% if estatisticas %}
+    <div class="info-section">
+        <h2><i class="fas fa-chart-bar"></i> Resumo Estatístico</h2>
+        <div class="estatisticas-grid">
+            {% for chave, valor in estatisticas.items() %}
+            <div class="estatistica-card">
+                <div class="estatistica-valor">{{ valor }}</div>
+                <div class="estatistica-label">{{ chave|replace('_', ' ')|title }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Seção de Resultados -->
+    <div class="info-section">
+        <h2><i class="fas fa-list"></i> Dados Detalhados</h2>
+        {% if resultados %}
+        <div class="table-responsive">
+            <table class="resultados-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Atividade</th>
+                        <th>Turma</th>
+                        <th>Status</th>
+                        <th>Data Cadastro</th>
+                        <th>Telefone</th>
+                        <th>Endereço</th>
+                        <th>Observações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for resultado in resultados %}
+                    <tr>
+                        <td><strong>{{ resultado.nome or 'N/A' }}</strong></td>
+                        <td>{{ resultado.atividade or 'N/A' }}</td>
+                        <td>{{ resultado.turma or 'N/A' }}</td>
+                        <td>
+                            {% if resultado.status_frequencia %}
+                                <span class="status-badge status-ativo">{{ resultado.status_frequencia }}</span>
+                            {% else %}
+                                <span class="status-badge status-pendente">Pendente</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ resultado.data_cadastro or 'N/A' }}</td>
+                        <td>{{ resultado.telefone or 'N/A' }}</td>
+                        <td>{{ resultado.endereco or 'N/A' }}</td>
+                        <td class="observacoes">{{ resultado.observacoes or 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="page-info">
+            Total de registros: {{ resultados|length }}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: #666;">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>Nenhum resultado encontrado para os filtros aplicados.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Rodapé -->
+    <div class="footer">
+        <p><strong>Associação Amigo do Povo</strong></p>
+        <p>Sistema de Gestão de Atividades e Alunos</p>
+        <p>Este relatório foi gerado automaticamente pelo sistema</p>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Função para formatar data
+        function formatarData(dataStr) {
+            if (!dataStr) return 'N/A';
+            try {
+                const data = new Date(dataStr);
+                return data.toLocaleDateString('pt-BR');
+            } catch (e) {
+                return dataStr;
+            }
+        }
+        
+        // Função para formatar telefone
+        function formatarTelefone(telefone) {
+            if (!telefone) return 'N/A';
+            const cleaned = telefone.replace(/\D/g, '');
+            if (cleaned.length === 11) {
+                return `(${cleaned.slice(0,2)}) ${cleaned.slice(2,7)}-${cleaned.slice(7)}`;
+            } else if (cleaned.length === 10) {
+                return `(${cleaned.slice(0,2)}) ${cleaned.slice(2,6)}-${cleaned.slice(6)}`;
+            }
+            return telefone;
+        }
+        
+        // Aplicar formatação aos dados da tabela
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabela = document.querySelector('.resultados-table');
+            if (tabela) {
+                const linhas = tabela.querySelectorAll('tbody tr');
+                linhas.forEach(linha => {
+                    const celulas = linha.querySelectorAll('td');
+                    if (celulas.length >= 6) {
+                        // Formatar data de cadastro
+                        if (celulas[4]) {
+                            celulas[4].textContent = formatarData(celulas[4].textContent);
+                        }
+                        // Formatar telefone
+                        if (celulas[5]) {
+                            celulas[5].textContent = formatarTelefone(celulas[5].textContent);
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Função para imprimir
+        function imprimirRelatorio() {
+            window.print();
+        }
+        
+        // Atalho de teclado para impressão (Ctrl+P)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+    </script>
+</body>
+</html>

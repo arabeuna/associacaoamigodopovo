@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha de Cadastro - {{ aluno.nome }} - Associação Amigo do Povo</title>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 20px; }
+            .page-break { page-break-before: always; }
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            background: white;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        
+        .foto-aluno {
+            width: 120px;
+            height: 120px;
+            border: 3px solid #007bff;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 20px;
+            display: block;
+        }
+        
+        .info-section {
+            margin-bottom: 30px;
+        }
+        
+        .info-section h2 {
+            color: #007bff;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .info-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .presenca-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            font-size: 12px;
+        }
+        
+        .presenca-table th {
+            background: #007bff;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #0056b3;
+        }
+        
+        .presenca-table td {
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        
+        .presenca-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .status-presenca {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-presente { background: #d4edda; color: #155724; }
+        .status-ausente { background: #f8d7da; color: #721c24; }
+        .status-justificado { background: #fff3cd; color: #856404; }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .page-info {
+            text-align: right;
+            font-size: 10px;
+            color: #999;
+            margin-bottom: 20px;
+        }
+        
+        .no-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .btn-print {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-print:hover {
+            background: #0056b3;
+        }
+        
+        .btn-back {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-back:hover {
+            background: #545b62;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .observacoes {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .observacoes h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .qr-code img {
+            width: 100px;
+            height: 100px;
+            border: 1px solid #ddd;
+        }
+        
+        @media screen and (max-width: 768px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .presenca-table {
+                font-size: 10px;
+            }
+            
+            .presenca-table th, .presenca-table td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Botões de controle (não aparecem na impressão) -->
+    <div class="no-print">
+        <a href="javascript:history.back()" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+        <button onclick="window.print()" class="btn-print">
+            <i class="fas fa-print"></i> Imprimir
+        </button>
+    </div>
+
+    <!-- Informações da página -->
+    <div class="page-info">
+        Gerado em: {{ data_geracao }}
+    </div>
+
+    <!-- Cabeçalho -->
+    <div class="header">
+        <h1>ASSOCIAÇÃO AMIGO DO POVO</h1>
+        <div class="subtitle">Ficha de Cadastro Individual</div>
+    </div>
+
+    <!-- Foto do Aluno (placeholder) -->
+    <div class="qr-code">
+        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSJ3aGl0ZSIvPgo8dGV4dCB4PSI1MCIgeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q29kZSBRUjwvdGV4dD4KPC9zdmc+" alt="QR Code" title="QR Code do Aluno">
+        <p><small>QR Code para identificação</small></p>
+    </div>
+
+    <!-- Informações Pessoais -->
+    <div class="info-section">
+        <h2><i class="fas fa-user me-2"></i>Informações Pessoais</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Nome Completo</div>
+                <div class="info-value">{{ aluno.nome or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Data de Nascimento</div>
+                <div class="info-value">{{ aluno.data_nascimento or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Idade</div>
+                <div class="info-value">
+                    {% if aluno.data_nascimento %}
+                        {% set nascimento = aluno.data_nascimento.split('/') %}
+                        {% set hoje = moment() %}
+                        {% set idade = hoje.year - nascimento[2]|int %}
+                        {% if hoje.month < nascimento[1]|int or (hoje.month == nascimento[1]|int and hoje.day < nascimento[0]|int) %}
+                            {% set idade = idade - 1 %}
+                        {% endif %}
+                        {{ idade }} anos
+                    {% else %}
+                        Não informado
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">CPF</div>
+                <div class="info-value">{{ aluno.cpf or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">RG</div>
+                <div class="info-value">{{ aluno.rg or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Sexo</div>
+                <div class="info-value">{{ aluno.sexo or 'Não informado' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações de Contato -->
+    <div class="info-section">
+        <h2><i class="fas fa-address-book me-2"></i>Informações de Contato</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Telefone</div>
+                <div class="info-value">{{ aluno.telefone or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">E-mail</div>
+                <div class="info-value">{{ aluno.email or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Endereço</div>
+                <div class="info-value">{{ aluno.endereco or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Bairro</div>
+                <div class="info-value">{{ aluno.bairro or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Cidade</div>
+                <div class="info-value">{{ aluno.cidade or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">CEP</div>
+                <div class="info-value">{{ aluno.cep or 'Não informado' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações Acadêmicas -->
+    <div class="info-section">
+        <h2><i class="fas fa-graduation-cap me-2"></i>Informações Acadêmicas</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Atividade</div>
+                <div class="info-value">{{ aluno.atividade or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Turma</div>
+                <div class="info-value">{{ aluno.turma or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Data de Matrícula</div>
+                <div class="info-value">{{ aluno.data_cadastro or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Status de Frequência</div>
+                <div class="info-value">
+                    {% if aluno.status_frequencia %}
+                        <span class="status-presenca status-presente">{{ aluno.status_frequencia }}</span>
+                    {% else %}
+                        <span class="status-presenca status-justificado">Pendente</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Responsável Legal</div>
+                <div class="info-value">{{ aluno.responsavel_legal or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Telefone do Responsável</div>
+                <div class="info-value">{{ aluno.telefone_responsavel or 'Não informado' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações Médicas -->
+    <div class="info-section">
+        <h2><i class="fas fa-heartbeat me-2"></i>Informações Médicas</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Tipo Sanguíneo</div>
+                <div class="info-value">{{ aluno.tipo_sanguineo or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Alergias</div>
+                <div class="info-value">{{ aluno.alergias or 'Nenhuma' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Medicamentos</div>
+                <div class="info-value">{{ aluno.medicamentos or 'Nenhum' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Condições Médicas</div>
+                <div class="info-value">{{ aluno.condicoes_medicas or 'Nenhuma' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Observações -->
+    {% if aluno.observacoes %}
+    <div class="observacoes">
+        <h4><i class="fas fa-sticky-note me-2"></i>Observações</h4>
+        <p>{{ aluno.observacoes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Histórico de Presenças -->
+    {% if dados_presenca and dados_presenca.registros %}
+    <div class="info-section">
+        <h2><i class="fas fa-calendar-check me-2"></i>Histórico de Presenças</h2>
+        <div class="table-responsive">
+            <table class="presenca-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Horário</th>
+                        <th>Status</th>
+                        <th>Observações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in dados_presenca.registros[:20] %}
+                    <tr>
+                        <td>{{ registro.data or 'N/A' }}</td>
+                        <td>{{ registro.horario or 'N/A' }}</td>
+                        <td>
+                            {% if registro.status == 'P' %}
+                                <span class="status-presenca status-presente">Presente</span>
+                            {% elif registro.status == 'A' %}
+                                <span class="status-presenca status-ausente">Ausente</span>
+                            {% elif registro.status == 'J' %}
+                                <span class="status-presenca status-justificado">Justificado</span>
+                            {% else %}
+                                <span class="status-presenca status-justificado">{{ registro.status or 'N/A' }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ registro.observacoes or 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if dados_presenca.registros|length > 20 %}
+        <div class="text-center text-muted mt-3">
+            <small>Mostrando os últimos 20 registros de {{ dados_presenca.registros|length }} total</small>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Estatísticas -->
+    <div class="info-section">
+        <h2><i class="fas fa-chart-bar me-2"></i>Estatísticas</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Total de Aulas</div>
+                <div class="info-value">
+                    {% if dados_presenca and dados_presenca.registros %}
+                        {{ dados_presenca.registros|length }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Presenças</div>
+                <div class="info-value">
+                    {% if dados_presenca and dados_presenca.registros %}
+                        {{ dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Faltas</div>
+                <div class="info-value">
+                    {% if dados_presenca and dados_presenca.registros %}
+                        {{ dados_presenca.registros|selectattr('status', 'equalto', 'A')|list|length }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Frequência</div>
+                <div class="info-value">
+                    {% if dados_presenca and dados_presenca.registros %}
+                        {% set total = dados_presenca.registros|length %}
+                        {% set presentes = dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length %}
+                        {% if total > 0 %}
+                            {{ "%.1f"|format((presentes / total) * 100) }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    {% else %}
+                        0%
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="footer">
+        <p><strong>Associação Amigo do Povo</strong></p>
+        <p>Sistema de Gestão de Atividades e Alunos</p>
+        <p>Esta ficha foi gerada automaticamente pelo sistema</p>
+        <p><strong>ID do Aluno:</strong> {{ aluno.id_unico or 'N/A' }}</p>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Função para imprimir
+        function imprimirFicha() {
+            window.print();
+        }
+        
+        // Atalho de teclado para impressão (Ctrl+P)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+        
+        // Função para voltar
+        function voltar() {
+            history.back();
+        }
+        
+        // Função para gerar QR Code (simulação)
+        function gerarQRCode() {
+            const qrImg = document.querySelector('.qr-code img');
+            const alunoNome = '{{ aluno.nome or "Aluno" }}';
+            const alunoId = '{{ aluno.id_unico or "N/A" }}';
+            
+            // Aqui você pode implementar a geração real de QR Code
+            console.log(`QR Code para: ${alunoNome} (ID: ${alunoId})`);
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            gerarQRCode();
+        });
+    </script>
+</body>
+</html>

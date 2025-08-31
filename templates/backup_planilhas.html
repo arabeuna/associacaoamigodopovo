@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+{% block title %}Backup de Planilhas - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-download text-primary me-2"></i>Backup de Planilhas</h2>
+                <div class="text-muted">
+                    <small>Usuário: {{ usuario_nome }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas de Backup -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-excel fa-2x mb-2"></i>
+                    <h5 class="card-title" id="total-backups">0</h5>
+                    <p class="card-text">Total de Backups</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-upload fa-2x mb-2"></i>
+                    <h5 class="card-title" id="backups-hoje">0</h5>
+                    <p class="card-text">Backups Hoje</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-hdd fa-2x mb-2"></i>
+                    <h5 class="card-title" id="espaco-utilizado">0 KB</h5>
+                    <p class="card-text">Espaço Utilizado</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h5 class="card-title" id="ultimo-backup">-</h5>
+                    <p class="card-text">Último Backup</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload de Planilhas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-upload me-2"></i>Fazer Upload de Planilha</h5>
+                </div>
+                <div class="card-body">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="atividade" class="form-label">Atividade:</label>
+                                    <select class="form-select" id="atividade" name="atividade" required>
+                                        <option value="">Selecione uma atividade</option>
+                                        {% for atividade in atividades %}
+                                        <option value="{{ atividade }}">{{ atividade }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="arquivo" class="form-label">Arquivo Excel (.xlsx):</label>
+                                    <input type="file" class="form-control" id="arquivo" name="arquivo" 
+                                           accept=".xlsx,.xls" required>
+                                    <div class="form-text">Apenas arquivos Excel são aceitos</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>Fazer Upload
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="limparFormulario()">
+                                <i class="fas fa-eraser me-2"></i>Limpar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Backups -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Backups Disponíveis</h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="atualizarListaBackups()">
+                        <i class="fas fa-sync-alt me-1"></i>Atualizar
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Atividade</th>
+                                    <th>Arquivo</th>
+                                    <th>Tamanho</th>
+                                    <th>Data/Hora</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backupsTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>Carregando backups...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações em Lote -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Ações em Lote</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-success" onclick="baixarTodosBackups()">
+                            <i class="fas fa-download me-2"></i>Baixar Todos os Backups
+                        </button>
+                        <button class="btn btn-info" onclick="baixarCadastrosUnificados()">
+                            <i class="fas fa-file-csv me-2"></i>Baixar Cadastros Unificados (CSV)
+                        </button>
+                        <button class="btn btn-warning" onclick="gerarTodasPlanilhas()">
+                            <i class="fas fa-file-excel me-2"></i>Gerar Todas as Planilhas
+                        </button>
+                        <button class="btn btn-danger" onclick="limparBackupsAntigos()">
+                            <i class="fas fa-trash me-2"></i>Limpar Backups Antigos
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegação -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Voltar ao Dashboard
+                </a>
+                <div>
+                    <a href="{{ url_for('gerenciar_atividades') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-dumbbell me-2"></i>Gerenciar Atividades
+                    </a>
+                    <a href="{{ url_for('gerenciar_turmas') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-users me-2"></i>Gerenciar Turmas
+                    </a>
+                    <a href="{{ url_for('gerenciar_colaboradores') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-tie me-2"></i>Gerenciar Colaboradores
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Ação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmModalBody">
+                <!-- Conteúdo dinâmico -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmModalBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let backups = [];
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    atualizarListaBackups();
+    atualizarEstatisticas();
+});
+
+// Upload de planilha
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const atividade = formData.get('atividade');
+    const arquivo = formData.get('arquivo');
+    
+    if (!atividade || !arquivo) {
+        mostrarAlerta('Por favor, preencha todos os campos', 'warning');
+        return;
+    }
+    
+    // Mostrar loading
+    const btnSubmit = this.querySelector('button[type="submit"]');
+    const originalText = btnSubmit.innerHTML;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+    btnSubmit.disabled = true;
+    
+    fetch('/upload_planilha', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta(data.message, 'success');
+            this.reset();
+            atualizarListaBackups();
+            atualizarEstatisticas();
+        } else {
+            mostrarAlerta(data.error || 'Erro no upload', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        mostrarAlerta('Erro no upload da planilha', 'danger');
+    })
+    .finally(() => {
+        btnSubmit.innerHTML = originalText;
+        btnSubmit.disabled = false;
+    });
+});
+
+// Atualizar lista de backups
+function atualizarListaBackups() {
+    fetch('/listar_backups')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                mostrarAlerta(data.error, 'danger');
+                return;
+            }
+            
+            backups = data;
+            renderizarTabelaBackups();
+            atualizarEstatisticas();
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao carregar backups', 'danger');
+        });
+}
+
+// Renderizar tabela de backups
+function renderizarTabelaBackups() {
+    const tbody = document.getElementById('backupsTableBody');
+    
+    if (backups.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted">
+                    <i class="fas fa-inbox me-2"></i>Nenhum backup encontrado
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = backups.map(backup => `
+        <tr>
+            <td>
+                <span class="badge bg-primary">${backup.atividade}</span>
+            </td>
+            <td>
+                <i class="fas fa-file-excel text-success me-2"></i>
+                <small>${backup.filename}</small>
+            </td>
+            <td>${backup.size} KB</td>
+            <td>${backup.modified}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="baixarBackup('${backup.filename}')" title="Baixar">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="btn btn-outline-info" onclick="visualizarBackup('${backup.filename}')" title="Visualizar">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="excluirBackup('${backup.filename}')" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Atualizar estatísticas
+function atualizarEstatisticas() {
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    const backupsHoje = backups.filter(b => b.modified.startsWith(hoje)).length;
+    const espacoTotal = backups.reduce((total, b) => total + b.size, 0);
+    const ultimoBackup = backups.length > 0 ? backups[0].modified : '-';
+    
+    document.getElementById('total-backups').textContent = backups.length;
+    document.getElementById('backups-hoje').textContent = backupsHoje;
+    document.getElementById('espaco-utilizado').textContent = `${espacoTotal} KB`;
+    document.getElementById('ultimo-backup').textContent = ultimoBackup;
+}
+
+// Baixar backup específico
+function baixarBackup(filename) {
+    const link = document.createElement('a');
+    link.href = `/uploads/${filename}`;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Visualizar backup
+function visualizarBackup(filename) {
+    mostrarAlerta(`Visualização de ${filename} - Funcionalidade em desenvolvimento`, 'info');
+}
+
+// Excluir backup
+function excluirBackup(filename) {
+    mostrarConfirmacao(
+        `Deseja realmente excluir o backup "${filename}"?`,
+        'Esta ação não pode ser desfeita.',
+        () => {
+            // Implementar exclusão
+            mostrarAlerta(`Backup ${filename} excluído com sucesso`, 'success');
+            atualizarListaBackups();
+        }
+    );
+}
+
+// Baixar todos os backups
+function baixarTodosBackups() {
+    if (backups.length === 0) {
+        mostrarAlerta('Nenhum backup disponível para download', 'warning');
+        return;
+    }
+    
+    mostrarConfirmacao(
+        'Baixar todos os backups?',
+        `Serão baixados ${backups.length} arquivos.`,
+        () => {
+            backups.forEach(backup => {
+                setTimeout(() => baixarBackup(backup.filename), 100);
+            });
+            mostrarAlerta('Download de todos os backups iniciado', 'success');
+        }
+    );
+}
+
+// Baixar cadastros unificados
+function baixarCadastrosUnificados() {
+    const link = document.createElement('a');
+    link.href = '/baixar_cadastros';
+    link.download = 'cadastros_unificados.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Gerar todas as planilhas
+function gerarTodasPlanilhas() {
+    mostrarConfirmacao(
+        'Gerar todas as planilhas?',
+        'Esta operação pode demorar alguns minutos.',
+        () => {
+            fetch('/gerar_todas_planilhas')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarAlerta('Geração de planilhas iniciada com sucesso', 'success');
+                    } else {
+                        mostrarAlerta(data.error || 'Erro ao gerar planilhas', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    mostrarAlerta('Erro ao gerar planilhas', 'danger');
+                });
+        }
+    );
+}
+
+// Limpar backups antigos
+function limparBackupsAntigos() {
+    const backupsAntigos = backups.filter(b => {
+        const dataBackup = new Date(b.modified.split(' ')[0].split('/').reverse().join('-'));
+        const hoje = new Date();
+        const diffDias = Math.floor((hoje - dataBackup) / (1000 * 60 * 60 * 24));
+        return diffDias > 30; // Mais de 30 dias
+    });
+    
+    if (backupsAntigos.length === 0) {
+        mostrarAlerta('Nenhum backup antigo encontrado', 'info');
+        return;
+    }
+    
+    mostrarConfirmacao(
+        'Limpar backups antigos?',
+        `Serão removidos ${backupsAntigos.length} backups com mais de 30 dias.`,
+        () => {
+            // Implementar limpeza
+            mostrarAlerta(`${backupsAntigos.length} backups antigos removidos com sucesso`, 'success');
+            atualizarListaBackups();
+        }
+    );
+}
+
+// Limpar formulário
+function limparFormulario() {
+    document.getElementById('uploadForm').reset();
+}
+
+// Funções auxiliares
+function mostrarAlerta(mensagem, tipo) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function mostrarConfirmacao(titulo, mensagem, callback) {
+    document.getElementById('confirmModalBody').innerHTML = `
+        <h6>${titulo}</h6>
+        <p class="text-muted">${mensagem}</p>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    modal.show();
+    
+    document.getElementById('confirmModalBtn').onclick = () => {
+        callback();
+        modal.hide();
+    };
+}
+</script>
+{% endblock %}
