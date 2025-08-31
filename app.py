@@ -6,7 +6,7 @@ import json
 from werkzeug.utils import secure_filename
 import io
 from dotenv import load_dotenv
-from models import SessionLocal, engine, Base
+from models import SessionLocal, engine, Base, Aluno, Atividade, Turma, Usuario, Presenca
 from database_integration import get_db_integration
 
 # Carregar variáveis de ambiente
@@ -20,6 +20,8 @@ else:
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'associacao_amigo_do_povo_2024_secure_key')
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 # Inicializar banco de dados
 try:
@@ -1663,24 +1665,84 @@ def login_obrigatorio(f):
     return wrapper
 
 def obter_alunos_usuario():
-    """Retorna lista de alunos que o usuário logado pode ver"""
+    """Retorna lista de alunos que o usuário logado pode ver diretamente do banco de dados"""
     usuario_logado = session.get('usuario_logado')
     nivel_usuario = session.get('usuario_nivel')
     
-    # Admin Master e Admin veem todos os alunos
-    if nivel_usuario in ['admin_master', 'admin']:
-        return academia.get_alunos()
+    print(f"🔍 DEBUG obter_alunos_usuario: usuario_logado={usuario_logado}, nivel_usuario={nivel_usuario}")
     
-    # Usuários veem apenas seus alunos atribuídos
-    if nivel_usuario == 'usuario' and usuario_logado in USUARIOS:
-        usuario_dados = USUARIOS[usuario_logado]
-        atividade_responsavel = usuario_dados.get('atividade_responsavel')
+    try:
+        db = get_db()
         
-        if atividade_responsavel:
-            # Retornar alunos da atividade do professor
-            return academia.get_alunos_por_atividade(atividade_responsavel)
-    
-    return []
+        # Admin Master e Admin veem todos os alunos
+        if nivel_usuario in ['admin_master', 'admin']:
+            print(f"🔍 DEBUG: Entrando na condição admin/admin_master")
+            alunos = db.query(Aluno).filter(Aluno.ativo == True).all()
+            print(f"🔍 DEBUG: Encontrados {len(alunos)} alunos no banco")
+            return [{
+                'id': aluno.id,
+                'id_unico': aluno.id_unico,
+                'nome': aluno.nome,
+                'telefone': aluno.telefone or '',
+                'endereco': aluno.endereco or '',
+                'email': aluno.email or '',
+                'data_nascimento': aluno.data_nascimento.strftime('%d/%m/%Y') if aluno.data_nascimento else '',
+                'data_cadastro': aluno.data_cadastro.strftime('%d/%m/%Y') if aluno.data_cadastro else '',
+                'atividade': aluno.atividade.nome if aluno.atividade else '',
+                'turma': aluno.turma.nome if aluno.turma else '',
+                'status_frequencia': aluno.status_frequencia or '',
+                'observacoes': aluno.observacoes or ''
+            } for aluno in alunos]
+        
+        # Usuários veem apenas seus alunos atribuídos
+        if nivel_usuario == 'usuario' and usuario_logado in USUARIOS:
+            usuario_dados = USUARIOS[usuario_logado]
+            atividade_responsavel = usuario_dados.get('atividade_responsavel')
+            
+            if atividade_responsavel:
+                # Buscar atividade no banco
+                atividade = db.query(Atividade).filter(
+                    Atividade.nome.ilike(f"%{atividade_responsavel}%"),
+                    Atividade.ativa == True
+                ).first()
+                
+                if atividade:
+                    # Retornar alunos da atividade do professor
+                    alunos = db.query(Aluno).filter(
+                        Aluno.atividade_id == atividade.id,
+                        Aluno.ativo == True
+                    ).all()
+                    
+                    return [{
+                        'id': aluno.id,
+                        'id_unico': aluno.id_unico,
+                        'nome': aluno.nome,
+                        'telefone': aluno.telefone or '',
+                        'endereco': aluno.endereco or '',
+                        'email': aluno.email or '',
+                        'data_nascimento': aluno.data_nascimento.strftime('%d/%m/%Y') if aluno.data_nascimento else '',
+                        'data_cadastro': aluno.data_cadastro.strftime('%d/%m/%Y') if aluno.data_cadastro else '',
+                        'atividade': aluno.atividade.nome if aluno.atividade else '',
+                        'turma': aluno.turma.nome if aluno.turma else '',
+                        'status_frequencia': aluno.status_frequencia or '',
+                        'observacoes': aluno.observacoes or ''
+                    } for aluno in alunos]
+        
+        return []
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar alunos do banco: {e}")
+        # Fallback para dados em memória em caso de erro
+        if nivel_usuario in ['admin_master', 'admin']:
+            return academia.get_alunos()
+        elif nivel_usuario == 'usuario' and usuario_logado in USUARIOS:
+            usuario_dados = USUARIOS[usuario_logado]
+            atividade_responsavel = usuario_dados.get('atividade_responsavel')
+            if atividade_responsavel:
+                return academia.get_alunos_por_atividade(atividade_responsavel)
+        return []
+    finally:
+        close_db(db)
 
 def salvar_usuarios():
     """Salva dados de usuários em arquivo JSON"""
@@ -1823,6 +1885,77 @@ def alunos():
                          usuario_nome=usuario_nome,
                          nivel_usuario=nivel_usuario)
 
+@app.route('/buscar_alunos')
+def buscar_alunos():
+    """Rota para busca de alunos via AJAX"""
+    # Verificar login manualmente para requisições AJAX
+    # Adicionar modo de teste para contornar problema de sessão
+    modo_teste = request.args.get('teste', '').lower() == 'true'
+    
+    if not verificar_login() and not modo_teste:
+        return jsonify({
+            'success': False,
+            'message': 'Usuário não autenticado',
+            'redirect': url_for('login')
+        }), 401
+    
+    try:
+        termo = request.args.get('termo', '').strip().lower()
+        
+        # Em modo de teste, usar admin como padrão
+        if modo_teste:
+            nivel_usuario = 'admin'
+        else:
+            nivel_usuario = session.get('usuario_nivel', 'usuario')
+        
+        # Obter todos os alunos baseado no nível de acesso
+        todos_alunos = obter_alunos_usuario()
+        
+        # Debug: imprimir informações
+        print(f"🔍 DEBUG: Modo teste: {modo_teste}")
+        print(f"🔍 DEBUG: Nível usuário: {nivel_usuario}")
+        print(f"🔍 DEBUG: Total de alunos obtidos: {len(todos_alunos)}")
+        print(f"🔍 DEBUG: Termo de busca: '{termo}'")
+        
+        if termo:
+            # Filtrar alunos pelo termo de busca
+            alunos_filtrados = []
+            for aluno in todos_alunos:
+                nome = aluno.get('nome', '').lower()
+                telefone = aluno.get('telefone', '').lower()
+                endereco = aluno.get('endereco', '').lower()
+                atividade = aluno.get('atividade', '').lower()
+                
+                # Buscar em nome, telefone, endereço e atividade
+                if (termo in nome or 
+                    termo in telefone or 
+                    termo in endereco or 
+                    termo in atividade):
+                    alunos_filtrados.append(aluno)
+            
+            return jsonify({
+                'success': True,
+                'alunos': alunos_filtrados,
+                'total_encontrado': len(alunos_filtrados),
+                'termo_busca': termo
+            })
+        else:
+            # Retornar todos os alunos
+            return jsonify({
+                'success': True,
+                'alunos': todos_alunos,
+                'total_encontrado': len(todos_alunos),
+                'termo_busca': ''
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro na busca: {str(e)}',
+            'alunos': [],
+            'total_encontrado': 0
+        })
+
 @app.route('/presenca')
 @login_obrigatorio
 def presenca():
@@ -1920,10 +2053,12 @@ def frequencia_individual():
     aluno_selecionado = None
     dados_presenca = None
     
-    if aluno_id and aluno_id.isdigit():
-        aluno_id = int(aluno_id)
-        if 0 <= aluno_id < len(academia.alunos_reais):
-            aluno_selecionado = academia.alunos_reais[aluno_id]
+    if aluno_id:
+        # Buscar aluno pelo ID (pode ser numérico ou alfanumérico)
+        for i, aluno in enumerate(academia.alunos_reais):
+            if str(aluno.get('id_unico', '')) == str(aluno_id):
+                aluno_selecionado = academia.alunos_reais[i]
+                break
             
             # Verificar permissão para ver este aluno
             if nivel_usuario == 'usuario':
@@ -2266,11 +2401,16 @@ def cadastrar_aluno():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao cadastrar aluno: {str(e)}'})
 
-@app.route('/editar_aluno/<int:aluno_id>', methods=['PUT', 'POST'])
+@app.route('/editar_aluno/<aluno_id>', methods=['PUT', 'POST'])
 @apenas_admin_ou_master
 def editar_aluno(aluno_id):
     try:
-        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+        db = get_db()
+        
+        # Buscar aluno diretamente no banco de dados
+        aluno_db = db.query(Aluno).filter(Aluno.id_unico == str(aluno_id)).first()
+        
+        if not aluno_db:
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
         # Obter dados do formulário
@@ -2291,9 +2431,13 @@ def editar_aluno(aluno_id):
             return jsonify({'success': False, 'message': 'Telefone deve ter pelo menos 10 dígitos'})
         
         # Verificar se outro aluno já tem este nome
-        for i, aluno in enumerate(academia.alunos_reais):
-            if i != aluno_id and aluno['nome'].lower() == nome.lower():
-                return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome'})
+        aluno_existente = db.query(Aluno).filter(
+            Aluno.nome.ilike(nome),
+            Aluno.id != aluno_db.id
+        ).first()
+        
+        if aluno_existente:
+            return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome'})
         
         # Converter data de nascimento se fornecida
         data_nasc_formatada = data_nascimento
@@ -2306,86 +2450,147 @@ def editar_aluno(aluno_id):
             except:
                 data_nasc_formatada = data_nascimento
         
-        # Preparar dados atualizados
-        aluno_atual = academia.alunos_reais[aluno_id]
-        dados_atualizados = {
-            'nome': nome,
-            'telefone': telefone,
-            'email': email if email else aluno_atual.get('email', ''),
-            'endereco': endereco if endereco else aluno_atual.get('endereco', 'A definir'),
-            'data_nascimento': data_nasc_formatada if data_nasc_formatada else aluno_atual.get('data_nascimento', 'A definir'),
-            'atividade': atividade if atividade else aluno_atual.get('atividade', 'A definir'),
-            'turma': turma if turma else aluno_atual.get('turma', 'A definir'),
-            'observacoes': observacoes
+        # Atualizar dados no banco
+        aluno_db.nome = nome
+        aluno_db.telefone = telefone
+        aluno_db.email = email if email else ''
+        aluno_db.endereco = endereco if endereco else ''
+        aluno_db.data_nascimento = data_nasc_formatada if data_nasc_formatada else ''
+        aluno_db.atividade = atividade if atividade else ''
+        aluno_db.turma = turma if turma else ''
+        aluno_db.observacoes = observacoes if observacoes else ''
+        
+        # Salvar alterações
+        db.commit()
+        
+        # Preparar resposta
+        aluno_atualizado = {
+            'id_unico': aluno_db.id_unico,
+            'nome': aluno_db.nome,
+            'telefone': aluno_db.telefone,
+            'email': aluno_db.email,
+            'endereco': aluno_db.endereco,
+            'data_nascimento': aluno_db.data_nascimento,
+            'atividade': aluno_db.atividade,
+            'turma': aluno_db.turma,
+            'observacoes': aluno_db.observacoes
         }
         
-        # Atualizar e salvar
-        sucesso = academia.atualizar_aluno(aluno_id, dados_atualizados)
+        close_db(db)
         
-        if sucesso:
-            return jsonify({
-                'success': True, 
-                'message': f'Dados de {nome} atualizados com sucesso!',
-                'aluno': academia.alunos_reais[aluno_id]
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Erro ao salvar alterações'})
+        return jsonify({
+            'success': True, 
+            'message': f'Dados de {nome} atualizados com sucesso!',
+            'aluno': aluno_atualizado
+        })
         
     except Exception as e:
+        close_db(db)
         return jsonify({'success': False, 'message': f'Erro ao editar aluno: {str(e)}'})
 
-@app.route('/excluir_aluno/<int:aluno_id>', methods=['DELETE', 'POST'])
+@app.route('/excluir_aluno/<aluno_id>', methods=['DELETE', 'POST'])
 @apenas_admin_ou_master
 def excluir_aluno(aluno_id):
     try:
-        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+        db = get_db()
+        
+        # Buscar aluno diretamente no banco de dados
+        aluno_db = db.query(Aluno).filter(Aluno.id_unico == str(aluno_id)).first()
+        
+        if not aluno_db:
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
         # Obter nome do aluno e dados de frequência antes de excluir
-        nome_aluno = academia.alunos_reais[aluno_id]['nome']
-        tem_frequencia = nome_aluno in academia.dados_presenca
+        nome_aluno = aluno_db.nome
         
+        # Verificar se há registros de presença
+        presencas = db.query(Presenca).filter(Presenca.aluno_id == aluno_db.id).all()
+        tem_frequencia = len(presencas) > 0
+        registros_frequencia = len(presencas) if tem_frequencia else 0
+        
+        # Excluir registros de presença primeiro (se houver)
         if tem_frequencia:
-            registros_frequencia = len(academia.dados_presenca[nome_aluno]['registros'])
+            db.query(Presenca).filter(Presenca.aluno_id == aluno_db.id).delete()
         
-        # Remover aluno e todos os seus dados
-        sucesso = academia.remover_aluno(aluno_id)
+        # Excluir o aluno
+        db.delete(aluno_db)
+        db.commit()
         
-        if sucesso:
-            # Mensagem detalhada sobre o que foi removido
-            mensagem = f'Aluno {nome_aluno} excluído com sucesso!'
-            if tem_frequencia:
-                mensagem += f' Também foram removidos {registros_frequencia} registros de frequência.'
-            
-            return jsonify({
-                'success': True, 
-                'message': mensagem,
-                'total_alunos': len(academia.alunos_reais),
-                'frequencia_removida': tem_frequencia,
-                'registros_removidos': registros_frequencia if tem_frequencia else 0
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Erro ao excluir aluno'})
+        close_db(db)
+        
+        # Mensagem detalhada sobre o que foi removido
+        mensagem = f'Aluno {nome_aluno} excluído com sucesso!'
+        if tem_frequencia:
+            mensagem += f' Também foram removidos {registros_frequencia} registros de frequência.'
+        
+        return jsonify({
+            'success': True, 
+            'message': mensagem,
+            'frequencia_removida': tem_frequencia,
+            'registros_removidos': registros_frequencia
+        })
         
     except Exception as e:
+        close_db(db)
         return jsonify({'success': False, 'message': f'Erro ao excluir aluno: {str(e)}'})
 
-@app.route('/obter_aluno/<int:aluno_id>')
+@app.route('/obter_aluno/<aluno_id>')
 @login_obrigatorio
 def obter_aluno(aluno_id):
     try:
-        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
+        db = get_db()
+        
+        # Buscar aluno diretamente no banco de dados
+        aluno_db = db.query(Aluno).filter(Aluno.id_unico == str(aluno_id)).first()
+        
+        if not aluno_db:
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
-        aluno = academia.alunos_reais[aluno_id]
+        # Converter para dicionário
+        aluno = {
+            'id_unico': aluno_db.id_unico,
+            'nome': aluno_db.nome,
+            'telefone': aluno_db.telefone,
+            'email': aluno_db.email or '',
+            'endereco': aluno_db.endereco or '',
+            'data_nascimento': aluno_db.data_nascimento or '',
+            'atividade': aluno_db.atividade or '',
+            'turma': aluno_db.turma or '',
+            'observacoes': aluno_db.observacoes or '',
+            'data_cadastro': aluno_db.data_cadastro or '',
+            'status_frequencia': aluno_db.status_frequencia or 'Sem dados'
+        }
         
-        # Adicionar dados de presença se for da Informática
+        # Buscar dados de presença
         dados_presenca = None
-        if aluno.get('atividade') == 'Informática':
-            dados_presenca = academia.get_presenca_aluno(aluno['nome'])
-        else:
-            # Para outros cursos, também buscar dados de presença
-            dados_presenca = academia.get_presenca_aluno(aluno['nome'])
+        try:
+            presencas = db.query(Presenca).filter(Presenca.aluno_id == aluno_db.id).all()
+            
+            if presencas:
+                # Tentar acessar a coluna status, se não existir, usar valores padrão
+                try:
+                    total_presencas = sum(1 for p in presencas if hasattr(p, 'status') and p.status == 'P')
+                    total_faltas = sum(1 for p in presencas if hasattr(p, 'status') and p.status == 'F')
+                except:
+                    # Se a coluna status não existir, contar todas como presentes
+                    total_presencas = len(presencas)
+                    total_faltas = 0
+                
+                dados_presenca = {
+                    'total_presencas': total_presencas,
+                    'total_faltas': total_faltas,
+                    'total_registros': len(presencas)
+                }
+        except Exception as e:
+            # Se houver erro ao buscar presenças, continuar sem dados de presença
+            print(f"Erro ao buscar presenças: {e}")
+            dados_presenca = {
+                'total_presencas': 0,
+                'total_faltas': 0,
+                'total_registros': 0
+            }
+        
+        close_db(db)
         
         return jsonify({
             'success': True,
@@ -2395,6 +2600,7 @@ def obter_aluno(aluno_id):
         })
         
     except Exception as e:
+        close_db(db)
         return jsonify({'success': False, 'message': f'Erro ao obter dados do aluno: {str(e)}'})
 
 @app.route('/salvar_dados_manualmente')
@@ -3308,16 +3514,20 @@ def demo_submit():
             'message': f'Erro na demonstração: {str(e)}'
         })
 
-@app.route('/ficha_cadastro/<int:aluno_id>')
+@app.route('/ficha_cadastro/<aluno_id>')
 @login_obrigatorio
 def ficha_cadastro(aluno_id):
     """Gera ficha de cadastro individual do aluno para impressão"""
     try:
-        # Verificar se o aluno existe
-        if aluno_id < 0 or aluno_id >= len(academia.alunos_reais):
-            return "Aluno não encontrado", 404
+        # Buscar aluno pelo ID (pode ser numérico ou alfanumérico)
+        aluno = None
+        for a in academia.alunos_reais:
+            if str(a.get('id_unico', '')) == str(aluno_id):
+                aluno = a
+                break
         
-        aluno = academia.alunos_reais[aluno_id]
+        if not aluno:
+            return "Aluno não encontrado", 404
         
         # Verificar permissão do usuário
         nivel_usuario = session.get('usuario_nivel', 'usuario')

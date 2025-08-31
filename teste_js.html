@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste JavaScript</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Teste de JavaScript</h1>
+    <button onclick="testeFuncao()">Teste</button>
+    
+    <script>
+    // Função de teste
+    window.testeFuncao = function() {
+        console.log('Função de teste funcionando!');
+        alert('JavaScript funcionando!');
+    };
+    
+    $(document).ready(function() {
+        console.log('jQuery carregado!');
+    });
+    </script>
+</body>
+</html>
