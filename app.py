@@ -2958,10 +2958,21 @@ def cadastrar_aluno():
         if not telefone or len(telefone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')) < 10:
             return jsonify({'success': False, 'message': 'Telefone deve ter pelo menos 10 dígitos'})
         
-        # Verificar se aluno já existe
-        for aluno in academia.alunos_reais:
-            if aluno['nome'].lower() == nome.lower():
-                return jsonify({'success': False, 'message': 'Já existe um aluno cadastrado com este nome'})
+        # Verificar se aluno já existe no banco de dados (nome + telefone)
+        # Permitir nomes duplicados, mas não nome + telefone duplicados
+        db = next(get_db())
+        try:
+            if telefone:  # Só validar se telefone foi fornecido
+                aluno_existente = db.query(Aluno).filter(
+                    Aluno.nome.ilike(nome),
+                    Aluno.telefone == telefone,
+                    Aluno.ativo == True
+                ).first()
+                
+                if aluno_existente:
+                    return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome e telefone'})
+        finally:
+            db.close()
         
         # Converter data de nascimento se fornecida
         data_nasc_formatada = data_nascimento
@@ -3003,16 +3014,26 @@ def cadastrar_aluno():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao cadastrar aluno: {str(e)}'})
 
-@app.route('/editar_aluno/<aluno_id>', methods=['PUT', 'POST'])
+@app.route('/editar_aluno/<aluno_id>', methods=['GET', 'PUT', 'POST'])
 @apenas_admin_ou_master
 def editar_aluno(aluno_id):
     db = SessionLocal()
     try:
         # Buscar aluno diretamente no banco de dados
-        aluno_db = db.query(Aluno).filter(Aluno.id_unico == str(aluno_id)).first()
+        aluno_db = db.query(Aluno).filter(Aluno.id == int(aluno_id)).first()
         
         if not aluno_db:
+            if request.method == 'GET':
+                flash('Aluno não encontrado', 'error')
+                return redirect(url_for('alunos'))
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
+        
+        # Se for GET, exibir formulário de edição
+        if request.method == 'GET':
+            return render_template('novo_aluno.html', 
+                                 aluno=aluno_db, 
+                                 editando=True,
+                                 nivel_usuario=session.get('nivel_usuario'))
         
         # Obter dados do formulário
         nome = request.form.get('nome', '').strip()
@@ -3031,14 +3052,17 @@ def editar_aluno(aluno_id):
         if not telefone or len(telefone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')) < 10:
             return jsonify({'success': False, 'message': 'Telefone deve ter pelo menos 10 dígitos'})
         
-        # Verificar se outro aluno já tem este nome
-        aluno_existente = db.query(Aluno).filter(
-            Aluno.nome.ilike(nome),
-            Aluno.id != aluno_db.id
-        ).first()
-        
-        if aluno_existente:
-            return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome'})
+        # Verificar se outro aluno já tem este nome E telefone (validação mais específica)
+        # Permitir nomes duplicados, mas não nome + telefone duplicados
+        if telefone:  # Só validar se telefone foi fornecido
+            aluno_existente = db.query(Aluno).filter(
+                Aluno.nome.ilike(nome),
+                Aluno.telefone == telefone,
+                Aluno.id != aluno_db.id
+            ).first()
+            
+            if aluno_existente:
+                return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome e telefone'})
         
         # Converter data de nascimento se fornecida
         if data_nascimento:
@@ -3122,7 +3146,7 @@ def excluir_aluno(aluno_id):
     db = SessionLocal()
     try:
         # Buscar aluno diretamente no banco de dados
-        aluno_db = db.query(Aluno).filter(Aluno.id_unico == str(aluno_id)).first()
+        aluno_db = db.query(Aluno).filter(Aluno.id == int(aluno_id)).first()
         
         if not aluno_db:
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
@@ -4129,6 +4153,22 @@ def desativar_atividade_route(nome_atividade):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao desativar atividade: {str(e)}'})
 
+@app.route('/api/atividade/<nome_atividade>', methods=['GET'])
+@login_obrigatorio
+def obter_atividade_api(nome_atividade):
+    """API para obter dados de uma atividade específica"""
+    try:
+        # Verificar se a atividade existe
+        if nome_atividade not in academia.atividades_cadastradas:
+            return jsonify({'error': 'Atividade não encontrada'}), 404
+        
+        # Retornar dados da atividade
+        atividade = academia.atividades_cadastradas[nome_atividade]
+        return jsonify(atividade)
+        
+    except Exception as e:
+        return jsonify({'error': f'Erro ao buscar atividade: {str(e)}'}), 500
+
 @app.route('/obter_professor_atividade/<nome_atividade>', methods=['GET'])
 @login_obrigatorio
 def obter_professor_atividade(nome_atividade):
@@ -4497,10 +4537,10 @@ def demo_submit():
 def ficha_cadastro(aluno_id):
     """Gera ficha de cadastro individual do aluno para impressão"""
     try:
-        # Buscar aluno pelo ID (pode ser numérico ou alfanumérico)
+        # Buscar aluno pelo ID do banco de dados
         aluno = None
         for a in academia.alunos_reais:
-            if str(a.get('id_unico', '')) == str(aluno_id):
+            if str(a.get('id', '')) == str(aluno_id):
                 aluno = a
                 break
         

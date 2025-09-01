@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Gerenciar Atividades - Associação Amigo do Povo{% endblock %}
+{% block title %}Gerenciar Atividades - Associacao Amigo do Povo{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -10,11 +10,11 @@
                 <i class="fas fa-dumbbell text-primary"></i>
                 Gerenciar Atividades
             </h1>
-            <p class="text-muted text-center">Gerencie as atividades disponíveis na academia</p>
+            <p class="text-muted text-center">Gerencie as atividades disponiveis na academia</p>
         </div>
     </div>
 
-    <!-- Estatísticas das Atividades -->
+    <!-- Estatisticas das Atividades -->
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="card text-center">
@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    <!-- Botão para Nova Atividade -->
+    <!-- Botao para Nova Atividade -->
     <div class="row mb-4">
         <div class="col-12 text-center">
             <button class="btn btn-lg btn-success" data-bs-toggle="modal" data-bs-target="#modalNovaAtividade">
@@ -81,13 +81,13 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th>Nome</th>
-                                    <th>Descrição</th>
+                                    <th>Descricao</th>
                                     <th>Status</th>
                                     <th>Total de Alunos</th>
                                     <th>Professores</th>
-                                    <th>Data Criação</th>
+                                    <th>Data Criacao</th>
                                     <th>Criado Por</th>
-                                    <th>Ações</th>
+                                    <th>Acoes</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -121,7 +121,7 @@
                                     <td>
                                         <div class="btn-group" role="group">
                                             <button class="btn btn-sm btn-outline-primary" 
-                                                    onclick="editarAtividade('{{ dados.nome }}')"
+                                                    onclick="editarAtividade({{ dados.nome|tojson }})"
                                                     title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -130,26 +130,26 @@
                                                     title="Ver Detalhes">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-outline-success" 
-                                                    onclick="gerenciarTurmas('{{ dados.nome }}')"
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    onclick="gerenciarTurmas({{ dados.nome|tojson }})"
                                                     title="Gerenciar Turmas">
                                                 <i class="fas fa-users"></i>
                                             </button>
                                             {% if dados.ativa %}
                                             <button class="btn btn-sm btn-outline-warning" 
-                                                    onclick="desativarAtividade('{{ dados.nome }}')"
+                                                    onclick="desativarAtividade({{ dados.nome|tojson }})"
                                                     title="Desativar">
                                                 <i class="fas fa-pause"></i>
                                             </button>
                                             {% else %}
                                             <button class="btn btn-sm btn-outline-success" 
-                                                    onclick="ativarAtividade('{{ dados.nome }}')"
+                                                    onclick="ativarAtividade({{ dados.nome|tojson }})"
                                                     title="Ativar">
                                                 <i class="fas fa-play"></i>
                                             </button>
                                             {% endif %}
                                             <button class="btn btn-sm btn-outline-danger" 
-                                                    onclick="excluirAtividade('{{ dados.nome }}')"
+                                                    onclick="excluirAtividade({{ dados.nome|tojson }})"
                                                     title="Excluir"
                                                     {% if dados.total_alunos > 0 %}disabled{% endif %}>
                                                 <i class="fas fa-trash"></i>
@@ -172,7 +172,7 @@
         </div>
     </div>
 
-    <!-- Botões de Navegação -->
+    <!-- Botoes de Navegacao -->
     <div class="row">
         <div class="col-12 text-center">
             <a href="{{ url_for('dashboard') }}" class="btn btn-lg btn-outline-primary">
@@ -206,38 +206,38 @@
                             <input type="text" class="form-control" id="nome_atividade" name="nome_atividade" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="professor" class="form-label">Professor Responsável</label>
+                            <label for="professor" class="form-label">Professor Responsavel</label>
                             <select class="form-select" id="professor" name="professor">
                                 <option value="">Selecione um professor</option>
-                                <option value="Professor João">Professor João</option>
+                                <option value="Professor Joao">Professor Joao</option>
                                 <option value="Professora Maria">Professora Maria</option>
                                 <option value="Professor Carlos">Professor Carlos</option>
                                 <option value="Professora Ana">Professora Ana</option>
                             </select>
                         </div>
                         <div class="col-12">
-                            <label for="descricao_atividade" class="form-label">Descrição *</label>
+                            <label for="descricao_atividade" class="form-label">Descricao *</label>
                             <textarea class="form-control" id="descricao_atividade" name="descricao_atividade" rows="3" required 
-                                      placeholder="Descreva a atividade, objetivos, público-alvo, etc."></textarea>
+                                      placeholder="Descreva a atividade, objetivos, publico-alvo, etc."></textarea>
                         </div>
                         <div class="col-md-6">
                             <label for="categoria" class="form-label">Categoria</label>
                             <select class="form-select" id="categoria" name="categoria">
                                 <option value="">Selecione uma categoria</option>
                                 <option value="Esportes">Esportes</option>
-                                <option value="Dança">Dança</option>
+                                <option value="Danca">Danca</option>
                                 <option value="Artes Marciais">Artes Marciais</option>
                                 <option value="Fitness">Fitness</option>
-                                <option value="Educação">Educação</option>
-                                <option value="Recreação">Recreação</option>
+                                <option value="Educacao">Educacao</option>
+                                <option value="Recreacao">Recreacao</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="idade_minima" class="form-label">Idade Mínima</label>
+                            <label for="idade_minima" class="form-label">Idade Minima</label>
                             <input type="number" class="form-control" id="idade_minima" name="idade_minima" min="0" max="120">
                         </div>
                         <div class="col-md-6">
-                            <label for="idade_maxima" class="form-label">Idade Máxima</label>
+                            <label for="idade_maxima" class="form-label">Idade Maxima</label>
                             <input type="number" class="form-control" id="idade_maxima" name="idade_maxima" min="0" max="120">
                         </div>
                         <div class="col-md-6">
@@ -245,9 +245,9 @@
                             <input type="number" class="form-control" id="capacidade_turma" name="capacidade_turma" min="1" max="100">
                         </div>
                         <div class="col-12">
-                            <label for="observacoes" class="form-label">Observações</label>
+                            <label for="observacoes" class="form-label">Observacoes</label>
                             <textarea class="form-control" id="observacoes" name="observacoes" rows="2" 
-                                      placeholder="Observações adicionais sobre a atividade"></textarea>
+                                      placeholder="Observacoes adicionais sobre a atividade"></textarea>
                         </div>
                     </div>
                 </div>
@@ -286,17 +286,17 @@
                             <input type="text" class="form-control" id="edit_nome_atividade" name="nome_atividade" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="edit_professor" class="form-label">Professor Responsável</label>
+                            <label for="edit_professor" class="form-label">Professor Responsavel</label>
                             <select class="form-select" id="edit_professor" name="professor">
                                 <option value="">Selecione um professor</option>
-                                <option value="Professor João">Professor João</option>
+                                <option value="Professor Joao">Professor Joao</option>
                                 <option value="Professora Maria">Professora Maria</option>
                                 <option value="Professor Carlos">Professor Carlos</option>
                                 <option value="Professora Ana">Professora Ana</option>
                             </select>
                         </div>
                         <div class="col-12">
-                            <label for="edit_descricao_atividade" class="form-label">Descrição *</label>
+                            <label for="edit_descricao_atividade" class="form-label">Descricao *</label>
                             <textarea class="form-control" id="edit_descricao_atividade" name="descricao_atividade" rows="3" required></textarea>
                         </div>
                         <div class="col-md-6">
@@ -304,11 +304,11 @@
                             <select class="form-select" id="edit_categoria" name="categoria">
                                 <option value="">Selecione uma categoria</option>
                                 <option value="Esportes">Esportes</option>
-                                <option value="Dança">Dança</option>
+                                <option value="Danca">Danca</option>
                                 <option value="Artes Marciais">Artes Marciais</option>
                                 <option value="Fitness">Fitness</option>
-                                <option value="Educação">Educação</option>
-                                <option value="Recreação">Recreação</option>
+                                <option value="Educacao">Educacao</option>
+                                <option value="Recreacao">Recreacao</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -327,7 +327,7 @@
                     </button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-2"></i>
-                        Salvar Alterações
+                        Salvar Alteracoes
                     </button>
                 </div>
             </form>
@@ -337,288 +337,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/gerenciar_atividades.js') }}"></script>
 <script>
-// Dados das atividades
-var atividades = {{ atividades|tojson|safe }};
-
-// Atualizar estatísticas
-function atualizarEstatisticas() {
-    var totalAtividades = {{ atividades|length }};
-    var atividadesAtivas = document.querySelectorAll('.badge.bg-success').length;
-    var totalAlunos = Array.from(document.querySelectorAll('.badge.bg-primary')).reduce(function(sum, badge) {
-        return sum + parseInt(badge.textContent) || 0;
-    }, 0);
-    
-    // Contar professores únicos
-    var professores = new Set();
-    document.querySelectorAll('.badge.bg-info').forEach(function(badge) {
-        professores.add(badge.textContent);
-    });
-    
-    document.getElementById('total-atividades').textContent = totalAtividades;
-    document.getElementById('total-alunos-atividades').textContent = totalAlunos;
-    document.getElementById('total-professores').textContent = professores.size;
-    document.getElementById('atividades-ativas').textContent = atividadesAtivas;
-}
-
-// Editar atividade
-function editarAtividade(nome) {
-    // Buscar dados da atividade na estrutura de dados
-    var atividade = atividades[nome];
-    
-    if (atividade) {
-        document.getElementById('edit_nome_antigo').value = nome;
-        document.getElementById('edit_nome_atividade').value = nome;
-        document.getElementById('edit_descricao_atividade').value = atividade.descricao || '';
-        
-        // Definir professor se existir
-        var professorSelect = document.getElementById('edit_professor');
-        if (atividade.professores_vinculados && atividade.professores_vinculados.length > 0) {
-            professorSelect.value = atividade.professores_vinculados[0];
-        } else {
-            professorSelect.value = '';
-        }
-        
-        // Definir status
-        var statusSelect = document.getElementById('edit_status');
-        statusSelect.value = atividade.ativa ? 'true' : 'false';
-    }
-    
-    var modal = new bootstrap.Modal(document.getElementById('modalEditarAtividade'));
-    modal.show();
-}
-
-// Ver detalhes da atividade
-function verDetalhesAtividade(nome) {
-    // Buscar dados da atividade na lista atual
-    var atividade = atividades[nome];
-    
-    if (!atividade) {
-        alert('Atividade não encontrada.');
-        return;
-    }
-    
-    // Criar modal com detalhes da atividade
-    var modal = document.createElement('div');
-    modal.className = 'modal fade';
-    modal.innerHTML = '
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Detalhes da Atividade</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Informações Básicas</h6>
-                            <p><strong>Nome:</strong> ' + atividade.nome + '</p>
-                            <p><strong>Descrição:</strong> ' + (atividade.descricao || 'Não informado') + '</p>
-                            <p><strong>Status:</strong> <span class="badge bg-' + (atividade.ativa ? 'success' : 'danger') + '">' + (atividade.ativa ? 'Ativa' : 'Inativa') + '</span></p>
-                            <p><strong>Data de Criação:</strong> ' + (atividade.data_criacao || 'Não informado') + '</p>
-                            <p><strong>Criado por:</strong> ' + (atividade.criado_por || 'Não informado') + '</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Estatísticas</h6>
-                            <p><strong>Total de Alunos:</strong> <span class="badge bg-info">' + (atividade.total_alunos || 0) + '</span></p>' +
-                            (atividade.professores_vinculados && atividade.professores_vinculados.length > 0 ? 
-                                '<h6>Professores Vinculados</h6>' +
-                                '<div class="mb-3">' +
-                                    atividade.professores_vinculados.map(function(prof) { return '<span class="badge bg-secondary me-1 mb-1">' + prof + '</span>'; }).join('') +
-                                '</div>'
-                             : '<p><strong>Professores:</strong> <span class="text-muted">Nenhum professor vinculado</span></p>') +
-                            (atividade.turmas && atividade.turmas.length > 0 ? 
-                                '<h6>Turmas</h6>' +
-                                '<div class="mb-3">' +
-                                    atividade.turmas.map(function(turma) { return '<span class="badge bg-primary me-1 mb-1">' + turma + '</span>'; }).join('') +
-                                '</div>'
-                             : '')
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                    <div class="btn-group">' +
-                        (atividade.ativa ? 
-                            '<button type="button" class="btn btn-warning" onclick="desativarAtividade(\'' + atividade.nome + '\')" data-bs-dismiss="modal">' +
-                                '<i class="fas fa-pause"></i> Desativar' +
-                            '</button>' :
-                            '<button type="button" class="btn btn-success" onclick="ativarAtividade(\'' + atividade.nome + '\')" data-bs-dismiss="modal">' +
-                                '<i class="fas fa-play"></i> Ativar' +
-                            '</button>'
-                        ) +
-                        '<button type="button" class="btn btn-danger" onclick="excluirAtividade(\'' + atividade.nome + '\')" data-bs-dismiss="modal">' +
-                            '<i class="fas fa-trash"></i> Excluir' +
-                        '</button>' +
-                    '</div>' +
-                '</div>' +
-            '</div>' +
-        '</div>' +
-    '';
-    
-    document.body.appendChild(modal);
-    var bsModal = new bootstrap.Modal(modal);
-    bsModal.show();
-    
-    // Remove modal do DOM quando fechado
-    modal.addEventListener('hidden.bs.modal', function() {
-        document.body.removeChild(modal);
-    });
-}
-
-// Gerenciar turmas da atividade
-function gerenciarTurmas(nome) {
-    // Redirecionar para gerenciar turmas com filtro da atividade
-    window.location.href = '{{ url_for("gerenciar_turmas") }}?atividade=' + encodeURIComponent(nome);
-}
-
-// Ativar atividade
-function ativarAtividade(nome) {
-    if (confirm('Deseja ativar a atividade "' + nome + '"?')) {
-        fetch('/ativar_atividade/' + encodeURIComponent(nome), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(function(data) {
-            if (data.success) {
-                alert('Atividade "' + nome + '" ativada com sucesso!');
-                location.reload();
-            } else {
-                alert('Erro ao ativar atividade: ' + data.message);
-            }
-        })
-        .catch(function(error) {
-            console.error('Erro:', error);
-            alert('Erro ao ativar atividade. Tente novamente.');
-        });
-    }
-}
-
-// Desativar atividade
-function desativarAtividade(nome) {
-    if (confirm('Deseja desativar a atividade "' + nome + '"?')) {
-        fetch('/desativar_atividade/' + encodeURIComponent(nome), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(function(data) {
-            if (data.success) {
-                alert('Atividade "' + nome + '" desativada com sucesso!');
-                location.reload();
-            } else {
-                alert('Erro ao desativar atividade: ' + data.message);
-            }
-        })
-        .catch(function(error) {
-            console.error('Erro:', error);
-            alert('Erro ao desativar atividade. Tente novamente.');
-        });
-    }
-}
-
-// Excluir atividade
-function excluirAtividade(nome) {
-    if (confirm('ATENÇÃO: Deseja realmente excluir a atividade "' + nome + '"?\n\nEsta ação não pode ser desfeita e pode afetar alunos cadastrados.')) {
-        fetch('/excluir_atividade/' + encodeURIComponent(nome), {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(function(data) {
-            if (data.success) {
-                alert('Atividade "' + nome + '" excluída com sucesso!');
-                location.reload();
-            } else {
-                alert('Erro ao excluir atividade: ' + data.message);
-            }
-        })
-        .catch(function(error) {
-            console.error('Erro:', error);
-            alert('Erro ao excluir atividade. Tente novamente.');
-        });
-    }
-}
-
-// Validação do formulário de nova atividade
-document.getElementById('formNovaAtividade').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    var nome = document.getElementById('nome_atividade').value.trim();
-    var descricao = document.getElementById('descricao_atividade').value.trim();
-    
-    if (!nome || !descricao) {
-        alert('Por favor, preencha todos os campos obrigatórios.');
-        return;
-    }
-    
-    // Verificar se o nome já existe
-    var atividadesExistentes = Array.from(document.querySelectorAll('tbody tr')).map(function(row) {
-        return row.querySelector('td:first-child strong').textContent;
-    });
-    
-    if (atividadesExistentes.includes(nome)) {
-        alert('Já existe uma atividade com este nome. Escolha outro nome.');
-        return;
-    }
-    
-    // Se tudo estiver ok, enviar formulário
-    alert('Formulário válido! Enviando dados...');
-    this.submit();
-});
-
-// Validação do formulário de editar atividade
-document.getElementById('formEditarAtividade').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    var nomeAntigo = document.getElementById('edit_nome_antigo').value.trim();
-    var nomeNovo = document.getElementById('edit_nome_atividade').value.trim();
-    var descricao = document.getElementById('edit_descricao_atividade').value.trim();
-    var professor = document.getElementById('edit_professor').value.trim();
-    
-    if (!nomeNovo || !descricao) {
-        alert('Por favor, preencha todos os campos obrigatórios.');
-        return;
-    }
-    
-    // Enviar dados via AJAX
-    fetch('/editar_atividade', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            nome_antigo: nomeAntigo,
-            nome_novo: nomeNovo,
-            descricao_nova: descricao,
-            professor_novo: professor
-        })
-    })
-    .then(response => response.json())
-    .then(function(data) {
-        if (data.success) {
-            alert('Atividade editada com sucesso!');
-            location.reload();
-        } else {
-            alert('Erro ao editar atividade: ' + data.message);
-        }
-    })
-    .catch(function(error) {
-        console.error('Erro:', error);
-        alert('Erro ao editar atividade. Tente novamente.');
-    });
-});
-
-// Inicializar estatísticas
-document.addEventListener('DOMContentLoaded', function() {
-    atualizarEstatisticas();
-});
+console.log('JavaScript carregado com sucesso');
 </script>
 {% endblock %}

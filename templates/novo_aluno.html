@@ -1,16 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %}Novo Aluno - Associação Amigo do Povo{% endblock %}
+{% block title %}{% if editando %}Editar Aluno{% else %}Novo Aluno{% endif %} - Associação Amigo do Povo{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="display-6 text-center mb-4">
+                {% if editando %}
+                <i class="fas fa-user-edit text-primary"></i>
+                Editar Aluno
+                {% else %}
                 <i class="fas fa-user-plus text-primary"></i>
                 Cadastrar Novo Aluno
+                {% endif %}
             </h1>
-            <p class="text-muted text-center">Preencha os dados para cadastrar um novo aluno no sistema</p>
+            <p class="text-muted text-center">
+                {% if editando %}
+                Edite os dados do aluno {{ aluno.nome }}
+                {% else %}
+                Preencha os dados para cadastrar um novo aluno no sistema
+                {% endif %}
+            </p>
         </div>
     </div>
 
@@ -25,7 +36,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form id="formNovoAluno" method="POST" action="{{ url_for('novo_aluno') }}">
+                    <form id="formNovoAluno" method="POST" action="{% if editando %}{{ url_for('editar_aluno', aluno_id=aluno.id) }}{% else %}{{ url_for('cadastrar_aluno') }}{% endif %}">
                         <!-- Informações Pessoais -->
                         <div class="row mb-3">
                             <div class="col-12">
@@ -39,11 +50,11 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="nome" class="form-label">Nome Completo *</label>
-                                <input type="text" class="form-control" id="nome" name="nome" required>
+                                <input type="text" class="form-control" id="nome" name="nome" value="{% if editando %}{{ aluno.nome }}{% endif %}" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="data_nascimento" class="form-label">Data de Nascimento *</label>
-                                <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required>
+                                <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" value="{% if editando and aluno.data_nascimento %}{{ aluno.data_nascimento.strftime('%Y-%m-%d') if aluno.data_nascimento.strftime else aluno.data_nascimento }}{% endif %}" required>
                             </div>
                         </div>
 
@@ -63,19 +74,19 @@
                                 <label for="sexo" class="form-label">Sexo</label>
                                 <select class="form-select" id="sexo" name="sexo">
                                     <option value="">Selecione</option>
-                                    <option value="M">Masculino</option>
-                                    <option value="F">Feminino</option>
-                                    <option value="O">Outro</option>
+                                    <option value="M" {% if editando and aluno.sexo == 'M' %}selected{% endif %}>Masculino</option>
+                                    <option value="F" {% if editando and aluno.sexo == 'F' %}selected{% endif %}>Feminino</option>
+                                    <option value="O" {% if editando and aluno.sexo == 'O' %}selected{% endif %}>Outro</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label for="estado_civil" class="form-label">Estado Civil</label>
                                 <select class="form-select" id="estado_civil" name="estado_civil">
                                     <option value="">Selecione</option>
-                                    <option value="Solteiro">Solteiro</option>
-                                    <option value="Casado">Casado</option>
-                                    <option value="Divorciado">Divorciado</option>
-                                    <option value="Viúvo">Viúvo</option>
+                                    <option value="Solteiro" {% if editando and aluno.estado_civil == 'Solteiro' %}selected{% endif %}>Solteiro</option>
+                                    <option value="Casado" {% if editando and aluno.estado_civil == 'Casado' %}selected{% endif %}>Casado</option>
+                                    <option value="Divorciado" {% if editando and aluno.estado_civil == 'Divorciado' %}selected{% endif %}>Divorciado</option>
+                                    <option value="Viúvo" {% if editando and aluno.estado_civil == 'Viúvo' %}selected{% endif %}>Viúvo</option>
                                 </select>
                             </div>
                         </div>
@@ -93,22 +104,22 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="telefone" class="form-label">Telefone *</label>
-                                <input type="tel" class="form-control" id="telefone" name="telefone" required>
+                                <input type="tel" class="form-control" id="telefone" name="telefone" value="{% if editando %}{{ aluno.telefone or '' }}{% endif %}" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="celular" class="form-label">Celular</label>
-                                <input type="tel" class="form-control" id="celular" name="celular">
+                                <input type="tel" class="form-control" id="celular" name="celular" value="{% if editando %}{{ aluno.celular or '' }}{% endif %}">
                             </div>
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="email" class="form-label">E-mail</label>
-                                <input type="email" class="form-control" id="email" name="email" placeholder="exemplo@email.com">
+                                <input type="email" class="form-control" id="email" name="email" value="{% if editando %}{{ aluno.email or '' }}{% endif %}" placeholder="exemplo@email.com">
                             </div>
                             <div class="col-md-6">
                                 <label for="whatsapp" class="form-label">WhatsApp</label>
-                                <input type="tel" class="form-control" id="whatsapp" name="whatsapp">
+                                <input type="tel" class="form-control" id="whatsapp" name="whatsapp" value="{% if editando %}{{ aluno.whatsapp or '' }}{% endif %}">
                             </div>
                         </div>
 
@@ -123,36 +134,11 @@
                         </div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label for="cep" class="form-label">CEP</label>
-                                <input type="text" class="form-control" id="cep" name="cep" placeholder="00000-000">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="logradouro" class="form-label">Logradouro</label>
-                                <input type="text" class="form-control" id="logradouro" name="logradouro" placeholder="Rua, Avenida, etc.">
+                            <div class="col-md-12">
+                                <label for="endereco" class="form-label">Endereço Completo</label>
+                                <input type="text" class="form-control" id="endereco" name="endereco" value="{% if editando %}{{ aluno.endereco or '' }}{% endif %}" placeholder="Rua, número, bairro, cidade">
                             </div>
                         </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label for="numero" class="form-label">Número</label>
-                                <input type="text" class="form-control" id="numero" name="numero">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="complemento" class="form-label">Complemento</label>
-                                <input type="text" class="form-control" id="complemento" name="complemento" placeholder="Apto, Casa, etc.">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="bairro" class="form-label">Bairro</label>
-                                <input type="text" class="form-control" id="bairro" name="bairro">
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label for="cidade" class="form-label">Cidade</label>
-                                <input type="text" class="form-control" id="cidade" name="cidade">
-                            </div>
                             <div class="col-md-6">
                                 <label for="estado" class="form-label">Estado</label>
                                 <select class="form-select" id="estado" name="estado">
@@ -203,27 +189,27 @@
                                 <label for="atividade" class="form-label">Atividade *</label>
                                 <select class="form-select" id="atividade" name="atividade" required>
                                     <option value="">Selecione uma atividade</option>
-                                    <option value="Futebol">Futebol</option>
-                                    <option value="Vôlei">Vôlei</option>
-                                    <option value="Basquete">Basquete</option>
-                                    <option value="Jiu-Jitsu">Jiu-Jitsu</option>
-                                    <option value="Capoeira">Capoeira</option>
-                                    <option value="Musculação">Musculação</option>
-                                    <option value="Aeróbico">Aeróbico</option>
-                                    <option value="Dança">Dança</option>
-                                    <option value="Yoga">Yoga</option>
-                                    <option value="Pilates">Pilates</option>
+                                    <option value="Futebol" {% if editando and aluno.atividade == 'Futebol' %}selected{% endif %}>Futebol</option>
+                                    <option value="Vôlei" {% if editando and aluno.atividade == 'Vôlei' %}selected{% endif %}>Vôlei</option>
+                                    <option value="Basquete" {% if editando and aluno.atividade == 'Basquete' %}selected{% endif %}>Basquete</option>
+                                    <option value="Jiu-Jitsu" {% if editando and aluno.atividade == 'Jiu-Jitsu' %}selected{% endif %}>Jiu-Jitsu</option>
+                                    <option value="Capoeira" {% if editando and aluno.atividade == 'Capoeira' %}selected{% endif %}>Capoeira</option>
+                                    <option value="Musculação" {% if editando and aluno.atividade == 'Musculação' %}selected{% endif %}>Musculação</option>
+                                    <option value="Aeróbico" {% if editando and aluno.atividade == 'Aeróbico' %}selected{% endif %}>Aeróbico</option>
+                                    <option value="Dança" {% if editando and aluno.atividade == 'Dança' %}selected{% endif %}>Dança</option>
+                                    <option value="Yoga" {% if editando and aluno.atividade == 'Yoga' %}selected{% endif %}>Yoga</option>
+                                    <option value="Pilates" {% if editando and aluno.atividade == 'Pilates' %}selected{% endif %}>Pilates</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label for="turma" class="form-label">Turma/Horário *</label>
                                 <select class="form-select" id="turma" name="turma" required>
                                     <option value="">Selecione uma turma</option>
-                                    <option value="Manhã">Manhã</option>
-                                    <option value="Tarde">Tarde</option>
-                                    <option value="Noite">Noite</option>
-                                    <option value="Sábado">Sábado</option>
-                                    <option value="Domingo">Domingo</option>
+                                    <option value="Manhã" {% if editando and aluno.turma == 'Manhã' %}selected{% endif %}>Manhã</option>
+                                    <option value="Tarde" {% if editando and aluno.turma == 'Tarde' %}selected{% endif %}>Tarde</option>
+                                    <option value="Noite" {% if editando and aluno.turma == 'Noite' %}selected{% endif %}>Noite</option>
+                                    <option value="Sábado" {% if editando and aluno.turma == 'Sábado' %}selected{% endif %}>Sábado</option>
+                                    <option value="Domingo" {% if editando and aluno.turma == 'Domingo' %}selected{% endif %}>Domingo</option>
                                 </select>
                             </div>
                         </div>
@@ -231,16 +217,16 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="data_inicio" class="form-label">Data de Início *</label>
-                                <input type="date" class="form-control" id="data_inicio" name="data_inicio" required>
+                                <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="{% if editando and aluno.data_inicio %}{{ aluno.data_inicio.strftime('%Y-%m-%d') if aluno.data_inicio.strftime else aluno.data_inicio }}{% endif %}" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="status" class="form-label">Status *</label>
                                 <select class="form-select" id="status" name="status" required>
                                     <option value="">Selecione</option>
-                                    <option value="Ativo">Ativo</option>
-                                    <option value="Inativo">Inativo</option>
-                                    <option value="Suspenso">Suspenso</option>
-                                    <option value="Transferido">Transferido</option>
+                                    <option value="Ativo" {% if editando and aluno.status == 'Ativo' %}selected{% elif not editando %}selected{% endif %}>Ativo</option>
+                                    <option value="Inativo" {% if editando and aluno.status == 'Inativo' %}selected{% endif %}>Inativo</option>
+                                    <option value="Suspenso" {% if editando and aluno.status == 'Suspenso' %}selected{% endif %}>Suspenso</option>
+                                    <option value="Transferido" {% if editando and aluno.status == 'Transferido' %}selected{% endif %}>Transferido</option>
                                 </select>
                             </div>
                         </div>
@@ -258,22 +244,22 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="responsavel" class="form-label">Responsável (se menor de idade)</label>
-                                <input type="text" class="form-control" id="responsavel" name="responsavel" placeholder="Nome do responsável">
+                                <input type="text" class="form-control" id="responsavel" name="responsavel" placeholder="Nome do responsável" value="{% if editando %}{{ aluno.responsavel or '' }}{% endif %}">
                             </div>
                             <div class="col-md-6">
                                 <label for="telefone_responsavel" class="form-label">Telefone do Responsável</label>
-                                <input type="tel" class="form-control" id="telefone_responsavel" name="telefone_responsavel">
+                                <input type="tel" class="form-control" id="telefone_responsavel" name="telefone_responsavel" value="{% if editando %}{{ aluno.telefone_responsavel or '' }}{% endif %}">
                             </div>
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="indicacao" class="form-label">Indicação</label>
-                                <input type="text" class="form-control" id="indicacao" name="indicacao" placeholder="Como conheceu a academia">
+                                <input type="text" class="form-control" id="indicacao" name="indicacao" placeholder="Como conheceu a academia" value="{% if editando %}{{ aluno.indicacao or '' }}{% endif %}">
                             </div>
                             <div class="col-md-6">
                                 <label for="observacoes" class="form-label">Observações</label>
-                                <textarea class="form-control" id="observacoes" name="observacoes" rows="2" placeholder="Observações adicionais"></textarea>
+                                <textarea class="form-control" id="observacoes" name="observacoes" rows="2" placeholder="Observações adicionais">{% if editando %}{{ aluno.observacoes or '' }}{% endif %}</textarea>
                             </div>
                         </div>
 
@@ -282,15 +268,17 @@
                             <div class="col-12 text-center">
                                 <button type="submit" class="btn btn-lg btn-success">
                                     <i class="fas fa-save me-2"></i>
-                                    Cadastrar Aluno
+                                    {% if editando %}Salvar Alterações{% else %}Cadastrar Aluno{% endif %}
                                 </button>
+                                {% if not editando %}
                                 <button type="button" class="btn btn-lg btn-secondary ms-3" onclick="limparFormulario()">
                                     <i class="fas fa-eraser me-2"></i>
                                     Limpar Formulário
                                 </button>
+                                {% endif %}
                                 <a href="{{ url_for('alunos') }}" class="btn btn-lg btn-outline-primary ms-3">
                                     <i class="fas fa-arrow-left me-2"></i>
-                                    Voltar aos Alunos
+                                    {% if editando %}Cancelar{% else %}Voltar aos Alunos{% endif %}
                                 </a>
                             </div>
                         </div>

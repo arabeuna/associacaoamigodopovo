@@ -160,11 +160,11 @@
                                 </div>
                             </td>
                             <td>{{ aluno.cpf }}</td>
-                            <td>{{ aluno.data_nascimento.strftime('%d/%m/%Y') if aluno.data_nascimento else 'N/A' }}</td>
+                            <td>{% if aluno.data_nascimento %}{% if aluno.data_nascimento.strftime is defined %}{{ aluno.data_nascimento.strftime('%d/%m/%Y') }}{% else %}{{ aluno.data_nascimento }}{% endif %}{% else %}N/A{% endif %}</td>
                             <td>{{ aluno.telefone or 'N/A' }}</td>
                             <td>
                                 {% if aluno.atividade %}
-                                    <span class="badge bg-info">{{ aluno.atividade.nome }}</span>
+                                    <span class="badge bg-info">{{ aluno.atividade }}</span>
                                 {% else %}
                                     <span class="badge bg-secondary">Sem atividade</span>
                                 {% endif %}
@@ -183,7 +183,7 @@
                             {% if nivel_usuario in ['admin', 'admin_master'] %}
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('editar_aluno', id=aluno.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <a href="{{ url_for('editar_aluno', aluno_id=aluno.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <button class="btn btn-sm btn-outline-danger" onclick="confirmarExclusao({{ aluno.id }}, '{{ aluno.nome }}')" title="Excluir">
@@ -191,6 +191,9 @@
                                     </button>
                                     <a href="{{ url_for('frequencia_individual', aluno_id=aluno.id) }}" class="btn btn-sm btn-outline-info" title="Ver Frequência">
                                         <i class="fas fa-chart-line"></i>
+                                    </a>
+                                    <a href="{{ url_for('ficha_cadastro', aluno_id=aluno.id) }}" class="btn btn-sm btn-outline-success" title="Imprimir Cadastro" target="_blank">
+                                        <i class="fas fa-print"></i>
                                     </a>
                                 </div>
                             </td>
