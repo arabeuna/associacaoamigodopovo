@@ -149,11 +149,39 @@ class Presenca(Base):
     aluno = relationship("Aluno", back_populates="presencas")
     turma = relationship("Turma", back_populates="presencas")
     atividade = relationship("Atividade", back_populates="presencas")
-    registrador = relationship("Usuario", foreign_keys=[registrado_por])
+    registrador = relationship("Usuario", foreign_keys=[registrado_por], overlaps="presencas_registradas")
     
     # __table_args__ = (
     #     CheckConstraint("status IN ('P', 'F', 'J')", name='check_status_presenca'),
     # )
+
+class BuscaSalva(Base):
+    """Modelo para buscas salvas pelos usuários"""
+    __tablename__ = "buscas_salvas"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(100), nullable=False)
+    descricao = Column(Text)
+    criterios = Column(Text, nullable=False)  # JSON string com os critérios da busca
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    data_criacao = Column(DateTime, default=datetime.utcnow)
+    data_ultima_execucao = Column(DateTime)
+    ativa = Column(Boolean, default=True)
+    
+    # Relacionamentos
+    usuario = relationship("Usuario")
+
+class LogAtividade(Base):
+    """Modelo para logs de atividades do sistema"""
+    __tablename__ = "logs_atividades"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    usuario = Column(String(100), nullable=False, index=True)
+    tipo_usuario = Column(String(20), nullable=False)
+    acao = Column(String(200), nullable=False, index=True)
+    detalhes = Column(Text)
+    data_registro = Column(DateTime, default=datetime.utcnow)
 
 # Funções auxiliares para o banco de dados
 def get_db():
@@ -308,6 +336,114 @@ class TurmaDAO:
         if turma:
             turma.total_alunos = total
             db.commit()
+
+class BuscaSalvaDAO:
+    """Data Access Object para operações com buscas salvas"""
+    
+    @staticmethod
+    def salvar_busca(db, nome, descricao, criterios, usuario_id):
+        """Salva uma nova busca"""
+        busca = BuscaSalva(
+            nome=nome,
+            descricao=descricao,
+            criterios=criterios,
+            usuario_id=usuario_id
+        )
+        db.add(busca)
+        db.commit()
+        db.refresh(busca)
+        return busca
+    
+    @staticmethod
+    def listar_por_usuario(db, usuario_id):
+        """Lista buscas salvas de um usuário"""
+        return db.query(BuscaSalva).filter(
+            BuscaSalva.usuario_id == usuario_id,
+            BuscaSalva.ativa == True
+        ).order_by(BuscaSalva.data_criacao.desc()).all()
+    
+    @staticmethod
+    def buscar_por_id(db, busca_id, usuario_id):
+        """Busca uma busca salva por ID e usuário"""
+        return db.query(BuscaSalva).filter(
+            BuscaSalva.id == busca_id,
+            BuscaSalva.usuario_id == usuario_id,
+            BuscaSalva.ativa == True
+        ).first()
+    
+    @staticmethod
+    def excluir_busca(db, busca_id, usuario_id):
+        """Exclui uma busca salva (soft delete)"""
+        busca = db.query(BuscaSalva).filter(
+            BuscaSalva.id == busca_id,
+            BuscaSalva.usuario_id == usuario_id
+        ).first()
+        if busca:
+            busca.ativa = False
+            db.commit()
+            return True
+        return False
+    
+    @staticmethod
+    def atualizar_ultima_execucao(db, busca_id):
+        """Atualiza a data da última execução de uma busca"""
+        busca = db.query(BuscaSalva).filter(BuscaSalva.id == busca_id).first()
+        if busca:
+            busca.data_ultima_execucao = datetime.utcnow()
+            db.commit()
+            return True
+        return False
+
+class LogAtividadeDAO:
+    """Data Access Object para operações com logs de atividades"""
+    
+    @staticmethod
+    def registrar_log(db, usuario, acao, detalhes, tipo_usuario="usuario"):
+        """Registra um novo log de atividade"""
+        log = LogAtividade(
+            usuario=usuario,
+            tipo_usuario=tipo_usuario,
+            acao=acao,
+            detalhes=detalhes
+        )
+        db.add(log)
+        db.commit()
+        db.refresh(log)
+        return log
+    
+    @staticmethod
+    def listar_logs(db, filtro=None, limite=1000):
+        """Lista logs de atividades com filtros opcionais"""
+        query = db.query(LogAtividade).order_by(LogAtividade.timestamp.desc())
+        
+        if filtro and filtro != 'todos':
+            if filtro == 'hoje':
+                from datetime import date
+                hoje = date.today()
+                query = query.filter(LogAtividade.timestamp >= hoje)
+            elif filtro == 'semana':
+                from datetime import date, timedelta
+                uma_semana_atras = date.today() - timedelta(days=7)
+                query = query.filter(LogAtividade.timestamp >= uma_semana_atras)
+            elif filtro == 'mes':
+                from datetime import date, timedelta
+                um_mes_atras = date.today() - timedelta(days=30)
+                query = query.filter(LogAtividade.timestamp >= um_mes_atras)
+        
+        return query.limit(limite).all()
+    
+    @staticmethod
+    def limpar_logs_antigos(db, dias_manter=90):
+        """Remove logs mais antigos que o número de dias especificado"""
+        from datetime import date, timedelta
+        data_limite = date.today() - timedelta(days=dias_manter)
+        
+        logs_removidos = db.query(LogAtividade).filter(
+            LogAtividade.timestamp < data_limite
+        ).delete()
+        
+        db.commit()
+        return logs_removidos
 
 # Inicialização das tabelas
 if __name__ == "__main__":

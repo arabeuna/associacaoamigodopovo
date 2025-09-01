@@ -231,7 +231,7 @@
         
         // Adicionar efeito de loading no botão
         document.querySelector('form').addEventListener('submit', function() {
-            const btn = document.querySelector('.btn-login');
+            var btn = document.querySelector('.btn-login');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Entrando...';
             btn.disabled = true;
         });

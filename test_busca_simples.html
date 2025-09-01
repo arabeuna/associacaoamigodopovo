@@ -84,7 +84,7 @@
     <script>
         function log(message) {
             const timestamp = new Date().toLocaleTimeString();
-            $('#debugLog').append(`[${timestamp}] ${message}<br>`);
+            $('#debugLog').append('[' + timestamp + '] ' + message + '<br>');
             console.log(message);
         }
 
@@ -97,15 +97,15 @@
             const $tbody = $('#tabelaAlunos tbody');
             
             log('Elementos encontrados:');
-            log(`- filtroBusca: ${$filtroBusca.length}`);
-            log(`- limparBusca: ${$limparBusca.length}`);
-            log(`- totalResultados: ${$totalResultados.length}`);
-            log(`- tbody: ${$tbody.length}`);
+            log('- filtroBusca: ' + $filtroBusca.length);
+            log('- limparBusca: ' + $limparBusca.length);
+            log('- totalResultados: ' + $totalResultados.length);
+            log('- tbody: ' + $tbody.length);
             
             // Teste de evento de input
             $filtroBusca.on('input', function() {
                 const valor = $(this).val();
-                log(`Input detectado: "${valor}"`);
+                log('Input detectado: "' + valor + '"');
                 
                 // Simular busca local
                 const termo = valor.toLowerCase();
@@ -123,7 +123,7 @@
                 });
                 
                 $totalResultados.text(encontrados);
-                log(`Busca concluída: ${encontrados} alunos encontrados`);
+                log('Busca concluída: ' + encontrados + ' alunos encontrados');
             });
             
             // Teste do botão limpar

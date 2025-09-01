@@ -10,8 +10,8 @@ from datetime import datetime, date
 from typing import List, Dict, Optional, Any
 from sqlalchemy.orm import Session
 from models import (
-    get_db, Usuario, Atividade, Turma, Aluno, Presenca,
-    AlunoDAO, PresencaDAO, AtividadeDAO, TurmaDAO
+    get_db, Usuario, Atividade, Turma, Aluno, Presenca, LogAtividade,
+    AlunoDAO, PresencaDAO, AtividadeDAO, TurmaDAO, LogAtividadeDAO
 )
 
 class DatabaseIntegration:
@@ -419,6 +419,140 @@ class DatabaseIntegration:
             print(f"❌ Erro ao listar alunos do banco: {str(e)}")
             return []
     
+    def contar_alunos_db(self) -> int:
+        """Conta o total de alunos ativos no banco de dados"""
+        try:
+            total = self.db.query(Aluno).filter(Aluno.ativo == True).count()
+            return total
+        except Exception as e:
+            print(f"❌ Erro ao contar alunos no banco: {str(e)}")
+            return 0
+    
+    def contar_atividades_db(self) -> int:
+        """Conta o total de atividades ativas no banco de dados"""
+        try:
+            total = self.db.query(Atividade).filter(Atividade.ativa == True).count()
+            return total
+        except Exception as e:
+            print(f"❌ Erro ao contar atividades no banco: {str(e)}")
+            return 0
+    
+    def contar_turmas_db(self) -> int:
+        """Conta o total de turmas ativas no banco de dados"""
+        try:
+            total = self.db.query(Turma).filter(Turma.ativa == True).count()
+            return total
+        except Exception as e:
+            print(f"❌ Erro ao contar turmas no banco: {str(e)}")
+            return 0
+    
+    def registrar_atividade_db(self, usuario: str, acao: str, detalhes: str, tipo_usuario: str = "usuario") -> bool:
+        """Registra uma atividade no sistema de logs do banco de dados"""
+        try:
+            LogAtividadeDAO.registrar_log(
+                db=self.db,
+                usuario=usuario,
+                acao=acao,
+                detalhes=detalhes,
+                tipo_usuario=tipo_usuario
+            )
+            return True
+        except Exception as e:
+            print(f"Erro ao registrar atividade no banco: {e}")
+            self.db.rollback()
+            return False
+    
+    def listar_logs_db(self, filtro: str = None, limite: int = 1000) -> List[Dict]:
+        """Lista logs de atividades do banco de dados"""
+        try:
+            logs = LogAtividadeDAO.listar_logs(
+                db=self.db,
+                filtro=filtro,
+                limite=limite
+            )
+            
+            logs_dict = []
+            for log in logs:
+                logs_dict.append({
+                    'id': log.id,
+                    'timestamp': log.timestamp.isoformat(),
+                    'data_hora': log.timestamp.strftime('%d/%m/%Y às %H:%M:%S'),
+                    'usuario': log.usuario,
+                    'tipo_usuario': log.tipo_usuario,
+                    'acao': log.acao,
+                    'detalhes': log.detalhes
+                })
+            
+            return logs_dict
+        except Exception as e:
+            print(f"Erro ao listar logs: {e}")
+            return []
+    
+    def limpar_logs_antigos_db(self, dias_manter: int = 90) -> int:
+        """Remove logs mais antigos que o número de dias especificado"""
+        try:
+            return LogAtividadeDAO.limpar_logs_antigos(
+                db=self.db,
+                dias_manter=dias_manter
+            )
+        except Exception as e:
+            print(f"Erro ao limpar logs antigos: {e}")
+            return 0
+    
+    def listar_atividades_db(self) -> List[Dict]:
+        """Lista atividades do banco de dados"""
+        try:
+            atividades = self.db.query(Atividade).filter(Atividade.ativa == True).all()
+            
+            resultado = []
+            for atividade in atividades:
+                atividade_dict = {
+                    'id': atividade.id,
+                    'nome': atividade.nome,
+                    'descricao': atividade.descricao,
+                    'professores_vinculados': atividade.professores_vinculados,
+                    'ativa': atividade.ativa,
+                    'total_alunos': atividade.total_alunos,
+                    'data_criacao': atividade.data_criacao.strftime('%d/%m/%Y') if atividade.data_criacao else '',
+                    'criado_por': atividade.criado_por
+                }
+                resultado.append(atividade_dict)
+            
+            return resultado
+        except Exception as e:
+            print(f"❌ Erro ao listar atividades do banco: {str(e)}")
+            return []
+    
+    def listar_turmas_db(self) -> List[Dict]:
+        """Lista turmas do banco de dados"""
+        try:
+            turmas = self.db.query(Turma).filter(Turma.ativa == True).all()
+            
+            resultado = []
+            for turma in turmas:
+                turma_dict = {
+                    'id': turma.id,
+                    'nome': turma.nome,
+                    'atividade': turma.atividade.nome if turma.atividade else '',
+                    'atividade_id': turma.atividade_id,
+                    'horario': turma.horario,
+                    'dias_semana': turma.dias_semana,
+                    'periodo': turma.periodo,
+                    'capacidade_maxima': turma.capacidade_maxima,
+                    'professor_responsavel': turma.professor_responsavel,
+                    'ativa': turma.ativa,
+                    'total_alunos': turma.total_alunos,
+                    'descricao': turma.descricao,
+                    'data_criacao': turma.data_criacao.strftime('%d/%m/%Y') if turma.data_criacao else '',
+                    'criado_por': turma.criado_por
+                }
+                resultado.append(turma_dict)
+            
+            return resultado
+        except Exception as e:
+            print(f"❌ Erro ao listar turmas do banco: {str(e)}")
+            return []
+
     def close(self):
         """Fecha a conexão com o banco de dados"""
         if self.db:

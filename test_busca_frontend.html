@@ -43,7 +43,7 @@
         function log(message) {
             const consoleOutput = document.getElementById('consoleOutput');
             const timestamp = new Date().toLocaleTimeString();
-            consoleOutput.innerHTML += `[${timestamp}] ${message}<br>`;
+            consoleOutput.innerHTML += '[' + timestamp + '] ' + message + '<br>';
             console.log(message);
         }
 
@@ -56,7 +56,7 @@
                 return;
             }
             
-            log(`Iniciando busca para: "${term}"`);
+            log('Iniciando busca para: "' + term + '"');
             resultsDiv.innerHTML = '<p class="loading">Buscando...</p>';
             
             $.ajax({
@@ -64,45 +64,46 @@
                 method: 'GET',
                 data: { termo: term },
                 success: function(response) {
-                    log(`Resposta recebida: ${JSON.stringify(response)}`);
+                    log('Resposta recebida: ' + JSON.stringify(response));
                     
                     if (response.success) {
-                        resultsDiv.innerHTML = `
-                            <p class="success">Busca bem-sucedida!</p>
-                            <p>Encontrados: ${response.total_encontrado} alunos</p>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Telefone</th>
-                                        <th>Atividade</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${response.alunos.map(aluno => `
-                                        <tr>
-                                            <td>${aluno.nome}</td>
-                                            <td>${aluno.telefone}</td>
-                                            <td>${aluno.atividade}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        `;
+                        var tableRows = '';
+                        response.alunos.forEach(function(aluno) {
+                            tableRows += '<tr>' +
+                                '<td>' + aluno.nome + '</td>' +
+                                '<td>' + aluno.telefone + '</td>' +
+                                '<td>' + aluno.atividade + '</td>' +
+                                '</tr>';
+                        });
+                        
+                        resultsDiv.innerHTML = 
+                            '<p class="success">Busca bem-sucedida!</p>' +
+                            '<p>Encontrados: ' + response.total_encontrado + ' alunos</p>' +
+                            '<table>' +
+                                '<thead>' +
+                                    '<tr>' +
+                                        '<th>Nome</th>' +
+                                        '<th>Telefone</th>' +
+                                        '<th>Atividade</th>' +
+                                    '</tr>' +
+                                '</thead>' +
+                                '<tbody>' +
+                                    tableRows +
+                                '</tbody>' +
+                            '</table>';
                     } else {
-                        resultsDiv.innerHTML = `<p class="error">Erro: ${response.message}</p>`;
+                        resultsDiv.innerHTML = '<p class="error">Erro: ' + response.message + '</p>';
                     }
                 },
                 error: function(xhr, status, error) {
-                    log(`Erro na requisição: ${status} - ${error}`);
-                    log(`Status HTTP: ${xhr.status}`);
-                    log(`Resposta: ${xhr.responseText}`);
+                    log('Erro na requisição: ' + status + ' - ' + error);
+                    log('Status HTTP: ' + xhr.status);
+                    log('Resposta: ' + xhr.responseText);
                     
-                    resultsDiv.innerHTML = `
-                        <p class="error">Erro na requisição</p>
-                        <p>Status: ${xhr.status}</p>
-                        <p>Erro: ${error}</p>
-                    `;
+                    resultsDiv.innerHTML = 
+                        '<p class="error">Erro na requisição</p>' +
+                        '<p>Status: ' + xhr.status + '</p>' +
+                        '<p>Erro: ' + error + '</p>';
                 }
             });
         }

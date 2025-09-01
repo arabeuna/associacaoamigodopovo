@@ -81,7 +81,7 @@
     <script>
         function log(message) {
             const timestamp = new Date().toLocaleTimeString();
-            $('#debugContent').append(`[${timestamp}] ${message}<br>`);
+            $('#debugContent').append('[' + timestamp + '] ' + message + '<br>');
             console.log(message);
         }
 
@@ -94,10 +94,10 @@
             const $tbody = $('#tabelaAlunos tbody');
             
             log('Elementos encontrados:');
-            log(`- filtroBusca: ${$filtroBusca.length}`);
-            log(`- limparBusca: ${$limparBusca.length}`);
-            log(`- totalResultados: ${$totalResultados.length}`);
-            log(`- tbody: ${$tbody.length}`);
+            log('- filtroBusca: ' + $filtroBusca.length);
+            log('- limparBusca: ' + $limparBusca.length);
+            log('- totalResultados: ' + $totalResultados.length);
+            log('- tbody: ' + $tbody.length);
             
             // Inicializar contador
             $totalResultados.text($tbody.find('tr').length);
@@ -105,7 +105,7 @@
             // Teste de busca local
             $filtroBusca.on('input', function() {
                 const valor = $(this).val();
-                log(`Input detectado: "${valor}"`);
+                log('Input detectado: "' + valor + '"');
                 
                 const termo = valor.toLowerCase();
                 const $linhas = $tbody.find('tr');
@@ -122,7 +122,7 @@
                 });
                 
                 $totalResultados.text(encontrados);
-                log(`Busca concluída: ${encontrados} alunos encontrados`);
+                log('Busca concluída: ' + encontrados + ' alunos encontrados');
             });
             
             // Teste do botão limpar
@@ -136,11 +136,11 @@
             
             // Teste de eventos adicionais
             $filtroBusca.on('keyup', function() {
-                log(`Keyup detectado: "${$(this).val()}"`);
+                log('Keyup detectado: "' + $(this).val() + '"');
             });
             
             $filtroBusca.on('change', function() {
-                log(`Change detectado: "${$(this).val()}"`);
+                log('Change detectado: "' + $(this).val() + '"');
             });
             
             // Teste de clique direto

@@ -349,7 +349,7 @@ function verDetalhesAluno(nome) {
     modalBody.innerHTML = `
         <div class="text-center">
             <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
-            <p>Carregando detalhes de ${nome}...</p>
+            <p>Carregando detalhes de ' + nome + '...</p>
         </div>
     `;
     
@@ -357,12 +357,12 @@ function verDetalhesAluno(nome) {
     modal.show();
     
     // Simular carregamento de dados
-    setTimeout(() => {
-        modalBody.innerHTML = `
+    setTimeout(function() {
+        modalBody.innerHTML = '
             <div class="row">
                 <div class="col-md-6">
                     <h6>Informações Pessoais</h6>
-                    <p><strong>Nome:</strong> ${nome}</p>
+                    <p><strong>Nome:</strong> ' + nome + '</p>
                     <p><strong>Atividade:</strong> {{ nome_atividade }}</p>
                     <p><strong>Data de Cadastro:</strong> 15/01/2024</p>
                     <p><strong>Status:</strong> <span class="badge bg-success">Ativo</span></p>
@@ -375,13 +375,91 @@ function verDetalhesAluno(nome) {
                     <p><strong>Observações:</strong> Aluno dedicado</p>
                 </div>
             </div>
-        `;
+        ';
     }, 1000);
 }
 
 // Editar presença
 function editarPresenca(nome) {
-    mostrarAlerta(`Editar presença de ${nome} - Funcionalidade em desenvolvimento`, 'info');
+    // Buscar dados atuais do aluno
+    const alunoCard = document.querySelector('[data-aluno="' + nome + '"]');
+    if (!alunoCard) {
+        mostrarAlerta('Dados do aluno não encontrados', 'error');
+        return;
+    }
+    
+    // Extrair informações do card
+    const statusElement = alunoCard.querySelector('.badge');
+    const observacoesElement = alunoCard.querySelector('.text-muted');
+    
+    const statusAtual = statusElement ? (statusElement.textContent.includes('Presente') ? 'P' : 'F') : 'F';
+    const observacoesAtuais = observacoesElement ? observacoesElement.textContent.replace('Obs: ', '') : '';
+    
+    // Preencher modal
+    document.getElementById('editarPresencaNome').value = nome;
+    document.getElementById('editarPresencaData').value = new Date().toISOString().split('T')[0];
+    document.getElementById('editarPresencaStatus').value = statusAtual;
+    document.getElementById('editarPresencaObservacoes').value = observacoesAtuais;
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarPresenca'));
+    modal.show();
+}
+
+// Salvar edição de presença
+function salvarEdicaoPresenca() {
+    const nome = document.getElementById('editarPresencaNome').value;
+    const data = document.getElementById('editarPresencaData').value;
+    const status = document.getElementById('editarPresencaStatus').value;
+    const observacoes = document.getElementById('editarPresencaObservacoes').value;
+    
+    if (!nome || !data || !status) {
+        mostrarAlerta('Todos os campos obrigatórios devem ser preenchidos', 'warning');
+        return;
+    }
+    
+    // Mostrar loading
+    const btnSalvar = document.querySelector('#modalEditarPresenca .btn-primary');
+    const textoOriginal = btnSalvar.textContent;
+    btnSalvar.textContent = 'Salvando...';
+    btnSalvar.disabled = true;
+    
+    fetch('/editar_presenca', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            aluno: nome,
+            data_original: data,
+            nova_data: data,
+            status: status,
+            observacoes: observacoes
+        })
+    })
+    .then(response => response.json())
+    .then(function(data) {
+        if (data.success) {
+            mostrarAlerta(data.message, 'success');
+            // Fechar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarPresenca'));
+            modal.hide();
+            // Recarregar dados
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+        } else {
+            mostrarAlerta(data.message, 'error');
+        }
+    })
+    .catch(function(error) {
+        console.error('Erro:', error);
+        mostrarAlerta('Erro ao salvar alterações', 'error');
+    })
+    .finally(function() {
+        btnSalvar.textContent = textoOriginal;
+        btnSalvar.disabled = false;
+    });
 }
 
 // Editar aluno
@@ -393,8 +471,8 @@ function editarAluno() {
 function gerarRelatorioAtividade() {
     mostrarConfirmacao(
         'Gerar relatório da atividade?',
-        `Será gerado um relatório completo de "${nome_atividade}"`,
-        () => {
+        'Será gerado um relatório completo de "' + nome_atividade + '"',
+        function() {
             // Implementar geração de relatório
             mostrarAlerta('Relatório gerado com sucesso!', 'success');
         }
@@ -404,16 +482,16 @@ function gerarRelatorioAtividade() {
 // Funções auxiliares
 function mostrarAlerta(mensagem, tipo) {
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    alertDiv.className = 'alert alert-' + tipo + ' alert-dismissible fade show position-fixed';
     alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    alertDiv.innerHTML = `
-        ${mensagem}
+    alertDiv.innerHTML = '
+        ' + mensagem + '
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
+    ';
     
     document.body.appendChild(alertDiv);
     
-    setTimeout(() => {
+    setTimeout(function() {
         if (alertDiv.parentNode) {
             alertDiv.remove();
         }
@@ -421,7 +499,7 @@ function mostrarAlerta(mensagem, tipo) {
 }
 
 function mostrarConfirmacao(titulo, mensagem, callback) {
-    if (confirm(`${titulo}\n\n${mensagem}`)) {
+    if (confirm(titulo + '\n\n' + mensagem)) {
         callback();
     }
 }
@@ -429,4 +507,44 @@ function mostrarConfirmacao(titulo, mensagem, callback) {
 // Atualizar estatísticas a cada 5 minutos
 setInterval(atualizarEstatisticas, 300000);
 </script>
+
+<!-- Modal Editar Presença -->
+<div class="modal fade" id="modalEditarPresenca" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Presença</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarPresenca">
+                    <div class="mb-3">
+                        <label for="editarPresencaNome" class="form-label">Aluno</label>
+                        <input type="text" class="form-control" id="editarPresencaNome" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editarPresencaData" class="form-label">Data</label>
+                        <input type="date" class="form-control" id="editarPresencaData" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editarPresencaStatus" class="form-label">Status</label>
+                        <select class="form-select" id="editarPresencaStatus" required>
+                            <option value="P">Presente</option>
+                            <option value="F">Falta</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editarPresencaObservacoes" class="form-label">Observações</label>
+                        <textarea class="form-control" id="editarPresencaObservacoes" rows="3" placeholder="Observações opcionais..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarEdicaoPresenca()">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

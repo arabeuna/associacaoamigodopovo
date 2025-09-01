@@ -72,77 +72,51 @@
     <div class="col-md-4">
         <div class="card border-info">
             <div class="card-body text-center">
-                <i class="fas fa-graduation-cap fa-2x text-info mb-2"></i>
+                <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
                 <h4>
-                    {% set atividades = [] %}
+                    {% set em_progresso = [] %}
                     {% for aluno in alunos %}
-                        {% if aluno.atividade != 'Não informado' and aluno.atividade not in atividades %}
-                            {% set _ = atividades.append(aluno.atividade) %}
+                        {% if 'Em progresso' in aluno.status_frequencia %}
+                            {% set _ = em_progresso.append(1) %}
                         {% endif %}
                     {% endfor %}
-                    {{ atividades|length }}
+                    {{ em_progresso|length }}
                 </h4>
-                <p class="text-muted mb-0">Atividades Diferentes</p>
+                <p class="text-muted mb-0">Em Progresso</p>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card border-secondary">
+        <div class="card border-success">
             <div class="card-body text-center">
-                <i class="fas fa-users fa-2x text-secondary mb-2"></i>
-                <h4>
-                    {% set turmas = [] %}
-                    {% for aluno in alunos %}
-                        {% if aluno.turma != 'Não informado' and aluno.turma not in turmas %}
-                            {% set _ = turmas.append(aluno.turma) %}
-                        {% endif %}
-                    {% endfor %}
-                    {{ turmas|length }}
-                </h4>
-                <p class="text-muted mb-0">Turmas Diferentes</p>
+                <i class="fas fa-check-double fa-2x text-success mb-2"></i>
+                <h4>{{ alunos|selectattr('status_frequencia', 'equalto', 'Dados disponíveis')|list|length }}</h4>
+                <p class="text-muted mb-0">Dados Completos</p>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Sistema de Busca Simples -->
-<div class="row mb-3">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="card border-primary">
-            <div class="card-body">
-                <h6 class="card-title text-primary mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
                     <i class="fas fa-search me-2"></i>
                     Buscar Alunos
-                </h6>
+                </h5>
+            </div>
+            <div class="card-body">
                 <div class="row">
                     <div class="col-md-8">
-                        <div class="input-group">
-                            <span class="input-group-text bg-primary text-white">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input type="text" 
-                                   id="filtroBusca" 
-                                   class="form-control" 
-                                   placeholder="Digite o nome do aluno para buscar... (ex: José ou José Silva)"
-                                   autocomplete="off">
-                            <button class="btn btn-primary" type="button" id="btnBuscar">
-                                <i class="fas fa-search me-1"></i>
-                                Buscar
-                            </button>
-                            <button class="btn btn-outline-primary" type="button" id="limparBusca">
-                                <i class="fas fa-times me-1"></i>
-                                Limpar
-                            </button>
-                        </div>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Digite o nome do aluno..." onkeyup="searchAlunos()">
                     </div>
                     <div class="col-md-4">
-                        <div class="d-flex align-items-center h-100">
-                                                         <span class="text-muted">
-                                 <i class="fas fa-info-circle me-1"></i>
-                                 Resultados: <span id="totalResultados" class="fw-bold text-primary">{{ alunos|length }}</span>
-                             </span>
-
-                        </div>
+                        <button class="btn btn-outline-secondary w-100" onclick="clearSearch()">
+                            <i class="fas fa-times me-2"></i>
+                            Limpar
+                        </button>
                     </div>
                 </div>
             </div>
@@ -151,255 +125,72 @@
 </div>
 
 <!-- Lista de Alunos -->
-<div class="card">
-    <div class="card-header bg-primary text-white">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-list me-2"></i>
-                Lista Completa de Alunos
-            </h5>
-            <a href="{{ url_for('novo_aluno') }}" class="btn btn-light btn-sm">
-                <i class="fas fa-plus me-1"></i>
-                Novo Aluno
-            </a>
-        </div>
-    </div>
-    <div class="card-body">
+<div class="row">
+    <div class="col-12">
         {% if alunos %}
             <div class="table-responsive">
-                {% if nivel_usuario == 'usuario' %}
-                <!-- Tabela simplificada para professores -->
-                <table class="table table-hover table-striped" id="tabelaAlunos">
+                <table class="table table-striped table-hover" id="alunosTable">
                     <thead class="table-dark">
                         <tr>
-                            <th scope="col">
-                                <i class="fas fa-user me-1"></i>
-                                Nome do Aluno
-                            </th>
-                            <th scope="col">
-                                <i class="fas fa-chart-bar me-1"></i>
-                                Status de Frequência
-                            </th>
-                            <th scope="col">
-                                <i class="fas fa-cogs me-1"></i>
-                                Ações
-                            </th>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Data de Nascimento</th>
+                            <th>Telefone</th>
+                            <th>Atividade</th>
+                            <th>Status Frequência</th>
+                            {% if nivel_usuario in ['admin', 'admin_master'] %}
+                            <th>Ações</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
-                {% else %}
-                <!-- Tabela completa para admins -->
-                <table class="table table-hover table-striped" id="tabelaAlunos">
-                    <thead class="table-dark">
-                        <tr>
-                            <th scope="col">
-                                <i class="fas fa-user me-1"></i>
-                                Nome Completo
-                            </th>
-                            <th scope="col">
-                                <i class="fas fa-phone me-1"></i>
-                                Telefone
-                            </th>
-                            <th scope="col">
-                                <i class="fas fa-map-marker-alt me-1"></i>
-                                Endereço
-                            </th>
-                            <th scope="col">
-                                <i class="fas fa-birthday-cake me-1"></i>
-                                Nascimento
-                            </th>
-                            <th scope="col">
-                                <i class="fas fa-dumbbell me-1"></i>
-                                Atividade
-                            </th>
-                            <th scope="col">
-                                <i class="fas fa-calendar-check me-1"></i>
-                                Matrícula
-                            </th>
-                            <th scope="col">
-                                <i class="fas fa-chart-bar me-1"></i>
-                                Frequência
-                            </th>
-                            <th scope="col">
-                                <i class="fas fa-cogs me-1"></i>
-                                Ações
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                {% endif %}
                         {% for aluno in alunos %}
                         <tr>
-                            <!-- Nome (sempre mostrado) -->
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-circle bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
-                                         style="width: 35px; height: 35px; font-size: 0.8rem;">
-                                        {{ aluno.nome.split()[0][0] }}{{ aluno.nome.split()[-1][0] if aluno.nome.split()|length > 1 else '' }}
+                                    <div class="avatar-sm me-2">
+                                        <div class="avatar-title bg-primary rounded-circle">
+                                            {{ aluno.nome[0].upper() }}
+                                        </div>
                                     </div>
-                                    <strong>{{ aluno.nome }}</strong>
+                                    <div>
+                                        <h6 class="mb-0">{{ aluno.nome }}</h6>
+                                        <small class="text-muted">ID: {{ aluno.id }}</small>
+                                    </div>
                                 </div>
                             </td>
-                            
-                            {% if nivel_usuario != 'usuario' %}
-                            <!-- Dados completos para admins -->
+                            <td>{{ aluno.cpf }}</td>
+                            <td>{{ aluno.data_nascimento.strftime('%d/%m/%Y') if aluno.data_nascimento else 'N/A' }}</td>
+                            <td>{{ aluno.telefone or 'N/A' }}</td>
                             <td>
-                                <a href="tel:{{ aluno.telefone }}" class="text-decoration-none">
-                                    <i class="fas fa-phone-alt text-success me-1"></i>
-                                    {{ aluno.telefone }}
-                                </a>
-                            </td>
-                            <td>
-                                {% if aluno.endereco and aluno.endereco != 'Não informado' %}
-                                    <i class="fas fa-map-marker-alt text-danger me-1"></i>
-                                    <span title="{{ aluno.endereco }}">
-                                        {% if aluno.endereco|length > 30 %}
-                                            {{ aluno.endereco[:30] }}...
-                                        {% else %}
-                                            {{ aluno.endereco }}
-                                        {% endif %}
-                                    </span>
+                                {% if aluno.atividade %}
+                                    <span class="badge bg-info">{{ aluno.atividade.nome }}</span>
                                 {% else %}
-                                    <span class="text-muted">
-                                        <i class="fas fa-map-marker-alt me-1"></i>
-                                        Não informado
-                                    </span>
+                                    <span class="badge bg-secondary">Sem atividade</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                {% if aluno.data_nascimento and aluno.data_nascimento != 'Não informado' %}
-                                    <span class="badge bg-info">
-                                        <i class="fas fa-birthday-cake me-1"></i>
-                                        {{ aluno.data_nascimento }}
-                                    </span>
-                                {% else %}
-                                    <span class="text-muted small">
-                                        <i class="fas fa-birthday-cake me-1"></i>
-                                        Não informado
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if aluno.atividade and aluno.atividade != 'Não informado' %}
-                                    <span class="badge bg-primary">
-                                        <i class="fas fa-graduation-cap me-1"></i>
-                                        {{ aluno.atividade }}
-                                    </span>
-                                    {% if aluno.turma and aluno.turma != 'Não informado' %}
-                                        <br><small class="text-muted">
-                                            <i class="fas fa-clock me-1"></i>
-                                            Turma: {{ aluno.turma }}
-                                        </small>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-muted small">
-                                        <i class="fas fa-graduation-cap me-1"></i>
-                                        Não informado
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if aluno.data_cadastro and aluno.data_cadastro != 'Não informado' %}
-                                    <span class="badge bg-secondary">
-                                        <i class="fas fa-calendar-plus me-1"></i>
-                                        {{ aluno.data_cadastro }}
-                                    </span>
-                                {% else %}
-                                    <span class="text-muted small">
-                                        <i class="fas fa-calendar-plus me-1"></i>
-                                        Não informado
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <!-- Frequência -->
                             <td>
                                 {% if aluno.status_frequencia == 'Dados disponíveis' %}
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        Disponível
-                                    </span>
+                                    <span class="badge bg-success">{{ aluno.status_frequencia }}</span>
                                 {% elif 'Aguardando' in aluno.status_frequencia %}
-                                    <span class="badge bg-warning">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Aguardando
-                                    </span>
-                                    <br><small class="text-muted">{{ aluno.status_frequencia }}</small>
+                                    <span class="badge bg-warning">{{ aluno.status_frequencia }}</span>
+                                {% elif 'Em progresso' in aluno.status_frequencia %}
+                                    <span class="badge bg-info">{{ aluno.status_frequencia }}</span>
                                 {% else %}
-                                    <span class="badge bg-danger">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        Sem dados
-                                    </span>
+                                    <span class="badge bg-secondary">{{ aluno.status_frequencia }}</span>
                                 {% endif %}
                             </td>
-                            <!-- Ações Admin/Admin Master -->
+                            {% if nivel_usuario in ['admin', 'admin_master'] %}
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('frequencia_individual', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-info" 
-                                       title="Relatório de Frequência">
-                                        <i class="fas fa-calendar-check"></i>
-                                    </a>
-                                    <a href="{{ url_for('ficha_cadastro', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-warning" 
-                                       title="Ficha de Cadastro" target="_blank">
-                                        <i class="fas fa-id-card"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" 
-                                            onclick="editarAluno('{{ aluno.id_unico }}')" 
-                                            title="Editar aluno">
+                                    <a href="{{ url_for('editar_aluno', id=aluno.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
                                         <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            onclick="confirmarExclusao('{{ aluno.id_unico }}', '{{ aluno.nome }}')" 
-                                            title="Excluir aluno">
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="confirmarExclusao({{ aluno.id }}, '{{ aluno.nome }}')" title="Excluir">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </div>
-                            </td>
-                            {% else %}
-                            <!-- Versão simplificada para professores -->
-                            <!-- Status de Frequência -->
-                            <td>
-                                {% if aluno.status_frequencia == 'Dados disponíveis' %}
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        Disponível
-                                    </span>
-                                {% elif 'Aguardando' in aluno.status_frequencia %}
-                                    <span class="badge bg-warning">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Aguardando
-                                    </span>
-                                    <br><small class="text-muted">{{ aluno.status_frequencia }}</small>
-                                {% elif 'frequência' in aluno.status_frequencia.lower() %}
-                                    <span class="badge bg-info">
-                                        <i class="fas fa-chart-line me-1"></i>
-                                        {{ aluno.status_frequencia }}
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-secondary">
-                                        <i class="fas fa-user me-1"></i>
-                                        {{ aluno.status_frequencia }}
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <!-- Ações Professor -->
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-outline-success" 
-                                            onclick="marcarPresencaAluno('{{ aluno.nome }}')" 
-                                            title="Marcar presença">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <a href="{{ url_for('frequencia_individual', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-info" 
-                                       title="Gerenciar frequência">
-                                        <i class="fas fa-calendar-check"></i>
-                                    </a>
-                                    <a href="{{ url_for('frequencia_individual', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-secondary" 
-                                       title="Relatório de Frequência">
-                                        <i class="fas fa-chart-bar"></i>
-                                    </a>
-                                    <a href="{{ url_for('ficha_cadastro', aluno_id=aluno.id_unico) }}" class="btn btn-sm btn-outline-warning" 
-                                       title="Ficha de Cadastro" target="_blank">
-                                        <i class="fas fa-id-card"></i>
+                                    <a href="{{ url_for('frequencia_individual', aluno_id=aluno.id) }}" class="btn btn-sm btn-outline-info" title="Ver Frequência">
+                                        <i class="fas fa-chart-line"></i>
                                     </a>
                                 </div>
                             </td>
@@ -410,184 +201,11 @@
                 </table>
             </div>
         {% else %}
-            <div class="text-center text-muted py-5">
-                <i class="fas fa-user-slash fa-4x mb-3"></i>
-                <h4>Nenhum aluno cadastrado</h4>
-                <p>Não há alunos cadastrados no sistema no momento.</p>
-                <a href="{{ url_for('recarregar_dados') }}" class="btn btn-primary">
-                    <i class="fas fa-sync-alt me-2"></i>
-                    Recarregar Dados
-                </a>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle me-2"></i>
+                Nenhum aluno cadastrado ainda.
             </div>
         {% endif %}
-    </div>
-</div>
-
-
-
-<!-- Botões de Ação -->
-<div class="row mt-4">
-    <div class="col-12 text-center">
-        <a href="{{ url_for('presenca') }}" class="btn btn-primary me-2">
-            <i class="fas fa-check-circle me-2"></i>
-            Marcar Presença
-        </a>
-        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-2"></i>
-            Voltar ao Dashboard
-        </a>
-    </div>
-</div>
-
-<!-- Modal de Edição de Aluno -->
-<div class="modal fade" id="modalEditarAluno" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>
-                    Editar Dados do Aluno
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="formEditarAluno">
-                    <input type="hidden" id="editAlunoId" name="aluno_id">
-                    
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label for="editNome" class="form-label">
-                                <i class="fas fa-user me-2"></i>
-                                Nome Completo <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control" id="editNome" name="nome" required>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="editTelefone" class="form-label">
-                                <i class="fas fa-phone me-2"></i>
-                                Telefone <span class="text-danger">*</span>
-                            </label>
-                            <input type="tel" class="form-control" id="editTelefone" name="telefone" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="editEmail" class="form-label">
-                                <i class="fas fa-envelope me-2"></i>
-                                E-mail
-                            </label>
-                            <input type="email" class="form-control" id="editEmail" name="email">
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label for="editEndereco" class="form-label">
-                                <i class="fas fa-map-marker-alt me-2"></i>
-                                Endereço
-                            </label>
-                            <input type="text" class="form-control" id="editEndereco" name="endereco">
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label for="editDataNascimento" class="form-label">
-                                <i class="fas fa-birthday-cake me-2"></i>
-                                Data de Nascimento
-                            </label>
-                            <input type="date" class="form-control" id="editDataNascimento" name="data_nascimento">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="editAtividade" class="form-label">
-                                <i class="fas fa-graduation-cap me-2"></i>
-                                Atividade
-                            </label>
-                            <select class="form-control" id="editAtividade" name="atividade">
-                                <option value="">Selecione...</option>
-                                <option value="Natação">Natação</option>
-                                <option value="Informática">Informática</option>
-                                <option value="Fisioterapia">Fisioterapia</option>
-                                <option value="Dança">Dança</option>
-                                <option value="Hidroginástica">Hidroginástica</option>
-                                <option value="Funcional">Funcional</option>
-                                <option value="Karatê">Karatê</option>
-                                <option value="Bombeiro mirim">Bombeiro mirim</option>
-                                <option value="Capoeira">Capoeira</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="editTurma" class="form-label">
-                                <i class="fas fa-clock me-2"></i>
-                                Turma
-                            </label>
-                            <input type="text" class="form-control" id="editTurma" name="turma" 
-                                   placeholder="Ex: Manhã, Tarde, 09:00">
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label for="editObservacoes" class="form-label">
-                                <i class="fas fa-sticky-note me-2"></i>
-                                Observações
-                            </label>
-                            <textarea class="form-control" id="editObservacoes" name="observacoes" 
-                                      rows="3" placeholder="Observações adicionais sobre o aluno..."></textarea>
-                        </div>
-                    </div>
-                </form>
-                
-                <div id="feedbackEdicao"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>
-                    Cancelar
-                </button>
-                <button type="button" class="btn btn-primary" onclick="salvarEdicaoAluno()">
-                    <i class="fas fa-save me-2"></i>
-                    Salvar Alterações
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal de Confirmação de Exclusão -->
-<div class="modal fade" id="modalConfirmarExclusao" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Confirmar Exclusão
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <i class="fas fa-user-times fa-4x text-danger mb-3"></i>
-                <p class="fs-5">Tem certeza que deseja excluir o aluno:</p>
-                <p class="fs-4 fw-bold text-danger" id="nomeAlunoExcluir"></p>
-                <p class="text-muted">Esta ação não pode ser desfeita!</p>
-                
-                <!-- Aviso sobre dados de frequência -->
-                <div id="avisoFrequencia"></div>
-                
-                <input type="hidden" id="idAlunoExcluir">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>
-                    Cancelar
-                </button>
-                <button type="button" class="btn btn-danger" onclick="excluirAluno()">
-                    <i class="fas fa-trash me-2"></i>
-                    Sim, Excluir
-                </button>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -595,501 +213,62 @@
 
 {% block scripts %}
 <script>
-// ===== FUNÇÕES GLOBAIS =====
+function searchAlunos() {
+    var input, filter, table, tr, td, i, txtValue;
+    input = document.getElementById("searchInput");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("alunosTable");
+    tr = table.getElementsByTagName("tr");
 
-// Função para buscar alunos
-function buscarAlunos(termo) {
-    console.log('Executando busca para:', termo);
-    
-    const $tbody = $('#tabelaAlunos tbody');
-    const $totalResultados = $('#totalResultados');
-    
-    // Verificar se os elementos existem
-    if (!$tbody || $tbody.length === 0) {
-        console.log('Elemento tbody não encontrado');
-        return;
+    for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName("td")[0];
+        if (td) {
+            txtValue = td.textContent || td.innerText;
+            if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
     }
-    
-    // Mostrar loading
-    const colspan = {% if nivel_usuario == 'usuario' %}3{% else %}8{% endif %};
-    
-    $tbody.html(`
-        <tr>
-            <td colspan="${colspan}" class="text-center py-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Buscando...</span>
-                </div>
-                <p class="mt-2 text-muted">Buscando alunos...</p>
-            </td>
-        </tr>
-    `);
-    
-    $.ajax({
-        url: '/buscar_alunos',
-        method: 'GET',
-        data: { termo: termo },
-        success: function(response) {
-            console.log('Resposta da busca:', response);
-            if (response.success) {
-                atualizarTabelaAlunos(response.alunos);
-                $totalResultados.text(response.total_encontrado);
-                
-                // Feedback visual
-                if (termo && response.total_encontrado === 0) {
-                    $tbody.html(`
-                        <tr>
-                            <td colspan="${colspan}" class="text-center py-4">
-                                <i class="fas fa-search fa-2x text-muted mb-2"></i>
-                                <p class="text-muted">Nenhum aluno encontrado para "<strong>${termo}</strong>"</p>
-                                <small class="text-muted">Tente usar um termo diferente ou verificar a ortografia.</small>
-                            </td>
-                        </tr>
-                    `);
-                }
-            } else {
-                $tbody.html(`
-                    <tr>
-                        <td colspan="${colspan}" class="text-center py-4 text-danger">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                            <p>Erro na busca: ${response.message}</p>
-                        </td>
-                    </tr>
-                `);
-            }
-        },
-        error: function(xhr, status, error) {
-            console.log('Erro na busca:', error);
-            $tbody.html(`
-                <tr>
-                    <td colspan="${colspan}" class="text-center py-4 text-danger">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                        <p>Erro ao conectar com o servidor</p>
-                        <small class="text-muted">Verifique sua conexão e tente novamente.</small>
-                    </td>
-                </tr>
-            `);
-        }
-    });
 }
 
-// Função para atualizar a tabela com os resultados da busca
-function atualizarTabelaAlunos(alunos) {
-    const $tbody = $('#tabelaAlunos tbody');
-    const colspan = {% if nivel_usuario == 'usuario' %}3{% else %}8{% endif %};
-    
-    if (alunos.length === 0) {
-        $tbody.html(`
-            <tr>
-                <td colspan="${colspan}" class="text-center py-4">
-                    <i class="fas fa-users fa-2x text-muted mb-2"></i>
-                    <p class="text-muted">Nenhum aluno encontrado</p>
-                </td>
-            </tr>
-        `);
-        return;
+function clearSearch() {
+    document.getElementById("searchInput").value = "";
+    searchAlunos();
+}
+
+function confirmarExclusao(id, nome) {
+    if (confirm('Tem certeza que deseja excluir o aluno "' + nome + '"?')) {
+        fetch('/excluir_aluno/' + id, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(function(response) {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Erro ao excluir aluno');
+            }
+        })
+        .catch(function(error) {
+            alert('Erro ao excluir aluno: ' + error);
+        });
     }
-    
-    let html = '';
-    
-    {% if nivel_usuario == 'usuario' %}
-    // Tabela simplificada para professores
-    alunos.forEach(function(aluno) {
-        html += `
-            <tr>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-circle bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
-                             style="width: 35px; height: 35px; font-size: 0.8rem;">
-                            ${aluno.nome.split(' ')[0][0]}${aluno.nome.split(' ').length > 1 ? aluno.nome.split(' ')[aluno.nome.split(' ').length - 1][0] : ''}
-                        </div>
-                        <strong>${aluno.nome}</strong>
-                    </div>
-                </td>
-                <td>
-                    <span class="badge ${getStatusBadgeClass(aluno.status_frequencia)}">
-                        ${aluno.status_frequencia}
-                    </span>
-                </td>
-                <td>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <a href="/frequencia_individual?aluno_id=${aluno.id_unico}" class="btn btn-outline-primary" 
-                           title="Ver Frequência">
-                            <i class="fas fa-chart-bar"></i>
-                        </a>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    {% else %}
-    // Tabela completa para admins
-    alunos.forEach(function(aluno) {
-        html += `
-            <tr>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-circle bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
-                             style="width: 35px; height: 35px; font-size: 0.8rem;">
-                            ${aluno.nome.split(' ')[0][0]}${aluno.nome.split(' ').length > 1 ? aluno.nome.split(' ')[aluno.nome.split(' ').length - 1][0] : ''}
-                        </div>
-                        <strong>${aluno.nome}</strong>
-                    </div>
-                </td>
-                <td>
-                    <a href="tel:${aluno.telefone}" class="text-decoration-none">
-                        <i class="fas fa-phone-alt text-success me-1"></i>
-                        ${aluno.telefone}
-                    </a>
-                </td>
-                <td>
-                    <i class="fas fa-map-marker-alt text-info me-1"></i>
-                    ${aluno.endereco}
-                </td>
-                <td>
-                    <i class="fas fa-birthday-cake text-warning me-1"></i>
-                    ${aluno.data_nascimento}
-                </td>
-                <td>
-                    <span class="badge bg-info">
-                        <i class="fas fa-dumbbell me-1"></i>
-                        ${aluno.atividade}
-                    </span>
-                </td>
-                <td>
-                    <small class="text-muted">
-                        <i class="fas fa-calendar-check me-1"></i>
-                        ${aluno.data_cadastro}
-                    </small>
-                </td>
-                <td>
-                    <span class="badge ${getStatusBadgeClass(aluno.status_frequencia)}">
-                        ${aluno.status_frequencia}
-                    </span>
-                </td>
-                <td>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-primary" 
-                                onclick="editarAluno('${aluno.id_unico}')" 
-                                title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <a href="/frequencia_individual?aluno_id=${aluno.id_unico}" class="btn btn-outline-info" 
-                           title="Ver Frequência">
-                            <i class="fas fa-chart-bar"></i>
-                        </a>
-                        <button type="button" class="btn btn-outline-danger" 
-                                onclick="confirmarExclusao('${aluno.id_unico}', '${aluno.nome}')" 
-                                title="Excluir">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    {% endif %}
-    
-    $tbody.html(html);
 }
 
-// Função auxiliar para determinar a classe do badge de status
-function getStatusBadgeClass(status) {
-    if (status.includes('Dados disponíveis')) return 'bg-success';
-    if (status.includes('Aguardando')) return 'bg-warning';
-    if (status.includes('Sem dados')) return 'bg-secondary';
-    return 'bg-info';
+function editarAluno(id) {
+    window.location.href = '/editar_aluno/' + id;
 }
 
-// ===== INICIALIZAÇÃO =====
-
-$(document).ready(function() {
-    console.log('Document ready iniciado');
-    
-    // Variáveis globais
-    let timeoutBusca;
-    const $filtroBusca = $('#filtroBusca');
-    const $btnBuscar = $('#btnBuscar');
-    const $limparBusca = $('#limparBusca');
-    const $totalResultados = $('#totalResultados');
-    const $tbody = $('#tabelaAlunos tbody');
-    
-    console.log('Elementos encontrados:', {
-        filtroBusca: $filtroBusca.length,
-        btnBuscar: $btnBuscar.length,
-        limparBusca: $limparBusca.length,
-        totalResultados: $totalResultados.length,
-        tbody: $tbody.length
-    });
-
-    // ===== EVENT LISTENERS =====
-    
-    // Event listener para o botão buscar
-    $btnBuscar.on('click', function(e) {
-        e.preventDefault();
-        console.log('Botão buscar clicado');
-        const termo = $filtroBusca.val().trim();
-        buscarAlunos(termo);
-    });
-    
-    // Event listener para o botão limpar
-    $limparBusca.on('click', function(e) {
-        e.preventDefault();
-        console.log('Botão limpar clicado');
-        $filtroBusca.val('');
-        buscarAlunos('');
-    });
-    
-    // Busca em tempo real com debounce
-    $filtroBusca.on('input', function() {
-        clearTimeout(timeoutBusca);
-        const termo = $(this).val().trim();
-        
-        timeoutBusca = setTimeout(function() {
-            buscarAlunos(termo);
-        }, 300); // Aguarda 300ms após o usuário parar de digitar
-    });
-    
-    // Busca ao pressionar Enter
-    $filtroBusca.on('keypress', function(e) {
-        if (e.which === 13) { // Enter key
-            e.preventDefault();
-            buscarAlunos($(this).val().trim());
-        }
-    });
-    
-    // Busca inicial
-    buscarAlunos('');
-    
-    console.log('Document ready finalizado');
-}); // Fechamento do $(document).ready()
-
-// ===== FUNÇÕES GLOBAIS PARA AÇÕES DE ALUNOS =====
-
-// Função para buscar manualmente (botão buscar) - mantida para compatibilidade
-window.buscarManual = function() {
-    console.log('=== FUNÇÃO BUSCAR MANUAL CHAMADA ===');
-    const termo = $('#filtroBusca').val().trim();
-    buscarAlunos(termo);
-    console.log('Busca manual executada para:', termo);
-};
-
-// Função para limpar busca manualmente (fallback) - mantida para compatibilidade
-window.limparBuscaManual = function() {
-    console.log('=== FUNÇÃO LIMPAR BUSCA MANUAL CHAMADA ===');
-    $('#filtroBusca').val('');
-    buscarAlunos('');
-    console.log('Busca limpa manualmente');
-};
-
-// Função para editar aluno
-window.editarAluno = function(alunoId) {
-    console.log('DEBUG: editarAluno chamado com ID:', alunoId);
-    
-    $.ajax({
-        url: `/obter_aluno/${alunoId}`,
-        method: 'GET',
-        success: function(response) {
-            console.log('DEBUG: Resposta recebida:', response);
-            
-            if (response.success) {
-                const aluno = response.aluno;
-                console.log('DEBUG: Aluno a ser editado:', aluno);
-                
-                // Preencher formulário
-                $('#editAlunoId').val(alunoId);
-                $('#editNome').val(aluno.nome);
-                $('#editTelefone').val(aluno.telefone);
-                $('#editEmail').val(aluno.email);
-                $('#editEndereco').val(aluno.endereco);
-                $('#editAtividade').val(aluno.atividade);
-                $('#editTurma').val(aluno.turma);
-                $('#editObservacoes').val(aluno.observacoes);
-                
-                // Converter data se necessário
-                if (aluno.data_nascimento && aluno.data_nascimento !== 'A definir') {
-                    const data = aluno.data_nascimento;
-                    if (data.includes('/')) {
-                        const [dia, mes, ano] = data.split('/');
-                        $('#editDataNascimento').val(`${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`);
-                    } else {
-                        $('#editDataNascimento').val(data);
-                    }
-                }
-                
-                // Limpar feedbacks
-                $('#feedbackEdicao').html('');
-                
-                // Mostrar modal
-                $('#modalEditarAluno').modal('show');
-            } else {
-                console.log('DEBUG: Erro na resposta:', response.message);
-                alert('Erro ao carregar dados do aluno: ' + response.message);
-            }
-        },
-        error: function(xhr, status, error) {
-            console.log('DEBUG: Erro na requisição:', error);
-            console.log('DEBUG: Status:', status);
-            console.log('DEBUG: XHR:', xhr);
-            alert('Erro ao carregar dados do aluno');
-        }
-    });
-};
-
-// Função para salvar edição
-window.salvarEdicaoAluno = function() {
-    const alunoId = $('#editAlunoId').val();
-    const formData = new FormData($('#formEditarAluno')[0]);
-    
-    $.ajax({
-        url: `/editar_aluno/${alunoId}`,
-        method: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-            if (response.success) {
-                $('#feedbackEdicao').html(`
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle me-2"></i>
-                        ${response.message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `);
-                
-                // Fechar modal e recarregar página
-                setTimeout(function() {
-                    $('#modalEditarAluno').modal('hide');
-                    location.reload();
-                }, 1500);
-            } else {
-                $('#feedbackEdicao').html(`
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        ${response.message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `);
-            }
-        },
-        error: function() {
-            $('#feedbackEdicao').html(`
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Erro ao salvar alterações
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `);
-        }
-    });
+function atualizarTabela() {
+    location.reload();
 }
 
-// Função para confirmar exclusão
-window.confirmarExclusao = function(alunoId, nomeAluno) {
-    $('#idAlunoExcluir').val(alunoId);
-    $('#nomeAlunoExcluir').text(nomeAluno);
-    
-    // Buscar informações detalhadas do aluno para verificar frequência
-    $.ajax({
-        url: `/obter_aluno/${alunoId}`,
-        method: 'GET',
-        success: function(response) {
-            if (response.success && response.dados_presenca) {
-                const totalRegistros = response.dados_presenca.total_presencas + response.dados_presenca.total_faltas;
-                $('#avisoFrequencia').html(
-                    `<div class="alert alert-warning mt-3">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Atenção:</strong> Este aluno possui <strong>${totalRegistros} registros de frequência</strong> 
-                        que também serão excluídos permanentemente.
-                    </div>`
-                );
-            } else {
-                $('#avisoFrequencia').html(
-                    `<div class="alert alert-info mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Este aluno não possui registros de frequência.
-                    </div>`
-                );
-            }
-        },
-        error: function() {
-            $('#avisoFrequencia').html('');
-        }
-    });
-    
-    $('#modalConfirmarExclusao').modal('show');
-}
-
-// Função para excluir aluno
-window.excluirAluno = function() {
-    const alunoId = $('#idAlunoExcluir').val();
-    const nomeAluno = $('#nomeAlunoExcluir').text();
-    
-    // Feedback visual no botão
-    const botaoExcluir = $('.btn-danger:contains("Sim, Excluir")');
-    const textoOriginal = botaoExcluir.html();
-    botaoExcluir.html('<i class="fas fa-spinner fa-spin me-2"></i>Excluindo...');
-    botaoExcluir.prop('disabled', true);
-    
-    $.ajax({
-        url: `/excluir_aluno/${alunoId}`,
-        method: 'POST',
-        success: function(response) {
-            if (response.success) {
-                $('#modalConfirmarExclusao').modal('hide');
-                
-                // Mostrar mensagem detalhada de sucesso
-                let mensagem = `✅ ${response.message}`;
-                if (response.frequencia_removida) {
-                    mensagem += `\n📊 ${response.registros_removidos} registros de frequência também foram removidos.`;
-                }
-                
-                // Mostrar notificação melhorada
-                $('body').append(`
-                    <div class="toast-container position-fixed top-0 end-0 p-3">
-                        <div class="toast show" role="alert">
-                            <div class="toast-header bg-success text-white">
-                                <i class="fas fa-check-circle me-2"></i>
-                                <strong class="me-auto">Exclusão Realizada</strong>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
-                            </div>
-                            <div class="toast-body">
-                                <p class="mb-1"><strong>${nomeAluno}</strong> foi excluído com sucesso!</p>
-                                ${response.frequencia_removida ? 
-                                    `<small class="text-muted">📊 ${response.registros_removidos} registros de frequência também foram removidos.</small>` : 
-                                    '<small class="text-muted">Nenhum registro de frequência foi encontrado.</small>'
-                                }
-                            </div>
-                        </div>
-                    </div>
-                `);
-                
-                // Auto-remover toast após 5 segundos
-                setTimeout(function() {
-                    $('.toast').toast('hide');
-                }, 5000);
-                
-                // Recarregar página após 2 segundos
-                setTimeout(function() {
-                    location.reload();
-                }, 2000);
-            } else {
-                // Restaurar botão
-                botaoExcluir.html(textoOriginal);
-                botaoExcluir.prop('disabled', false);
-                
-                alert('Erro ao excluir aluno: ' + response.message);
-            }
-        },
-        error: function() {
-            // Restaurar botão
-            botaoExcluir.html(textoOriginal);
-            botaoExcluir.prop('disabled', false);
-            
-            alert('Erro ao conectar com o servidor. Tente novamente.');
-        }
-    });
-}
-
-
+setTimeout(function() {
+    atualizarTabela();
+}, 30000);
 </script>
 {% endblock %}

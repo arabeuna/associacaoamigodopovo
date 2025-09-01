@@ -304,8 +304,8 @@
 <script>
 // Definir data atual como padrão
 document.addEventListener('DOMContentLoaded', function() {
-    const hoje = new Date().toISOString().split('T')[0];
-    const dataInput = document.getElementById('data_presenca');
+    var hoje = new Date().toISOString().split('T')[0];
+    var dataInput = document.getElementById('data_presenca');
     if (dataInput) {
         dataInput.value = hoje;
     }
@@ -318,7 +318,7 @@ function editarPresenca(data, horario, status, observacoes) {
     document.getElementById('edit_status').value = status;
     document.getElementById('edit_observacoes').value = observacoes;
     
-    const modal = new bootstrap.Modal(document.getElementById('modalEditarPresenca'));
+    var modal = new bootstrap.Modal(document.getElementById('modalEditarPresenca'));
     modal.show();
 }
 
@@ -327,14 +327,14 @@ function salvarEdicao() {
     // Implementar lógica para salvar edição
     alert('Funcionalidade de edição será implementada em breve.');
     
-    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarPresenca'));
+    var modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarPresenca'));
     modal.hide();
 }
 
 // Função para limpar formulário
 function limparFormulario() {
     document.getElementById('formPresenca').reset();
-    const hoje = new Date().toISOString().split('T')[0];
+    var hoje = new Date().toISOString().split('T')[0];
     document.getElementById('data_presenca').value = hoje;
 }
 
@@ -342,7 +342,7 @@ function limparFormulario() {
 document.getElementById('formPresenca').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    const formData = new FormData(this);
+    var formData = new FormData(this);
     
     fetch('{{ url_for("marcar_presenca_detalhada") }}', {
         method: 'POST',

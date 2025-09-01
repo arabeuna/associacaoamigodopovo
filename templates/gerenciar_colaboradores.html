@@ -408,16 +408,81 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Gerenciar Permissões -->
+<div class="modal fade" id="modalPermissoes" tabindex="-1" aria-labelledby="modalPermissoesLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPermissoesLabel">
+                    <i class="fas fa-user-shield me-2"></i>
+                    Gerenciar Permissões
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formPermissoes" method="POST" action="{{ url_for('gerenciar_permissoes') }}">
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Usuário:</strong></label>
+                            <p id="permissaoUsuario" class="text-muted"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Nome:</strong></label>
+                            <p id="permissaoNome" class="text-muted"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="nivelPermissao" class="form-label">Nível de Permissão</label>
+                        <select class="form-select" id="nivelPermissao" name="nivel" required>
+                            <option value="admin_master">Admin Master</option>
+                            <option value="admin">Admin</option>
+                            <option value="professor">Professor</option>
+                            <option value="usuario">Usuário</option>
+                        </select>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Níveis de Permissão:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Admin Master:</strong> Acesso total ao sistema</li>
+                            <li><strong>Admin:</strong> Gerenciamento de usuários e relatórios</li>
+                            <li><strong>Professor:</strong> Gerenciamento de turmas e atividades</li>
+                            <li><strong>Usuário:</strong> Acesso básico às funcionalidades</li>
+                        </ul>
+                    </div>
+                    
+                    <input type="hidden" id="usuarioPermissao" name="usuario">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        Salvar Permissões
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Dados dos colaboradores
+var colaboradores = {{ colaboradores|tojson|safe }};
+
 // Atualizar estatísticas
 function atualizarEstatisticas() {
-    const totalColaboradores = {{ colaboradores|length }};
-    const adminMasters = document.querySelectorAll('.badge.bg-danger').length;
-    const professores = document.querySelectorAll('.badge.bg-info').length;
-    const usuariosAtivos = document.querySelectorAll('.badge.bg-success').length;
+    var totalColaboradores = {{ colaboradores|length }};
+    var adminMasters = document.querySelectorAll('.badge.bg-danger').length;
+    var professores = document.querySelectorAll('.badge.bg-info').length;
+    var usuariosAtivos = document.querySelectorAll('.badge.bg-success').length;
     
     document.getElementById('total-colaboradores').textContent = totalColaboradores;
     document.getElementById('admin-masters').textContent = adminMasters;
@@ -427,8 +492,8 @@ function atualizarEstatisticas() {
 
 // Toggle campo de atividade responsável
 function toggleAtividadeResponsavel() {
-    const nivel = document.getElementById('nivel').value;
-    const divAtividade = document.getElementById('div_atividade_responsavel');
+    var nivel = document.getElementById('nivel').value;
+    var divAtividade = document.getElementById('div_atividade_responsavel');
     
     if (nivel === 'professor' || nivel === 'usuario') {
         divAtividade.style.display = 'block';
@@ -442,8 +507,8 @@ function toggleAtividadeResponsavel() {
 
 // Toggle campo de atividade responsável no modal de edição
 function toggleEditAtividadeResponsavel() {
-    const nivel = document.getElementById('edit_nivel').value;
-    const divAtividade = document.getElementById('edit_div_atividade_responsavel');
+    var nivel = document.getElementById('edit_nivel').value;
+    var divAtividade = document.getElementById('edit_div_atividade_responsavel');
     
     if (nivel === 'professor' || nivel === 'usuario') {
         divAtividade.style.display = 'block';
@@ -456,7 +521,7 @@ function toggleEditAtividadeResponsavel() {
 // Editar colaborador
 function editarColaborador(usuario) {
     // Buscar dados do colaborador
-    const colaborador = colaboradoresData[usuario];
+    var colaborador = colaboradores.find(function(c) { return c.usuario === usuario; });
     if (!colaborador) {
         alert('Colaborador não encontrado!');
         return;
@@ -474,46 +539,183 @@ function editarColaborador(usuario) {
     // Mostrar/ocultar campo de atividade baseado no nível
     toggleEditAtividadeResponsavel();
     
-    const modal = new bootstrap.Modal(document.getElementById('modalEditarColaborador'));
+    var modal = new bootstrap.Modal(document.getElementById('modalEditarColaborador'));
     modal.show();
 }
 
 // Ver detalhes do colaborador
 function verDetalhesColaborador(usuario) {
-    alert(`Visualizando detalhes do colaborador: ${usuario}`);
-    // Aqui você implementaria a lógica para mostrar detalhes
+    // Fazer requisição para obter dados do colaborador
+    fetch('/obter_colaborador/' + usuario, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(function(data) {
+        if (data.success) {
+            var colaborador = data.colaborador;
+            
+            // Criar modal com detalhes do colaborador
+            var modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = 
+                '<div class="modal-dialog modal-lg">' +
+                    '<div class="modal-content">' +
+                        '<div class="modal-header">' +
+                            '<h5 class="modal-title">Detalhes do Colaborador</h5>' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+                        '</div>' +
+                        '<div class="modal-body">' +
+                            '<div class="row">' +
+                                '<div class="col-md-6">' +
+                                    '<h6>Informações Básicas</h6>' +
+                                    '<p><strong>Usuário:</strong> ' + colaborador.username + '</p>' +
+                                    '<p><strong>Nome:</strong> ' + colaborador.nome + '</p>' +
+                                    '<p><strong>Nível:</strong> <span class="badge bg-' + (colaborador.nivel === 'admin' ? 'warning' : 'info') + '">' + colaborador.nivel + '</span></p>' +
+                                    '<p><strong>Status:</strong> <span class="badge bg-' + (colaborador.ativo ? 'success' : 'danger') + '">' + (colaborador.ativo ? 'Ativo' : 'Inativo') + '</span></p>' +
+                                    '<p><strong>Data de Criação:</strong> ' + (colaborador.data_criacao || 'Não informado') + '</p>' +
+                                    '<p><strong>Criado por:</strong> ' + (colaborador.criado_por || 'Não informado') + '</p>' +
+                                '</div>' +
+                                '<div class="col-md-6">' +
+                                    '<h6>Permissões</h6>' +
+                                    '<div class="mb-3">' +
+                                        (colaborador.permissoes && colaborador.permissoes.length > 0 ? 
+                                            colaborador.permissoes.map(function(perm) { return '<span class="badge bg-secondary me-1 mb-1">' + perm + '</span>'; }).join('') : 
+                                            '<span class="text-muted">Nenhuma permissão específica</span>'
+                                        ) +
+                                    '</div>' +
+                                    (colaborador.atividade_responsavel ? 
+                                        '<h6>Atividade Responsável</h6>' +
+                                        '<p><span class="badge bg-primary">' + colaborador.atividade_responsavel + '</span></p>'
+                                     : '') +
+                                    (colaborador.alunos_atribuidos && colaborador.alunos_atribuidos.length > 0 ? 
+                                        '<h6>Alunos Atribuídos</h6>' +
+                                        '<p><span class="badge bg-info">' + colaborador.alunos_atribuidos.length + ' alunos</span></p>'
+                                     : '') +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="modal-footer">' +
+                            '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>' +
+                            '<button type="button" class="btn btn-primary" onclick="gerenciarPermissoes(\'' + colaborador.username + '\')" data-bs-dismiss="modal">' +
+                                '<i class="fas fa-cog"></i> Gerenciar Permissões' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            
+            document.body.appendChild(modal);
+            var bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            // Remove modal do DOM quando fechado
+            modal.addEventListener('hidden.bs.modal', function() {
+                document.body.removeChild(modal);
+            });
+        } else {
+            alert('Erro ao carregar detalhes do colaborador: ' + data.message);
+        }
+    })
+    .catch(function(error) {
+        console.error('Erro:', error);
+        alert('Erro ao carregar detalhes do colaborador.');
+    });
 }
 
 // Gerenciar permissões do colaborador
 function gerenciarPermissoes(usuario) {
-    alert(`Gerenciando permissões do colaborador: ${usuario}`);
-    // Aqui você implementaria a lógica para gerenciar permissões
+    // Buscar dados do colaborador
+    var colaborador = colaboradores.find(function(c) { return c.usuario === usuario; });
+    if (!colaborador) {
+        alert('Colaborador não encontrado!');
+        return;
+    }
+    
+    // Preencher modal com dados do colaborador
+    document.getElementById('permissaoUsuario').textContent = colaborador.usuario;
+    document.getElementById('permissaoNome').textContent = colaborador.nome;
+    document.getElementById('nivelPermissao').value = colaborador.nivel;
+    document.getElementById('usuarioPermissao').value = colaborador.usuario;
+    
+    // Mostrar modal
+    var modal = new bootstrap.Modal(document.getElementById('modalPermissoes'));
+    modal.show();
 }
 
 // Ativar colaborador
 function ativarColaborador(usuario) {
-    if (confirm(`Deseja ativar o colaborador "${usuario}"?`)) {
-        // Aqui você implementaria a lógica para ativar
-        alert(`Colaborador "${usuario}" ativado com sucesso!`);
-        location.reload();
+    if (confirm('Deseja ativar o colaborador "' + usuario + '"?')) {
+        fetch('/ativar_colaborador/' + usuario, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                alert('Colaborador "' + usuario + '" ativado com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro ao ativar colaborador: ' + data.message);
+            }
+        })
+        .catch(function(error) {
+            console.error('Erro:', error);
+            alert('Erro ao ativar colaborador. Tente novamente.');
+        });
     }
 }
 
 // Desativar colaborador
 function desativarColaborador(usuario) {
-    if (confirm(`Deseja desativar o colaborador "${usuario}"?`)) {
-        // Aqui você implementaria a lógica para desativar
-        alert(`Colaborador "${usuario}" desativado com sucesso!`);
-        location.reload();
+    if (confirm('Deseja desativar o colaborador "' + usuario + '"?')) {
+        fetch('/desativar_colaborador/' + usuario, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                alert('Colaborador "' + usuario + '" desativado com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro ao desativar colaborador: ' + data.message);
+            }
+        })
+        .catch(function(error) {
+            console.error('Erro:', error);
+            alert('Erro ao desativar colaborador. Tente novamente.');
+        });
     }
 }
 
 // Excluir colaborador
 function excluirColaborador(usuario) {
-    if (confirm(`ATENÇÃO: Deseja realmente excluir o colaborador "${usuario}"?\n\nEsta ação não pode ser desfeita.`)) {
-        // Aqui você implementaria a lógica para excluir
-        alert(`Colaborador "${usuario}" excluído com sucesso!`);
-        location.reload();
+    if (confirm('ATENÇÃO: Deseja realmente excluir o colaborador "' + usuario + '"?\n\nEsta ação não pode ser desfeita.')) {
+        fetch('/excluir_colaborador/' + usuario, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                alert('Colaborador "' + usuario + '" excluído com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro ao excluir colaborador: ' + data.message);
+            }
+        })
+        .catch(function(error) {
+            console.error('Erro:', error);
+            alert('Erro ao excluir colaborador. Tente novamente.');
+        });
     }
 }
 
@@ -521,12 +723,12 @@ function excluirColaborador(usuario) {
 document.getElementById('formNovoColaborador').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    const usuario = document.getElementById('usuario').value.trim();
-    const nome = document.getElementById('nome').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const nivel = document.getElementById('nivel').value;
-    const senha = document.getElementById('senha').value;
-    const confirmarSenha = document.getElementById('confirmar_senha').value;
+    var usuario = document.getElementById('usuario').value.trim();
+    var nome = document.getElementById('nome').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var nivel = document.getElementById('nivel').value;
+    var senha = document.getElementById('senha').value;
+    var confirmarSenha = document.getElementById('confirmar_senha').value;
     
     if (!usuario || !nome || !email || !nivel || !senha || !confirmarSenha) {
         alert('Por favor, preencha todos os campos obrigatórios.');
@@ -544,7 +746,7 @@ document.getElementById('formNovoColaborador').addEventListener('submit', functi
     }
     
     // Verificar se o usuário já existe
-    const colaboradoresExistentes = Array.from(document.querySelectorAll('tbody tr')).map(row => {
+    var colaboradoresExistentes = Array.from(document.querySelectorAll('tbody tr')).map(function(row) {
         return row.querySelector('td:first-child strong').textContent;
     });
     
@@ -559,7 +761,7 @@ document.getElementById('formNovoColaborador').addEventListener('submit', functi
 });
 
 // Dados dos colaboradores para edição
-const colaboradoresData = {{ colaboradores|tojson }};
+// colaboradoresData já está disponível através da variável global colaboradores
 
 // Inicializar estatísticas
 document.addEventListener('DOMContentLoaded', function() {

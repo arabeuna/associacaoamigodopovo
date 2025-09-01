@@ -294,5 +294,21 @@
     "tipo_usuario": "admin_master",
     "acao": "Fez Login",
     "detalhes": "Usuário Admin Master fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-31T17:40:48.980988",
+    "data_hora": "31/08/2025 às 17:40:48",
+    "usuario": "admin",
+    "tipo_usuario": "admin",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Administrador Geral fez login no sistema"
+  },
+  {
+    "timestamp": "2025-08-31T17:43:08.409376",
+    "data_hora": "31/08/2025 às 17:43:08",
+    "usuario": "admin",
+    "tipo_usuario": "admin",
+    "acao": "Fez Login",
+    "detalhes": "Usuário Administrador Geral fez login no sistema"
   }
 ]

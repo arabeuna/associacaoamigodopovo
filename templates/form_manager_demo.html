@@ -326,9 +326,9 @@ class FormManager {
     }
 
     setupFormListeners() {
-        const forms = document.querySelectorAll('.form-demo');
-        forms.forEach(form => {
-            const formId = form.id;
+        var forms = document.querySelectorAll('.form-demo');
+        forms.forEach(function(form) {
+            var formId = form.id;
             this.forms.set(formId, {
                 element: form,
                 data: new FormData(form),
@@ -359,7 +359,7 @@ class FormManager {
     }
 
     handleFormChange(formId, event) {
-        const form = this.forms.get(formId);
+        var form = this.forms.get(formId);
         if (!form) return;
 
         // Atualizar dados do formulário
@@ -372,13 +372,13 @@ class FormManager {
         
         // Atualizar status
         this.updateFormStatus(formId);
-        this.logActivity(`Formulário ${formId} atualizado`, formId, 'info');
+        this.logActivity('Formulário ' + formId + ' atualizado', formId, 'info');
     }
 
     handleFormSubmit(formId) {
-        const form = this.forms.get(formId);
+        var form = this.forms.get(formId);
         if (!form || !form.valid) {
-            this.showError(`Formulário ${formId} inválido`);
+            this.showError('Formulário ' + formId + ' inválido');
             return;
         }
 
@@ -392,11 +392,11 @@ class FormManager {
         .then(response => response.json())
         .then(data => {
             this.showResult(data);
-            this.logActivity(`Formulário ${formId} enviado com sucesso`, formId, 'success');
+            this.logActivity('Formulário ' + formId + ' enviado com sucesso', formId, 'success');
         })
         .catch(error => {
-            this.showError(`Erro ao enviar formulário: ${error.message}`);
-            this.logActivity(`Erro ao enviar ${formId}`, formId, 'error');
+            this.showError('Erro ao enviar formulário: ' + error.message);
+            this.logActivity('Erro ao enviar ' + formId, formId, 'error');
         })
         .finally(() => {
             this.hideLoading(formId);
@@ -404,14 +404,14 @@ class FormManager {
     }
 
     validateField(field) {
-        const isValid = field.checkValidity();
+        var isValid = field.checkValidity();
         field.classList.toggle('is-invalid', !isValid);
         field.classList.toggle('is-valid', isValid);
         return isValid;
     }
 
     validateForm(form) {
-        const fields = form.querySelectorAll('.form-control, .form-select');
+        var fields = form.querySelectorAll('.form-control, .form-select');
         let isValid = true;
         
         fields.forEach(field => {
@@ -424,7 +424,7 @@ class FormManager {
     }
 
     memoizeFormData(formId, formData) {
-        const key = `${formId}_${Date.now()}`;
+        const key = formId + '_' + Date.now();
         const data = Object.fromEntries(formData.entries());
         
         // Usar useMemo pattern para evitar recálculos desnecessários
@@ -436,7 +436,7 @@ class FormManager {
 
     updateFormStatus(formId) {
         const form = this.forms.get(formId);
-        const statusElement = document.getElementById(`status${formId.charAt(0).toUpperCase() + formId.slice(1)}`);
+        const statusElement = document.getElementById('status' + formId.charAt(0).toUpperCase() + formId.slice(1));
         
         if (statusElement) {
             if (form.valid) {
@@ -465,7 +465,7 @@ class FormManager {
     }
 
     showLoading(formId) {
-        const submitBtn = document.querySelector(`#${formId} button[type="submit"]`);
+        const submitBtn = document.querySelector('#' + formId + ' button[type="submit"]');
         if (submitBtn) {
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
             submitBtn.disabled = true;
@@ -473,7 +473,7 @@ class FormManager {
     }
 
     hideLoading(formId) {
-        const submitBtn = document.querySelector(`#${formId} button[type="submit"]`);
+        const submitBtn = document.querySelector('#' + formId + ' button[type="submit"]');
         if (submitBtn) {
             const originalText = submitBtn.getAttribute('data-original-text') || 'Enviar';
             submitBtn.innerHTML = originalText;
@@ -483,12 +483,7 @@ class FormManager {
 
     showResult(data) {
         const modalBody = document.getElementById('resultadoModalBody');
-        modalBody.innerHTML = `
-            <div class="alert alert-${data.success ? 'success' : 'danger'}">
-                <h6>${data.message}</h6>
-                ${data.data ? `<pre class="mt-3">${JSON.stringify(data.data, null, 2)}</pre>` : ''}
-            </div>
-        `;
+        modalBody.innerHTML = '<div class="alert alert-' + (data.success ? 'success' : 'danger') + '"><h6>' + data.message + '</h6>' + (data.data ? '<pre class="mt-3">' + JSON.stringify(data.data, null, 2) + '</pre>' : '') + '</div>';
         
         const modal = new bootstrap.Modal(document.getElementById('resultadoModal'));
         modal.show();
@@ -500,12 +495,9 @@ class FormManager {
 
     showAlert(message, type) {
         const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show position-fixed';
         alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
+        alertDiv.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
         
         document.body.appendChild(alertDiv);
         
@@ -522,7 +514,7 @@ class FormManager {
             action: action,
             form: form,
             status: status,
-            details: `Operação realizada em ${new Date().toLocaleString()}`
+            details: 'Operação realizada em ' + new Date().toLocaleString()
         };
 
         this.log.unshift(logEntry);
@@ -539,29 +531,11 @@ class FormManager {
         if (!tbody) return;
 
         if (this.log.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="text-center text-muted">
-                        <i class="fas fa-inbox me-2"></i>Nenhuma atividade registrada
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted"><i class="fas fa-inbox me-2"></i>Nenhuma atividade registrada</td></tr>';
             return;
         }
 
-        tbody.innerHTML = this.log.map(entry => `
-            <tr>
-                <td><small>${entry.timestamp}</small></td>
-                <td>${entry.action}</td>
-                <td><span class="badge bg-secondary">${entry.form}</span></td>
-                <td>
-                    <span class="badge bg-${entry.status === 'success' ? 'success' : entry.status === 'error' ? 'danger' : 'info'}">
-                        ${entry.status}
-                    </span>
-                </td>
-                <td><small>${entry.details}</small></td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = this.log.map(entry => '<tr><td><small>' + entry.timestamp + '</small></td><td>' + entry.action + '</td><td><span class="badge bg-secondary">' + entry.form + '</span></td><td><span class="badge bg-' + (entry.status === 'success' ? 'success' : entry.status === 'error' ? 'danger' : 'info') + '">' + entry.status + '</span></td><td><small>' + entry.details + '</small></td></tr>').join('');
     }
 
     resetForms() {
@@ -595,7 +569,7 @@ class FormManager {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `formmanager_demo_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+        a.download = 'formmanager_demo_' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

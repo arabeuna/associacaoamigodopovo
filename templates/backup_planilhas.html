@@ -206,7 +206,7 @@
 
 {% block scripts %}
 <script>
-let backups = [];
+var backups = [];
 
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function() {
@@ -218,9 +218,9 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('uploadForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    const formData = new FormData(this);
-    const atividade = formData.get('atividade');
-    const arquivo = formData.get('arquivo');
+    var formData = new FormData(this);
+    var atividade = formData.get('atividade');
+    var arquivo = formData.get('arquivo');
     
     if (!atividade || !arquivo) {
         mostrarAlerta('Por favor, preencha todos os campos', 'warning');
@@ -228,8 +228,8 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     }
     
     // Mostrar loading
-    const btnSubmit = this.querySelector('button[type="submit"]');
-    const originalText = btnSubmit.innerHTML;
+    var btnSubmit = this.querySelector('button[type="submit"]');
+    var originalText = btnSubmit.innerHTML;
     btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
     btnSubmit.disabled = true;
     
@@ -280,64 +280,63 @@ function atualizarListaBackups() {
 
 // Renderizar tabela de backups
 function renderizarTabelaBackups() {
-    const tbody = document.getElementById('backupsTableBody');
+    var tbody = document.getElementById('backupsTableBody');
     
     if (backups.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center text-muted">
-                    <i class="fas fa-inbox me-2"></i>Nenhum backup encontrado
-                </td>
-            </tr>
-        `;
+        tbody.innerHTML = '
+            <tr>' +
+                '<td colspan="5" class="text-center text-muted">' +
+                    '<i class="fas fa-inbox me-2"></i>Nenhum backup encontrado' +
+                '</td>' +
+            '</tr>';
         return;
     }
     
-    tbody.innerHTML = backups.map(backup => `
-        <tr>
-            <td>
-                <span class="badge bg-primary">${backup.atividade}</span>
-            </td>
-            <td>
-                <i class="fas fa-file-excel text-success me-2"></i>
-                <small>${backup.filename}</small>
-            </td>
-            <td>${backup.size} KB</td>
-            <td>${backup.modified}</td>
-            <td>
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary" onclick="baixarBackup('${backup.filename}')" title="Baixar">
-                        <i class="fas fa-download"></i>
-                    </button>
-                    <button class="btn btn-outline-info" onclick="visualizarBackup('${backup.filename}')" title="Visualizar">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-outline-danger" onclick="excluirBackup('${backup.filename}')" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = backups.map(backup => 
+        '<tr>' +
+            '<td>' +
+                '<span class="badge bg-primary">' + backup.atividade + '</span>' +
+            '</td>' +
+            '<td>' +
+                '<i class="fas fa-file-excel text-success me-2"></i>' +
+                '<small>' + backup.filename + '</small>' +
+            '</td>' +
+            '<td>' + backup.size + ' KB</td>' +
+            '<td>' + backup.modified + '</td>' +
+            '<td>' +
+                '<div class="btn-group btn-group-sm">' +
+                    '<button class="btn btn-outline-primary" onclick="baixarBackup(\'' + backup.filename + '\')" title="Baixar">' +
+                        '<i class="fas fa-download"></i>' +
+                    '</button>' +
+                    '<button class="btn btn-outline-info" onclick="visualizarBackup(\'' + backup.filename + '\')" title="Visualizar">' +
+                        '<i class="fas fa-eye"></i>' +
+                    '</button>' +
+                    '<button class="btn btn-outline-danger" onclick="excluirBackup(\'' + backup.filename + '\')" title="Excluir">' +
+                        '<i class="fas fa-trash"></i>' +
+                    '</button>' +
+                '</div>' +
+            '</td>' +
+        '</tr>'
+    ).join('');
 }
 
 // Atualizar estatísticas
 function atualizarEstatisticas() {
-    const hoje = new Date().toLocaleDateString('pt-BR');
-    const backupsHoje = backups.filter(b => b.modified.startsWith(hoje)).length;
-    const espacoTotal = backups.reduce((total, b) => total + b.size, 0);
-    const ultimoBackup = backups.length > 0 ? backups[0].modified : '-';
+    var hoje = new Date().toLocaleDateString('pt-BR');
+    var backupsHoje = backups.filter(b => b.modified.startsWith(hoje)).length;
+    var espacoTotal = backups.reduce((total, b) => total + b.size, 0);
+    var ultimoBackup = backups.length > 0 ? backups[0].modified : '-';
     
     document.getElementById('total-backups').textContent = backups.length;
     document.getElementById('backups-hoje').textContent = backupsHoje;
-    document.getElementById('espaco-utilizado').textContent = `${espacoTotal} KB`;
+    document.getElementById('espaco-utilizado').textContent = espacoTotal + ' KB';
     document.getElementById('ultimo-backup').textContent = ultimoBackup;
 }
 
 // Baixar backup específico
 function baixarBackup(filename) {
-    const link = document.createElement('a');
-    link.href = `/uploads/${filename}`;
+    var link = document.createElement('a');
+    link.href = '/uploads/' + filename;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
@@ -346,17 +345,17 @@ function baixarBackup(filename) {
 
 // Visualizar backup
 function visualizarBackup(filename) {
-    mostrarAlerta(`Visualização de ${filename} - Funcionalidade em desenvolvimento`, 'info');
+    mostrarAlerta('Visualização de ' + filename + ' - Funcionalidade em desenvolvimento', 'info');
 }
 
 // Excluir backup
 function excluirBackup(filename) {
     mostrarConfirmacao(
-        `Deseja realmente excluir o backup "${filename}"?`,
+        'Deseja realmente excluir o backup "' + filename + '"?',
         'Esta ação não pode ser desfeita.',
         () => {
             // Implementar exclusão
-            mostrarAlerta(`Backup ${filename} excluído com sucesso`, 'success');
+            mostrarAlerta('Backup ' + filename + ' excluído com sucesso', 'success');
             atualizarListaBackups();
         }
     );
@@ -371,7 +370,7 @@ function baixarTodosBackups() {
     
     mostrarConfirmacao(
         'Baixar todos os backups?',
-        `Serão baixados ${backups.length} arquivos.`,
+        'Serão baixados ' + backups.length + ' arquivos.',
         () => {
             backups.forEach(backup => {
                 setTimeout(() => baixarBackup(backup.filename), 100);
@@ -416,10 +415,10 @@ function gerarTodasPlanilhas() {
 
 // Limpar backups antigos
 function limparBackupsAntigos() {
-    const backupsAntigos = backups.filter(b => {
-        const dataBackup = new Date(b.modified.split(' ')[0].split('/').reverse().join('-'));
-        const hoje = new Date();
-        const diffDias = Math.floor((hoje - dataBackup) / (1000 * 60 * 60 * 24));
+    var backupsAntigos = backups.filter(b => {
+        var dataBackup = new Date(b.modified.split(' ')[0].split('/').reverse().join('-'));
+        var hoje = new Date();
+        var diffDias = Math.floor((hoje - dataBackup) / (1000 * 60 * 60 * 24));
         return diffDias > 30; // Mais de 30 dias
     });
     
@@ -430,10 +429,10 @@ function limparBackupsAntigos() {
     
     mostrarConfirmacao(
         'Limpar backups antigos?',
-        `Serão removidos ${backupsAntigos.length} backups com mais de 30 dias.`,
+        'Serão removidos ' + backupsAntigos.length + ' backups com mais de 30 dias.',
         () => {
             // Implementar limpeza
-            mostrarAlerta(`${backupsAntigos.length} backups antigos removidos com sucesso`, 'success');
+            mostrarAlerta(backupsAntigos.length + ' backups antigos removidos com sucesso', 'success');
             atualizarListaBackups();
         }
     );
@@ -446,13 +445,10 @@ function limparFormulario() {
 
 // Funções auxiliares
 function mostrarAlerta(mensagem, tipo) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    var alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-' + tipo + ' alert-dismissible fade show position-fixed';
     alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    alertDiv.innerHTML = `
-        ${mensagem}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
+    alertDiv.innerHTML = mensagem + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
     
     document.body.appendChild(alertDiv);
     
@@ -464,12 +460,9 @@ function mostrarAlerta(mensagem, tipo) {
 }
 
 function mostrarConfirmacao(titulo, mensagem, callback) {
-    document.getElementById('confirmModalBody').innerHTML = `
-        <h6>${titulo}</h6>
-        <p class="text-muted">${mensagem}</p>
-    `;
+    document.getElementById('confirmModalBody').innerHTML = '<h6>' + titulo + '</h6><p class="text-muted">' + mensagem + '</p>';
     
-    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    var modal = new bootstrap.Modal(document.getElementById('confirmModal'));
     modal.show();
     
     document.getElementById('confirmModalBtn').onclick = () => {

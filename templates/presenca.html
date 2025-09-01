@@ -207,17 +207,17 @@
 <script>
 // Atualizar estatísticas
 function atualizarEstatisticas() {
-    const presentes = document.querySelectorAll('.status-presenca[value="P"]').length;
-    const faltas = document.querySelectorAll('.status-presenca[value="F"]').length;
-    const justificadas = document.querySelectorAll('.status-presenca[value="J"]').length;
-    const total = presentes + faltas + justificadas;
+    var presentes = document.querySelectorAll('.status-presenca[value="P"]').length;
+    var faltas = document.querySelectorAll('.status-presenca[value="F"]').length;
+    var justificadas = document.querySelectorAll('.status-presenca[value="J"]').length;
+    var total = presentes + faltas + justificadas;
     
     document.getElementById('total-presentes').textContent = presentes;
     document.getElementById('total-faltas').textContent = faltas;
     document.getElementById('total-justificadas').textContent = justificadas;
     
     if (total > 0) {
-        const taxa = ((presentes / total) * 100).toFixed(1);
+        var taxa = ((presentes / total) * 100).toFixed(1);
         document.getElementById('taxa-presenca').textContent = taxa + '%';
     } else {
         document.getElementById('taxa-presenca').textContent = '0%';
@@ -227,13 +227,13 @@ function atualizarEstatisticas() {
 // Atualizar status de presença
 function atualizarStatus(aluno, status) {
     // Aqui você pode implementar a lógica para salvar no banco
-    console.log(`Aluno: ${aluno}, Status: ${status}`);
+    console.log('Aluno: ' + aluno + ', Status: ' + status);
     atualizarEstatisticas();
 }
 
 // Marcar todos como presentes
 function marcarTodosPresentes() {
-    document.querySelectorAll('.status-presenca').forEach(select => {
+    document.querySelectorAll('.status-presenca').forEach(function(select) {
         select.value = 'P';
     });
     atualizarEstatisticas();
@@ -241,7 +241,7 @@ function marcarTodosPresentes() {
 
 // Marcar todos como faltaram
 function marcarTodosFaltaram() {
-    document.querySelectorAll('.status-presenca').forEach(select => {
+    document.querySelectorAll('.status-presenca').forEach(function(select) {
         select.value = 'F';
     });
     atualizarEstatisticas();
@@ -249,41 +249,168 @@ function marcarTodosFaltaram() {
 
 // Salvar presença individual
 function salvarPresenca(aluno) {
-    const status = document.querySelector(`.status-presenca[data-aluno="${aluno}"]`).value;
-    const observacoes = document.querySelector(`.observacoes-presenca[data-aluno="${aluno}"]`).value;
+    var status = document.querySelector('.status-presenca[data-aluno="' + aluno + '"]').value;
+    var observacoes = document.querySelector('.observacoes-presenca[data-aluno="' + aluno + '"]').value;
+    var dataInput = document.getElementById('data');
+    var data = dataInput ? dataInput.value : new Date().toISOString().split('T')[0];
     
     if (!status) {
         alert('Selecione um status para o aluno ' + aluno);
         return;
     }
     
-    // Aqui você implementaria a chamada para salvar no banco
-    console.log(`Salvando presença: ${aluno} - ${status} - ${observacoes}`);
-    alert(`Presença de ${aluno} salva com sucesso!`);
+    // Fazer requisição para salvar no backend
+    fetch('/salvar_presenca', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            aluno: aluno,
+            status: status,
+            observacoes: observacoes,
+            data: data
+        })
+    })
+    .then(response => response.json())
+    .then(function(data) {
+        if (data.success) {
+            // Mostrar toast de sucesso
+            mostrarToast(data.message, 'success');
+            
+            // Desabilitar os campos para este aluno
+            var statusSelect = document.querySelector('.status-presenca[data-aluno="' + aluno + '"]');
+            var obsTextarea = document.querySelector('.observacoes-presenca[data-aluno="' + aluno + '"]');
+            var saveButton = document.querySelector('button[onclick="salvarPresenca(\'' + aluno + '\')"');
+            
+            if (statusSelect) statusSelect.disabled = true;
+            if (obsTextarea) obsTextarea.disabled = true;
+            if (saveButton) {
+                saveButton.disabled = true;
+                saveButton.innerHTML = '<i class="fas fa-check"></i> Salvo';
+                saveButton.classList.remove('btn-primary');
+                saveButton.classList.add('btn-success');
+            }
+        } else {
+            mostrarToast(data.message, 'error');
+        }
+    })
+    .catch(function(error) {
+        console.error('Erro ao salvar presença:', error);
+        mostrarToast('Erro ao salvar presença. Tente novamente.', 'error');
+    });
 }
 
 // Salvar todas as presenças
 function salvarTodasPresencas() {
-    const presencas = [];
+    var presencas = [];
+    var dataInput = document.getElementById('data');
+    var data = dataInput ? dataInput.value : new Date().toISOString().split('T')[0];
     
-    document.querySelectorAll('.status-presenca').forEach(select => {
-        const aluno = select.dataset.aluno;
-        const status = select.value;
-        const observacoes = document.querySelector(`.observacoes-presenca[data-aluno="${aluno}"]`).value;
+    document.querySelectorAll('.status-presenca').forEach(function(select) {
+        var aluno = select.dataset.aluno;
+        var status = select.value;
+        var observacoes = document.querySelector('.observacoes-presenca[data-aluno="' + aluno + '"]').value;
         
-        if (status) {
+        if (status && !select.disabled) { // Só incluir se não foi salvo ainda
             presencas.push({ aluno, status, observacoes });
         }
     });
     
     if (presencas.length === 0) {
-        alert('Nenhuma presença para salvar. Selecione pelo menos um status.');
+        mostrarToast('Nenhuma presença para salvar. Selecione pelo menos um status ou todas já foram salvas.', 'warning');
         return;
     }
     
-    // Aqui você implementaria a chamada para salvar todas no banco
-    console.log('Presenças a salvar:', presencas);
-    alert(`${presencas.length} presenças salvas com sucesso!`);
+    // Desabilitar botão durante o salvamento
+    var botaoSalvar = document.querySelector('button[onclick="salvarTodasPresencas()"]');
+    if (botaoSalvar) {
+        botaoSalvar.disabled = true;
+        botaoSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
+    }
+    
+    // Fazer requisição para salvar todas no backend
+    fetch('/salvar_todas_presencas', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            presencas: presencas,
+            data: data
+        })
+    })
+    .then(response => response.json())
+    .then(function(data) {
+        if (data.success) {
+            mostrarToast(data.message, 'success');
+            
+            // Desabilitar todos os campos salvos com sucesso
+            presencas.forEach(function(presenca) {
+                var statusSelect = document.querySelector('.status-presenca[data-aluno="' + presenca.aluno + '"]');
+                var obsTextarea = document.querySelector('.observacoes-presenca[data-aluno="' + presenca.aluno + '"]');
+                var saveButton = document.querySelector('button[onclick="salvarPresenca(\'' + presenca.aluno + '\')"');
+                
+                if (statusSelect) statusSelect.disabled = true;
+                if (obsTextarea) obsTextarea.disabled = true;
+                if (saveButton) {
+                    saveButton.disabled = true;
+                    saveButton.innerHTML = '<i class="fas fa-check"></i> Salvo';
+                    saveButton.classList.remove('btn-primary');
+                    saveButton.classList.add('btn-success');
+                }
+            });
+            
+            // Mostrar erros se houver
+            if (data.erros && data.erros.length > 0) {
+                console.warn('Erros encontrados:', data.erros);
+                mostrarToast('Alguns erros ocorreram. Verifique o console para detalhes.', 'warning');
+            }
+        } else {
+            mostrarToast(data.message, 'error');
+            if (data.erros && data.erros.length > 0) {
+                console.error('Erros:', data.erros);
+            }
+        }
+    })
+    .catch(function(error) {
+        console.error('Erro ao salvar presenças:', error);
+        mostrarToast('Erro ao salvar presenças. Tente novamente.', 'error');
+    })
+    .finally(function() {
+        // Reabilitar botão
+        if (botaoSalvar) {
+            botaoSalvar.disabled = false;
+            botaoSalvar.innerHTML = '<i class="fas fa-save me-2"></i>Salvar Todas as Presenças';
+        }
+    });
+}
+
+// Função para mostrar toast notifications
+function mostrarToast(mensagem, tipo) {
+    tipo = tipo || 'info';
+    // Remover toast anterior se existir
+    var toastExistente = document.querySelector('.toast-notification');
+    if (toastExistente) {
+        toastExistente.remove();
+    }
+    
+    // Criar elemento do toast
+    var toast = document.createElement('div');
+    toast.className = 'toast-notification alert alert-' + (tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : tipo === 'warning' ? 'warning' : 'info') + ' alert-dismissible fade show';
+    toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    
+    toast.innerHTML = '<strong>' + (tipo === 'success' ? 'Sucesso!' : tipo === 'error' ? 'Erro!' : tipo === 'warning' ? 'Atenção!' : 'Info!') + '</strong> ' + mensagem + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    
+    // Adicionar ao body
+    document.body.appendChild(toast);
+    
+    // Remover automaticamente após 5 segundos
+    setTimeout(function() {
+        if (toast && toast.parentNode) {
+            toast.remove();
+        }
+    }, 5000);
 }
 
 // Inicializar estatísticas
@@ -291,9 +418,9 @@ document.addEventListener('DOMContentLoaded', function() {
     atualizarEstatisticas();
     
     // Definir data atual como padrão se não estiver definida
-    const dataInput = document.getElementById('data');
+    var dataInput = document.getElementById('data');
     if (dataInput && !dataInput.value) {
-        const hoje = new Date().toISOString().split('T')[0];
+        var hoje = new Date().toISOString().split('T')[0];
         dataInput.value = hoje;
     }
 });

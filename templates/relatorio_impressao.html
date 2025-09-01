@@ -344,7 +344,7 @@
         function formatarData(dataStr) {
             if (!dataStr) return 'N/A';
             try {
-                const data = new Date(dataStr);
+                var data = new Date(dataStr);
                 return data.toLocaleDateString('pt-BR');
             } catch (e) {
                 return dataStr;
@@ -354,22 +354,22 @@
         // Função para formatar telefone
         function formatarTelefone(telefone) {
             if (!telefone) return 'N/A';
-            const cleaned = telefone.replace(/\D/g, '');
+            var cleaned = telefone.replace(/\D/g, '');
             if (cleaned.length === 11) {
-                return `(${cleaned.slice(0,2)}) ${cleaned.slice(2,7)}-${cleaned.slice(7)}`;
+                return '(' + cleaned.slice(0,2) + ') ' + cleaned.slice(2,7) + '-' + cleaned.slice(7);
             } else if (cleaned.length === 10) {
-                return `(${cleaned.slice(0,2)}) ${cleaned.slice(2,6)}-${cleaned.slice(6)}`;
+                return '(' + cleaned.slice(0,2) + ') ' + cleaned.slice(2,6) + '-' + cleaned.slice(6);
             }
             return telefone;
         }
         
         // Aplicar formatação aos dados da tabela
         document.addEventListener('DOMContentLoaded', function() {
-            const tabela = document.querySelector('.resultados-table');
+            var tabela = document.querySelector('.resultados-table');
             if (tabela) {
-                const linhas = tabela.querySelectorAll('tbody tr');
-                linhas.forEach(linha => {
-                    const celulas = linha.querySelectorAll('td');
+                var linhas = tabela.querySelectorAll('tbody tr');
+                linhas.forEach(function(linha) {
+                    var celulas = linha.querySelectorAll('td');
                     if (celulas.length >= 6) {
                         // Formatar data de cadastro
                         if (celulas[4]) {

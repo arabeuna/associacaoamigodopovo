@@ -363,9 +363,9 @@ document.getElementById('cep').addEventListener('blur', function() {
 });
 
 function buscarCep(cep) {
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+    fetch('https://viacep.com.br/ws/' + cep + '/json/')
         .then(response => response.json())
-        .then(data => {
+        .then(function(data) {
             if (!data.erro) {
                 document.getElementById('logradouro').value = data.logradouro;
                 document.getElementById('bairro').value = data.bairro;
@@ -373,7 +373,7 @@ function buscarCep(cep) {
                 document.getElementById('estado').value = data.uf;
             }
         })
-        .catch(error => {
+        .catch(function(error) {
             console.error('Erro ao buscar CEP:', error);
         });
 }
