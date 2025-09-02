@@ -97,6 +97,18 @@
     </div>
 </div>
 
+<!-- Botão Novo Aluno -->
+{% if nivel_usuario in ['admin', 'admin_master'] %}
+<div class="row mb-4">
+    <div class="col-12 text-end">
+        <a href="{{ url_for('novo_aluno') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-user-plus me-2"></i>
+            Novo Aluno
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <!-- Sistema de Busca Simples -->
 <div class="row mb-4">
     <div class="col-12">

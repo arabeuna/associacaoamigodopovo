@@ -209,20 +209,24 @@ class DatabaseIntegration:
         Substitui o método salvar_dados() para alunos
         """
         try:
-            # Buscar atividade e turma
+            print(f"[DEBUG DB] Iniciando salvamento no banco: {dados_aluno.get('nome')}")
+            # Buscar atividade
             atividade = None
-            turma = None
-            
             if dados_aluno.get('atividade'):
+                print(f"[DEBUG DB] Buscando atividade: {dados_aluno['atividade']}")
                 atividade = self.db.query(Atividade).filter(
                     Atividade.nome == dados_aluno['atividade']
                 ).first()
+                print(f"[DEBUG DB] Atividade encontrada: {atividade.nome if atividade else 'Não encontrada'}")
             
-            if dados_aluno.get('turma') and atividade:
+            # Buscar turma
+            turma = None
+            if dados_aluno.get('turma'):
+                print(f"[DEBUG DB] Buscando turma: {dados_aluno['turma']}")
                 turma = self.db.query(Turma).filter(
-                    Turma.nome == dados_aluno['turma'],
-                    Turma.atividade_id == atividade.id
+                    Turma.nome == dados_aluno['turma']
                 ).first()
+                print(f"[DEBUG DB] Turma encontrada: {turma.nome if turma else 'Não encontrada'}")
             
             # Converter datas
             data_nascimento = None
@@ -249,14 +253,21 @@ class DatabaseIntegration:
                 elif isinstance(dados_aluno['data_cadastro'], date):
                     data_cadastro = dados_aluno['data_cadastro']
             
+            # Gerar ID único
+            import uuid
+            id_unico = dados_aluno.get('id_unico') or str(uuid.uuid4())[:8]
+            
             # Criar novo aluno
+            print(f"[DEBUG DB] Criando objeto aluno com id_unico={id_unico}, atividade_id={atividade.id if atividade else None}, turma_id={turma.id if turma else None}")
             novo_aluno = Aluno(
+                id_unico=id_unico,
                 nome=dados_aluno.get('nome', ''),
                 telefone=dados_aluno.get('telefone', ''),
                 endereco=dados_aluno.get('endereco', ''),
                 email=dados_aluno.get('email', ''),
                 data_nascimento=data_nascimento,
                 data_cadastro=data_cadastro,
+                titulo_eleitor=dados_aluno.get('titulo_eleitor', ''),
                 atividade_id=atividade.id if atividade else None,
                 turma_id=turma.id if turma else None,
                 status_frequencia=dados_aluno.get('status_frequencia', ''),
@@ -265,8 +276,11 @@ class DatabaseIntegration:
                 criado_por=dados_aluno.get('criado_por', 'sistema')
             )
             
+            print(f"[DEBUG DB] Adicionando aluno à sessão")
             self.db.add(novo_aluno)
+            print(f"[DEBUG DB] Fazendo commit")
             self.db.commit()
+            print(f"[DEBUG DB] Aluno salvo com ID: {novo_aluno.id}")
             
             # Atualizar contadores
             if atividade:
@@ -311,6 +325,7 @@ class DatabaseIntegration:
             aluno.telefone = dados_aluno.get('telefone', aluno.telefone)
             aluno.endereco = dados_aluno.get('endereco', aluno.endereco)
             aluno.email = dados_aluno.get('email', aluno.email)
+            aluno.titulo_eleitor = dados_aluno.get('titulo_eleitor', aluno.titulo_eleitor)
             
             # Converter data de nascimento
             if dados_aluno.get('data_nascimento'):

@@ -2941,15 +2941,21 @@ def relatorio_mes(mes):
 @apenas_admin_ou_master
 def cadastrar_aluno():
     try:
+        print("[DEBUG] Iniciando cadastro de aluno")
         # Obter dados do formulário
         nome = request.form.get('nome', '').strip()
         telefone = request.form.get('telefone', '').strip()
         email = request.form.get('email', '').strip()
         endereco = request.form.get('endereco', '').strip()
         data_nascimento = request.form.get('data_nascimento', '').strip()
+        titulo_eleitor = request.form.get('titulo_eleitor', '').strip()
         atividade = request.form.get('atividade', '').strip()
         turma = request.form.get('turma', '').strip()
+        status_frequencia = request.form.get('status', '').strip()  # Campo 'status' do formulário
         observacoes = request.form.get('observacoes', '').strip()
+        
+        print(f"[DEBUG] Dados recebidos: nome={nome}, telefone={telefone}, atividade={atividade}, turma={turma}, status={status_frequencia}")
+
         
         # Validações
         if not nome or len(nome) < 3:
@@ -2957,6 +2963,15 @@ def cadastrar_aluno():
         
         if not telefone or len(telefone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')) < 10:
             return jsonify({'success': False, 'message': 'Telefone deve ter pelo menos 10 dígitos'})
+            
+        if not atividade:
+            return jsonify({'success': False, 'message': 'Atividade é obrigatória'})
+            
+        if not turma:
+            return jsonify({'success': False, 'message': 'Turma é obrigatória'})
+            
+        if not status_frequencia:
+            return jsonify({'success': False, 'message': 'Status é obrigatório'})
         
         # Verificar se aluno já existe no banco de dados (nome + telefone)
         # Permitir nomes duplicados, mas não nome + telefone duplicados
@@ -2974,14 +2989,14 @@ def cadastrar_aluno():
         finally:
             db.close()
         
-        # Converter data de nascimento se fornecida
+        # Manter data de nascimento no formato YYYY-MM-DD para o banco de dados
         data_nasc_formatada = data_nascimento
         if data_nascimento:
             try:
-                # Converter de YYYY-MM-DD para DD/MM/YYYY
+                # Validar formato da data
                 from datetime import datetime as dt
                 data_obj = dt.strptime(data_nascimento, '%Y-%m-%d')
-                data_nasc_formatada = data_obj.strftime('%d/%m/%Y')
+                data_nasc_formatada = data_nascimento  # Manter formato original para o banco
             except:
                 data_nasc_formatada = data_nascimento
         
@@ -2992,7 +3007,8 @@ def cadastrar_aluno():
             'endereco': endereco if endereco else 'A definir',
             'email': email if email else f"{nome.lower().replace(' ', '.')}@email.com",
             'data_nascimento': data_nasc_formatada if data_nasc_formatada else 'A definir',
-            'data_cadastro': datetime.now().strftime('%d/%m/%Y'),
+            'data_cadastro': datetime.now().strftime('%Y-%m-%d'),
+            'titulo_eleitor': titulo_eleitor if titulo_eleitor else '',
             'atividade': atividade if atividade else 'A definir',
             'turma': turma if turma else 'A definir',
             'status_frequencia': 'Novo cadastro',
@@ -3000,18 +3016,23 @@ def cadastrar_aluno():
         }
         
         # Adicionar ao sistema e salvar
+        print(f"[DEBUG] Tentando salvar aluno: {novo_aluno}")
         sucesso = academia.adicionar_aluno(novo_aluno)
+        print(f"[DEBUG] Resultado do salvamento: {sucesso}")
         
         if sucesso:
+            print(f"[DEBUG] Cadastro bem-sucedido para {nome}")
             return jsonify({
                 'success': True, 
                 'message': f'Aluno {nome} cadastrado com sucesso!',
                 'total_alunos': len(academia.alunos_reais)
             })
         else:
+            print(f"[DEBUG] Falha no cadastro para {nome}")
             return jsonify({'success': False, 'message': 'Erro ao salvar dados do aluno'})
         
     except Exception as e:
+        print(f"[DEBUG] Exceção no cadastro: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro ao cadastrar aluno: {str(e)}'})
 
 @app.route('/editar_aluno/<aluno_id>', methods=['GET', 'PUT', 'POST'])
@@ -3041,6 +3062,7 @@ def editar_aluno(aluno_id):
         email = request.form.get('email', '').strip()
         endereco = request.form.get('endereco', '').strip()
         data_nascimento = request.form.get('data_nascimento', '').strip()
+        titulo_eleitor = request.form.get('titulo_eleitor', '').strip()
         atividade = request.form.get('atividade', '').strip()
         turma = request.form.get('turma', '').strip()
         observacoes = request.form.get('observacoes', '').strip()
@@ -3098,6 +3120,7 @@ def editar_aluno(aluno_id):
         aluno_db.atividade_id = atividade_id
         aluno_db.turma_id = turma_id
         aluno_db.observacoes = observacoes if observacoes else ''
+        aluno_db.titulo_eleitor = titulo_eleitor if titulo_eleitor else ''
         
         # Salvar alterações
         db.commit()
@@ -3125,7 +3148,8 @@ def editar_aluno(aluno_id):
             'data_nascimento': str(aluno_db.data_nascimento) if aluno_db.data_nascimento else '',
             'atividade': atividade_nome,
             'turma': turma_nome,
-            'observacoes': aluno_db.observacoes
+            'observacoes': aluno_db.observacoes,
+            'titulo_eleitor': aluno_db.titulo_eleitor if aluno_db.titulo_eleitor else ''
         }
         
         close_db(db)
@@ -3208,7 +3232,8 @@ def obter_aluno(aluno_id):
             'turma': '',      # Será preenchido separadamente
             'observacoes': aluno_db.observacoes or '',
             'data_cadastro': str(aluno_db.data_cadastro) if aluno_db.data_cadastro else '',
-            'status_frequencia': aluno_db.status_frequencia or 'Sem dados'
+            'status_frequencia': aluno_db.status_frequencia or 'Sem dados',
+            'titulo_eleitor': aluno_db.titulo_eleitor or ''
         }
         
         # Buscar nome da atividade separadamente se houver atividade_id
@@ -3888,6 +3913,37 @@ def gerar_todas_planilhas():
 @app.route('/health')
 def health():
     return jsonify({'status': 'ok', 'service': 'Associação Amigo do Povo'})
+
+# Endpoint para executar migrações manualmente em produção
+@app.route('/migrate')
+def migrate():
+    """Executa migrações do banco de dados manualmente"""
+    try:
+        # Importar e executar o script de migração
+        from migrate_production import executar_migracao_producao
+        
+        # Executar migração
+        sucesso = executar_migracao_producao()
+        
+        if sucesso:
+            return jsonify({
+                'status': 'success',
+                'message': 'Migração executada com sucesso!',
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Falha na execução da migração',
+                'timestamp': datetime.now().isoformat()
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Erro ao executar migração: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 # Teste simples
 @app.route('/test')

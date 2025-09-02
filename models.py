@@ -116,6 +116,7 @@ class Aluno(Base):
     email = Column(String(200))
     data_nascimento = Column(Date)
     data_cadastro = Column(Date, default=datetime.utcnow().date())
+    titulo_eleitor = Column(String(20))  # Campo não obrigatório para título de eleitor
     atividade_id = Column(Integer, ForeignKey("atividades.id"))
     turma_id = Column(Integer, ForeignKey("turmas.id"))
     status_frequencia = Column(String(200))

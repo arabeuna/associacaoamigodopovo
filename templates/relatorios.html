@@ -331,15 +331,15 @@ function preencherTabela(dados) {
 
     dados.forEach(aluno => {
         const row = document.createElement('tr');
-        row.innerHTML = '
-            <td>' + aluno.nome + '</td>
-            <td>' + aluno.atividade + '</td>
-            <td>' + aluno.turma + '</td>
-            <td>' + aluno.presencas + '</td>
-            <td>' + aluno.faltas + '</td>
-            <td>' + aluno.taxa + '%</td>
-            <td><span class="badge bg-success">' + aluno.status + '</span></td>
-        ';
+        row.innerHTML = `
+            <td>${aluno.nome}</td>
+            <td>${aluno.atividade}</td>
+            <td>${aluno.turma}</td>
+            <td>${aluno.presencas}</td>
+            <td>${aluno.faltas}</td>
+            <td>${aluno.taxa}%</td>
+            <td><span class="badge bg-success">${aluno.status}</span></td>
+        `;
         tbody.appendChild(row);
     });
 }
@@ -400,19 +400,28 @@ function imprimirRelatorio() {
 }
 
 // Atualizar gráficos quando mudar filtros
-document.getElementById('mes').addEventListener('change', function() {
-    // Aqui você implementaria a lógica para atualizar os dados baseado no mês selecionado
-    console.log('Mês selecionado:', this.value);
-});
+const mesSelect = document.getElementById('mes');
+if (mesSelect) {
+    mesSelect.addEventListener('change', function() {
+        // Aqui você implementaria a lógica para atualizar os dados baseado no mês selecionado
+        console.log('Mês selecionado:', this.value);
+    });
+}
 
-document.getElementById('atividade').addEventListener('change', function() {
-    // Aqui você implementaria a lógica para atualizar os dados baseado na atividade selecionada
-    console.log('Atividade selecionada:', this.value);
-});
+const atividadeSelect = document.getElementById('atividade');
+if (atividadeSelect) {
+    atividadeSelect.addEventListener('change', function() {
+        // Aqui você implementaria a lógica para atualizar os dados baseado na atividade selecionada
+        console.log('Atividade selecionada:', this.value);
+    });
+}
 
-document.getElementById('tipo_relatorio').addEventListener('change', function() {
-    // Aqui você implementaria a lógica para mudar o tipo de relatório
-    console.log('Tipo de relatório selecionado:', this.value);
-});
+const tipoRelatorioSelect = document.getElementById('tipo_relatorio');
+if (tipoRelatorioSelect) {
+    tipoRelatorioSelect.addEventListener('change', function() {
+        // Aqui você implementaria a lógica para mudar o tipo de relatório
+        console.log('Tipo de relatório selecionado:', this.value);
+    });
+}
 </script>
 {% endblock %}

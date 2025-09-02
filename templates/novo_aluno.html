@@ -61,11 +61,18 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="cpf" class="form-label">CPF</label>
-                                <input type="text" class="form-control" id="cpf" name="cpf" placeholder="000.000.000-00">
+                                <input type="text" class="form-control" id="cpf" name="cpf" placeholder="000.000.000-00" value="{% if editando %}{{ aluno.cpf or '' }}{% endif %}">
                             </div>
                             <div class="col-md-6">
                                 <label for="rg" class="form-label">RG</label>
-                                <input type="text" class="form-control" id="rg" name="rg" placeholder="00.000.000-0">
+                                <input type="text" class="form-control" id="rg" name="rg" placeholder="00.000.000-0" value="{% if editando %}{{ aluno.rg or '' }}{% endif %}">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="titulo_eleitor" class="form-label">Título de Eleitor</label>
+                                <input type="text" class="form-control" id="titulo_eleitor" name="titulo_eleitor" placeholder="0000.0000.0000" value="{% if editando %}{{ aluno.titulo_eleitor or '' }}{% endif %}">
                             </div>
                         </div>
 
@@ -334,6 +341,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Máscara para Título de Eleitor
+    const tituloEleitorInput = document.getElementById('titulo_eleitor');
+    if (tituloEleitorInput) {
+        tituloEleitorInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 12) {
+                value = value.replace(/(\d{4})(\d{4})(\d{4})/, '$1.$2.$3');
+                e.target.value = value;
+            }
+        });
+    }
+
     // Definir data atual como padrão para data de início
     const dataInicioInput = document.getElementById('data_inicio');
     if (dataInicioInput) {
@@ -343,12 +362,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Buscar endereço pelo CEP
-document.getElementById('cep').addEventListener('blur', function() {
-    const cep = this.value.replace(/\D/g, '');
-    if (cep.length === 8) {
-        buscarCep(cep);
-    }
-});
+const cepInput = document.getElementById('cep');
+if (cepInput) {
+    cepInput.addEventListener('blur', function() {
+        const cep = this.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            buscarCep(cep);
+        }
+    });
+}
 
 function buscarCep(cep) {
     fetch('https://viacep.com.br/ws/' + cep + '/json/')
@@ -367,44 +389,52 @@ function buscarCep(cep) {
 }
 
 // Validação do formulário
-document.getElementById('formNovoAluno').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Validações básicas
-    const nome = document.getElementById('nome').value.trim();
-    const dataNascimento = document.getElementById('data_nascimento').value;
-    const telefone = document.getElementById('telefone').value.trim();
-    const atividade = document.getElementById('atividade').value;
-    const turma = document.getElementById('turma').value;
-    const status = document.getElementById('status').value;
-    
-    if (!nome || !dataNascimento || !telefone || !atividade || !turma || !status) {
-        alert('Por favor, preencha todos os campos obrigatórios marcados com *');
-        return;
-    }
-    
-    // Validar data de nascimento
-    const hoje = new Date();
-    const nascimento = new Date(dataNascimento);
-    const idade = hoje.getFullYear() - nascimento.getFullYear();
-    
-    if (idade < 5 || idade > 100) {
-        alert('A data de nascimento parece incorreta. Verifique.');
-        return;
-    }
-    
-    // Se tudo estiver ok, enviar formulário
-    alert('Formulário válido! Enviando dados...');
-    this.submit();
-});
+const formNovoAluno = document.getElementById('formNovoAluno');
+if (formNovoAluno) {
+    formNovoAluno.addEventListener('submit', function(e) {
+        // Validações básicas
+        const nome = document.getElementById('nome').value.trim();
+        const dataNascimento = document.getElementById('data_nascimento').value;
+        const telefone = document.getElementById('telefone').value.trim();
+        const atividade = document.getElementById('atividade').value;
+        const turma = document.getElementById('turma').value;
+        const status = document.getElementById('status').value;
+        
+        if (!nome || !dataNascimento || !telefone || !atividade || !turma || !status) {
+            e.preventDefault();
+            alert('Por favor, preencha todos os campos obrigatórios marcados com *');
+            return;
+        }
+        
+        // Validar data de nascimento
+        const hoje = new Date();
+        const nascimento = new Date(dataNascimento);
+        const idade = hoje.getFullYear() - nascimento.getFullYear();
+        
+        if (idade < 5 || idade > 100) {
+            e.preventDefault();
+            alert('A data de nascimento parece incorreta. Verifique.');
+            return;
+        }
+        
+        // Se chegou até aqui, o formulário é válido e será enviado normalmente
+        console.log('Formulário válido, enviando dados...');
+    });
+}
 
 // Limpar formulário
 function limparFormulario() {
-    document.getElementById('formNovoAluno').reset();
+    const form = document.getElementById('formNovoAluno');
+    if (form) {
+        form.reset();
+    }
     
     // Definir data atual como padrão
     const hoje = new Date().toISOString().split('T')[0];
-    document.getElementById('data_inicio').value = hoje;
+    const dataInicioInput = document.getElementById('data_inicio');
+    if (dataInicioInput) {
+        dataInicioInput.value = hoje;
+    }
     
     alert('Formulário limpo com sucesso!');
 }
