@@ -4,7 +4,7 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install -e .
+    buildCommand: pip install -e . && python migrate_production.py
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
