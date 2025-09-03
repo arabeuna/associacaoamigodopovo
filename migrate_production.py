@@ -193,16 +193,26 @@ def migrar_atividades_basicas():
     finally:
         db.close()
 
-def extrair_alunos_sqlite():
-    """Extrai alunos do banco SQLite local se existir"""
-    sqlite_file = 'associacao_amigo_do_povo.db'
-    if not os.path.exists(sqlite_file):
-        print("⚠️ Banco SQLite local não encontrado")
-        return []
-    
+def extrair_alunos_postgresql():
+    """Extrai alunos do banco PostgreSQL local como fallback"""
     try:
-        import sqlite3
-        conn = sqlite3.connect(sqlite_file)
+        import psycopg2
+        from dotenv import load_dotenv
+        
+        # Carregar configurações locais
+        load_dotenv()
+        
+        # Configurações do PostgreSQL local
+        db_config = {
+            'host': os.environ.get('DB_HOST', 'localhost'),
+            'port': os.environ.get('DB_PORT', '5432'),
+            'user': os.environ.get('DB_USER', 'postgres'),
+            'password': os.environ.get('DB_PASSWORD', 'admin123'),
+            'database': os.environ.get('DB_NAME', 'academia_amigo_povo')
+        }
+        
+        # Conectar ao PostgreSQL local
+        conn = psycopg2.connect(**db_config)
         cursor = conn.cursor()
         
         # Buscar todos os alunos com informações das atividades
@@ -212,33 +222,36 @@ def extrair_alunos_sqlite():
                    at.nome as atividade_nome, a.status_frequencia, a.observacoes, a.ativo
             FROM alunos a
             LEFT JOIN atividades at ON a.atividade_id = at.id
-            WHERE a.ativo = 1
+            WHERE a.ativo = true
         """)
         
+        rows = cursor.fetchall()
         alunos_data = []
-        for row in cursor.fetchall():
-            aluno = {
+        
+        for row in rows:
+            aluno_data = {
                 'id_unico': row[0],
                 'nome': row[1],
                 'telefone': row[2] or '',
                 'endereco': row[3] or '',
                 'email': row[4] or '',
-                'data_nascimento': row[5],
-                'data_cadastro': row[6],
+                'data_nascimento': row[5].strftime('%Y-%m-%d') if row[5] else '',
+                'data_cadastro': row[6].strftime('%Y-%m-%d') if row[6] else datetime.now().strftime('%Y-%m-%d'),
                 'titulo_eleitor': row[7] or '',
-                'atividade': row[8],
-                'status_frequencia': row[9] or 'Ativo',
+                'atividade': row[8] or 'Sem atividade',
+                'turma': 'Turma Padrão',
+                'status_frequencia': row[9] or 'ativo',
                 'observacoes': row[10] or '',
                 'ativo': bool(row[11])
             }
-            alunos_data.append(aluno)
+            alunos_data.append(aluno_data)
         
         conn.close()
-        print(f"✅ {len(alunos_data)} alunos extraídos do SQLite local")
+        print(f"✅ Extraídos {len(alunos_data)} alunos do PostgreSQL local")
         return alunos_data
         
     except Exception as e:
-        print(f"❌ Erro ao extrair alunos do SQLite: {e}")
+        print(f"❌ Erro ao extrair alunos do PostgreSQL: {e}")
         return []
 
 def migrar_alunos_existentes():
@@ -260,8 +273,8 @@ def migrar_alunos_existentes():
             with open(arquivo_alunos, 'r', encoding='utf-8') as f:
                 dados_alunos = json.load(f)
         else:
-            print("📄 Arquivo JSON não encontrado, tentando extrair do SQLite...")
-            dados_alunos = extrair_alunos_sqlite()
+            print("📄 Arquivo JSON não encontrado, tentando extrair do PostgreSQL...")
+            dados_alunos = extrair_alunos_postgresql()
             
         if not dados_alunos:
              print("⚠️ Nenhum aluno encontrado para migração")
