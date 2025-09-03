@@ -193,8 +193,56 @@ def migrar_atividades_basicas():
     finally:
         db.close()
 
+def extrair_alunos_sqlite():
+    """Extrai alunos do banco SQLite local se existir"""
+    sqlite_file = 'associacao_amigo_do_povo.db'
+    if not os.path.exists(sqlite_file):
+        print("⚠️ Banco SQLite local não encontrado")
+        return []
+    
+    try:
+        import sqlite3
+        conn = sqlite3.connect(sqlite_file)
+        cursor = conn.cursor()
+        
+        # Buscar todos os alunos com informações das atividades
+        cursor.execute("""
+            SELECT a.id_unico, a.nome, a.telefone, a.endereco, a.email, 
+                   a.data_nascimento, a.data_cadastro, a.titulo_eleitor,
+                   at.nome as atividade_nome, a.status_frequencia, a.observacoes, a.ativo
+            FROM alunos a
+            LEFT JOIN atividades at ON a.atividade_id = at.id
+            WHERE a.ativo = 1
+        """)
+        
+        alunos_data = []
+        for row in cursor.fetchall():
+            aluno = {
+                'id_unico': row[0],
+                'nome': row[1],
+                'telefone': row[2] or '',
+                'endereco': row[3] or '',
+                'email': row[4] or '',
+                'data_nascimento': row[5],
+                'data_cadastro': row[6],
+                'titulo_eleitor': row[7] or '',
+                'atividade': row[8],
+                'status_frequencia': row[9] or 'Ativo',
+                'observacoes': row[10] or '',
+                'ativo': bool(row[11])
+            }
+            alunos_data.append(aluno)
+        
+        conn.close()
+        print(f"✅ {len(alunos_data)} alunos extraídos do SQLite local")
+        return alunos_data
+        
+    except Exception as e:
+        print(f"❌ Erro ao extrair alunos do SQLite: {e}")
+        return []
+
 def migrar_alunos_existentes():
-    """Migra alunos do arquivo JSON local para o banco de produção (se existir)"""
+    """Migra alunos do arquivo JSON local ou SQLite para o banco de produção"""
     db = SessionLocal()
     try:
         # Verificar se já existem alunos
@@ -204,17 +252,20 @@ def migrar_alunos_existentes():
             return True
             
         # Tentar carregar alunos do arquivo JSON local
+        dados_alunos = []
         arquivo_alunos = 'dados_alunos.json'
-        if not os.path.exists(arquivo_alunos):
-            print("⚠️ Arquivo dados_alunos.json não encontrado - pulando migração de alunos")
-            return True
-            
-        with open(arquivo_alunos, 'r', encoding='utf-8') as f:
-            dados_alunos = json.load(f)
+        
+        if os.path.exists(arquivo_alunos):
+            print("📄 Carregando alunos do arquivo JSON...")
+            with open(arquivo_alunos, 'r', encoding='utf-8') as f:
+                dados_alunos = json.load(f)
+        else:
+            print("📄 Arquivo JSON não encontrado, tentando extrair do SQLite...")
+            dados_alunos = extrair_alunos_sqlite()
             
         if not dados_alunos:
-            print("⚠️ Nenhum aluno encontrado no arquivo JSON")
-            return True
+             print("⚠️ Nenhum aluno encontrado para migração")
+             return True
             
         # Migrar alunos
         import uuid
