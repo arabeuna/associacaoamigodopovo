@@ -9,7 +9,6 @@ import io
 from dotenv import load_dotenv
 from models import SessionLocal, engine, Base, Aluno, Atividade, Turma, Usuario, Presenca, get_db
 from database_integration import get_db_integration
-from database_integration_robusto import db_integration_robusto
 
 # Carregar variáveis de ambiente
 # Tenta carregar .env.production primeiro (para ambiente de produção)
@@ -1504,24 +1503,19 @@ class SistemaAcademia:
     def adicionar_aluno(self, novo_aluno):
         """Adiciona um novo aluno e salva os dados no banco PostgreSQL"""
         try:
-            # Salvar no banco de dados PostgreSQL com sistema robusto
-            resultado = db_integration_robusto.salvar_aluno_db_robusto(novo_aluno)
+            # Salvar no banco de dados PostgreSQL
+            db_integration = get_db_integration()
+            aluno_id = db_integration.salvar_aluno_db(novo_aluno)
             
-            if resultado.get('success'):
-                aluno_id = resultado.get('aluno_id')
-                
+            if aluno_id:
                 # Também manter compatibilidade com sistema antigo (temporário)
                 novo_aluno['id'] = aluno_id
                 self.alunos_reais.append(novo_aluno)
                 self.salvar_dados()  # Backup em JSON
-                
-                if resultado.get('method') == 'fallback':
-                    print(f"⚠️ Aluno {novo_aluno.get('nome')} salvo em fallback (conexão indisponível)")
-                else:
-                    print(f"✅ Aluno {novo_aluno.get('nome')} salvo no banco PostgreSQL (ID: {aluno_id})")
+                print(f"✅ Aluno {novo_aluno.get('nome')} salvo no banco PostgreSQL (ID: {aluno_id})")
                 return True
             else:
-                print(f"❌ Falha ao salvar aluno: {resultado.get('message')}")
+                print("❌ Falha ao salvar aluno no banco de dados")
                 return False
         except Exception as e:
             print(f"❌ Erro ao adicionar aluno: {e}")
@@ -4995,54 +4989,6 @@ def service_worker():
     return app.send_static_file('js/service-worker.js'), 200, {'Content-Type': 'application/javascript'}
 
 # Para produção
-
-
-@app.route('/sistema/status')
-@login_obrigatorio
-def status_sistema():
-    """Endpoint para verificar status do sistema de banco de dados"""
-    try:
-        status = db_integration_robusto.get_status_sistema()
-        
-        return jsonify({
-            'success': True,
-            'status': status,
-            'timestamp': datetime.now().isoformat()
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-@app.route('/sistema')
-@login_obrigatorio
-def sistema_admin():
-    """Página de administração do sistema"""
-    return render_template('sistema_status.html')
-
-@app.route('/sistema/processar-fallback', methods=['POST'])
-@login_obrigatorio
-def processar_fallback():
-    """Endpoint para processar registros pendentes do fallback"""
-    try:
-        resultado = db_integration_robusto.processar_fallback_pendente()
-        
-        return jsonify({
-            'success': True,
-            'resultado': resultado,
-            'timestamp': datetime.now().isoformat()
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print("🚀 Iniciando Associação Amigo do Povo...")

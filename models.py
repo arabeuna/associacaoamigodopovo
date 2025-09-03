@@ -140,7 +140,7 @@ class Presenca(Base):
     horario = Column(Time)
     turma_id = Column(Integer, ForeignKey("turmas.id"))
     atividade_id = Column(Integer, ForeignKey("atividades.id"))
-    # status = Column(String(10))  # P=Presente, F=Faltou, J=Justificado - TEMPORARIAMENTE COMENTADO
+    status = Column(String(10))  # P=Presente, F=Faltou, J=Justificado
     observacoes = Column(Text)
     tipo_registro = Column(String(20), default='MANUAL')
     data_registro = Column(DateTime, default=datetime.utcnow)
@@ -152,9 +152,9 @@ class Presenca(Base):
     atividade = relationship("Atividade", back_populates="presencas")
     registrador = relationship("Usuario", foreign_keys=[registrado_por], overlaps="presencas_registradas")
     
-    # __table_args__ = (
-    #     CheckConstraint("status IN ('P', 'F', 'J')", name='check_status_presenca'),
-    # )
+    __table_args__ = (
+        CheckConstraint("status IN ('P', 'F', 'J')", name='check_status_presenca'),
+    )
 
 class BuscaSalva(Base):
     """Modelo para buscas salvas pelos usuários"""

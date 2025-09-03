@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Sistema - Status{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>🔧 Status do Sistema</h2>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>📊 Status da Conexão</h5>
+                </div>
+                <div class="card-body">
+                    <div id="status-info">
+                        <p>Carregando status...</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="atualizarStatus()">🔄 Atualizar Status</button>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>💾 Registros Pendentes (Fallback)</h5>
+                </div>
+                <div class="card-body">
+                    <div id="fallback-info">
+                        <p>Verificando registros pendentes...</p>
+                    </div>
+                    <button class="btn btn-success" onclick="processarFallback()" id="btn-processar">⚡ Processar Pendentes</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>📝 Log de Atividades</h5>
+                </div>
+                <div class="card-body">
+                    <div id="log-atividades" style="height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                        <p>Aguardando atividades...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let logCount = 0;
+
+function adicionarLog(mensagem, tipo = 'info') {
+    const logDiv = document.getElementById('log-atividades');
+    const timestamp = new Date().toLocaleTimeString();
+    const cor = tipo === 'error' ? 'text-danger' : tipo === 'success' ? 'text-success' : 'text-info';
+    
+    logDiv.innerHTML += `<div class="${cor}"><small>[${timestamp}]</small> ${mensagem}</div>`;
+    logDiv.scrollTop = logDiv.scrollHeight;
+    
+    logCount++;
+    if (logCount > 100) {
+        // Limpar logs antigos
+        const lines = logDiv.innerHTML.split('</div>');
+        logDiv.innerHTML = lines.slice(-50).join('</div>');
+        logCount = 50;
+    }
+}
+
+function atualizarStatus() {
+    adicionarLog('🔄 Atualizando status do sistema...');
+    
+    fetch('/sistema/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const status = data.status;
+                const statusHtml = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Conexão com Banco:</strong> 
+                                <span class="badge ${status.database_connected ? 'bg-success' : 'bg-danger'}">
+                                    ${status.database_connected ? '✅ Conectado' : '❌ Desconectado'}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Registros Pendentes:</strong> 
+                                <span class="badge ${status.fallback_records > 0 ? 'bg-warning' : 'bg-success'}">
+                                    ${status.fallback_records} registros
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    <p><small><strong>Última verificação:</strong> ${new Date(status.last_check).toLocaleString()}</small></p>
+                `;
+                
+                document.getElementById('status-info').innerHTML = statusHtml;
+                
+                const fallbackHtml = status.fallback_records > 0 ? 
+                    `<div class="alert alert-warning">⚠️ Existem ${status.fallback_records} registros aguardando processamento.</div>` :
+                    `<div class="alert alert-success">✅ Nenhum registro pendente.</div>`;
+                
+                document.getElementById('fallback-info').innerHTML = fallbackHtml;
+                
+                adicionarLog(`✅ Status atualizado: Banco ${status.database_connected ? 'conectado' : 'desconectado'}, ${status.fallback_records} pendentes`, 'success');
+            } else {
+                adicionarLog(`❌ Erro ao obter status: ${data.error}`, 'error');
+            }
+        })
+        .catch(error => {
+            adicionarLog(`❌ Erro na requisição: ${error.message}`, 'error');
+        });
+}
+
+function processarFallback() {
+    const btn = document.getElementById('btn-processar');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Processando...';
+    
+    adicionarLog('⚡ Iniciando processamento de registros pendentes...');
+    
+    fetch('/sistema/processar-fallback', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const resultado = data.resultado;
+            adicionarLog(`✅ Processamento concluído: ${resultado.processed} processados, ${resultado.remaining} restantes`, 'success');
+            
+            if (resultado.errors && resultado.errors.length > 0) {
+                resultado.errors.forEach(error => {
+                    adicionarLog(`⚠️ ${error}`, 'error');
+                });
+            }
+            
+            // Atualizar status após processamento
+            setTimeout(atualizarStatus, 1000);
+        } else {
+            adicionarLog(`❌ Erro no processamento: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        adicionarLog(`❌ Erro na requisição: ${error.message}`, 'error');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '⚡ Processar Pendentes';
+    });
+}
+
+// Atualizar status automaticamente a cada 30 segundos
+setInterval(atualizarStatus, 30000);
+
+// Carregar status inicial
+document.addEventListener('DOMContentLoaded', atualizarStatus);
+</script>
+{% endblock %}
