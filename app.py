@@ -4124,9 +4124,7 @@ def processar_planilha():
                             on_bad_lines='skip',  # Pular linhas problemáticas
                             engine='python',      # Usar engine Python mais flexível
                             quoting=csv.QUOTE_MINIMAL,
-                            skipinitialspace=True,
-                            error_bad_lines=False,  # Para versões antigas do pandas
-                            warn_bad_lines=True
+                            skipinitialspace=True
                         )
                         print(f"✅ CSV lido com sucesso usando encoding={config['encoding']}, sep='{config['sep']}'")
                         break
