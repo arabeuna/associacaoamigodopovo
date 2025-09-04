@@ -1,3 +1,5 @@
 Deploy trigger - 2025-09-04 00:31:30
 Forçando novo deploy para ativar serviço no Render
 Force redeploy: PWA corrections applied - pwa.js updated
+Deploy trigger - 2025-09-04 11:50:00
+Forçando redeploy após configuração PostgreSQL local
