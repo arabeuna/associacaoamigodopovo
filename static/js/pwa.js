@@ -23,26 +23,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('beforeinstallprompt', (e) => {
   console.log('PWA: Evento beforeinstallprompt disparado');
-  // Previne o comportamento padrão do navegador
-  e.preventDefault();
-  // Armazena o evento para uso posterior
-  deferredPrompt = e;
   
   // Aguarda o DOM estar carregado se necessário
   if (!installButton) {
     installButton = document.getElementById('install-button');
   }
   
-  // Mostra o botão de instalação se ele existir
+  // Verifica se existe botão personalizado
   if (installButton) {
-    console.log('PWA: Mostrando botão de instalação');
+    console.log('PWA: Botão personalizado encontrado - usando controle manual');
+    // Previne o comportamento padrão apenas se temos botão personalizado
+    e.preventDefault();
+    // Armazena o evento para uso posterior
+    deferredPrompt = e;
+    
+    // Mostra o botão de instalação
     installButton.style.display = 'block';
     
     // Remove listeners anteriores para evitar duplicação
     installButton.removeEventListener('click', handleInstallClick);
     installButton.addEventListener('click', handleInstallClick);
   } else {
-    console.warn('PWA: Botão de instalação não encontrado');
+    console.log('PWA: Botão personalizado não encontrado - permitindo banner nativo');
+    // NÃO chama preventDefault() para permitir o banner nativo do navegador
+    // O navegador mostrará seu próprio banner de instalação
   }
 });
 
