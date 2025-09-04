@@ -38,16 +38,40 @@ class DatabaseIntegrationRobusto:
         self.retry_delay = retry_delay
         self.db = None
         self.fallback_file = 'cadastros_fallback.json'
+        
+        # Inicializar DAOs como None
+        self.aluno_dao = None
+        self.atividade_dao = None
+        self.turma_dao = None
+        self.presenca_dao = None
+        self.log_atividade_dao = None
+        self.usuario_dao = None
+        
         self._init_connection()
     
     def _init_connection(self):
-        """Inicializa a conexão com o banco de dados"""
+        """Inicializa a conexão com o banco de dados e os DAOs"""
         try:
             self.db = next(get_db())
-            logger.info("✅ Conexão com banco de dados estabelecida")
+            
+            # Inicializar todos os DAOs
+            self.aluno_dao = AlunoDAO(self.db)
+            self.atividade_dao = AtividadeDAO(self.db)
+            self.turma_dao = TurmaDAO(self.db)
+            self.presenca_dao = PresencaDAO(self.db)
+            self.log_atividade_dao = LogAtividadeDAO(self.db)
+            self.usuario_dao = UsuarioDAO(self.db)
+            
+            logger.info("✅ Conexão com banco de dados e DAOs estabelecida")
         except Exception as e:
             logger.error(f"❌ Erro ao conectar com banco: {e}")
             self.db = None
+            self.aluno_dao = None
+            self.atividade_dao = None
+            self.turma_dao = None
+            self.presenca_dao = None
+            self.log_atividade_dao = None
+            self.usuario_dao = None
     
     def _test_connection(self) -> bool:
         """Testa se a conexão com o banco está ativa"""
@@ -64,16 +88,24 @@ class DatabaseIntegrationRobusto:
             return False
     
     def _reconnect(self) -> bool:
-        """Tenta reconectar com o banco de dados"""
+        """Tenta reconectar com o banco de dados e reinicializar DAOs"""
         try:
             if self.db:
                 self.db.close()
             
             self.db = next(get_db())
             
+            # Reinicializar todos os DAOs
+            self.aluno_dao = AlunoDAO(self.db)
+            self.atividade_dao = AtividadeDAO(self.db)
+            self.turma_dao = TurmaDAO(self.db)
+            self.presenca_dao = PresencaDAO(self.db)
+            self.log_atividade_dao = LogAtividadeDAO(self.db)
+            self.usuario_dao = UsuarioDAO(self.db)
+            
             # Testar a nova conexão
             if self._test_connection():
-                logger.info("✅ Reconexão com banco bem-sucedida")
+                logger.info("✅ Reconexão com banco e DAOs bem-sucedida")
                 return True
             else:
                 logger.error("❌ Falha na reconexão")
@@ -82,6 +114,12 @@ class DatabaseIntegrationRobusto:
         except Exception as e:
             logger.error(f"❌ Erro durante reconexão: {e}")
             self.db = None
+            self.aluno_dao = None
+            self.atividade_dao = None
+            self.turma_dao = None
+            self.presenca_dao = None
+            self.log_atividade_dao = None
+            self.usuario_dao = None
             return False
     
     def _is_connection_error(self, error: Exception) -> bool:
@@ -193,8 +231,7 @@ class DatabaseIntegrationRobusto:
             atividade = None
             atividade_id = None
             if dados_aluno.get('atividade'):
-                atividade_dao = AtividadeDAO(self.db)
-                atividades = atividade_dao.listar_todas()
+                atividades = self.atividade_dao.listar_todas()
                 for ativ in atividades:
                     if ativ.get('nome') == dados_aluno['atividade']:
                         atividade = ativ
@@ -205,8 +242,7 @@ class DatabaseIntegrationRobusto:
             turma = None
             turma_id = None
             if dados_aluno.get('turma'):
-                turma_dao = TurmaDAO(self.db)
-                turmas = turma_dao.listar_todas()
+                turmas = self.turma_dao.listar_todas()
                 for t in turmas:
                     if t.get('nome') == dados_aluno['turma']:
                         turma = t
@@ -264,16 +300,13 @@ class DatabaseIntegrationRobusto:
             }
             
             # Salvar usando DAO do MongoDB
-            aluno_dao = AlunoDAO(self.db)
-            resultado = aluno_dao.criar(dados_novo_aluno)
+            resultado = self.aluno_dao.criar(dados_novo_aluno)
             
             # Atualizar contadores
             if atividade_id:
-                atividade_dao = AtividadeDAO(self.db)
-                atividade_dao.atualizar_total_alunos(atividade_id)
+                self.atividade_dao.atualizar_total_alunos(atividade_id)
             if turma_id:
-                turma_dao = TurmaDAO(self.db)
-                turma_dao.atualizar_total_alunos(turma_id)
+                self.turma_dao.atualizar_total_alunos(turma_id)
             
             logger.info(f"[ROBUSTO] ✅ Aluno salvo com ID: {resultado}")
             return resultado
@@ -405,8 +438,7 @@ class DatabaseIntegrationRobusto:
         try:
             if not self._test_connection():
                 return 0
-            aluno_dao = AlunoDAO(self.db)
-            return aluno_dao.contar_total()
+            return self.aluno_dao.contar_total()
         except Exception as e:
             logger.error(f"Erro ao contar alunos: {e}")
             return 0
@@ -416,8 +448,7 @@ class DatabaseIntegrationRobusto:
         try:
             if not self._test_connection():
                 return 0
-            atividade_dao = AtividadeDAO(self.db)
-            return atividade_dao.contar_total()
+            return self.atividade_dao.contar_total()
         except Exception as e:
             logger.error(f"Erro ao contar atividades: {e}")
             return 0
@@ -427,8 +458,7 @@ class DatabaseIntegrationRobusto:
         try:
             if not self._test_connection():
                 return 0
-            turma_dao = TurmaDAO(self.db)
-            return turma_dao.contar_total()
+            return self.turma_dao.contar_total()
         except Exception as e:
             logger.error(f"Erro ao contar turmas: {e}")
             return 0
@@ -438,8 +468,7 @@ class DatabaseIntegrationRobusto:
         try:
             if not self._test_connection():
                 return []
-            aluno_dao = AlunoDAO(self.db)
-            return aluno_dao.listar_todos()
+            return self.aluno_dao.listar_todos()
         except Exception as e:
             logger.error(f"Erro ao listar alunos: {e}")
             return []
@@ -449,8 +478,7 @@ class DatabaseIntegrationRobusto:
         try:
             if not self._test_connection():
                 return []
-            atividade_dao = AtividadeDAO(self.db)
-            return atividade_dao.listar_todas()
+            return self.atividade_dao.listar_todas()
         except Exception as e:
             logger.error(f"Erro ao listar atividades: {e}")
             return []
@@ -460,8 +488,7 @@ class DatabaseIntegrationRobusto:
         try:
             if not self._test_connection():
                 return []
-            turma_dao = TurmaDAO(self.db)
-            return turma_dao.listar_todas()
+            return self.turma_dao.listar_todas()
         except Exception as e:
             logger.error(f"Erro ao listar turmas: {e}")
             return []
@@ -471,8 +498,7 @@ class DatabaseIntegrationRobusto:
         try:
             if not self._test_connection():
                 return False
-            aluno_dao = AlunoDAO(self.db)
-            return aluno_dao.atualizar(aluno_id, dados_atualizados)
+            return self.aluno_dao.atualizar(aluno_id, dados_atualizados)
         except Exception as e:
             logger.error(f"Erro ao atualizar aluno: {e}")
             return False
@@ -482,7 +508,6 @@ class DatabaseIntegrationRobusto:
         try:
             if not self._test_connection():
                 return False
-            log_dao = LogAtividadeDAO(self.db)
             dados_log = {
                 'usuario': usuario,
                 'acao': acao,
@@ -490,7 +515,7 @@ class DatabaseIntegrationRobusto:
                 'tipo_usuario': tipo_usuario,
                 'timestamp': datetime.now().isoformat()
             }
-            log_dao.criar(dados_log)
+            self.log_atividade_dao.criar(dados_log)
             return True
         except Exception as e:
             logger.error(f"Erro ao registrar atividade: {e}")
