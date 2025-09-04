@@ -84,6 +84,119 @@
         </div>
     </div>
 
+    <!-- Logs de Erros -->
+    <div class="row mb-4" id="errorLogsSection" style="display: none;">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('static', filename='images/error-logo.svg') }}" alt="Erro" width="40" height="40" class="me-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Logs de Erros do Upload
+                        </h5>
+                        <button class="btn btn-sm btn-outline-light ms-auto" onclick="limparLogsErros()">
+                            <i class="fas fa-trash me-1"></i>Limpar
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="text-center p-2 border rounded bg-light">
+                                <h6 class="text-danger mb-1">Total de Erros</h6>
+                                <span class="badge bg-danger fs-6" id="totalErros">0</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-2 border rounded bg-light">
+                                <h6 class="text-warning mb-1">Linhas com Erro</h6>
+                                <span class="badge bg-warning fs-6" id="linhasComErro">0</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-2 border rounded bg-light">
+                                <h6 class="text-info mb-1">Colunas Ignoradas</h6>
+                                <span class="badge bg-info fs-6" id="colunasIgnoradas">0</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-2 border rounded bg-light">
+                                <h6 class="text-success mb-1">Taxa de Sucesso</h6>
+                                <span class="badge bg-success fs-6" id="taxaSucesso">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detalhes dos Erros -->
+                    <div class="accordion" id="errorAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingErrors">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapseErrors" aria-expanded="false" aria-controls="collapseErrors">
+                                    <i class="fas fa-list-alt me-2"></i>Detalhes dos Erros por Linha
+                                </button>
+                            </h2>
+                            <div id="collapseErrors" class="accordion-collapse collapse" 
+                                 aria-labelledby="headingErrors" data-bs-parent="#errorAccordion">
+                                <div class="accordion-body">
+                                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped">
+                                            <thead class="table-dark sticky-top">
+                                                <tr>
+                                                    <th>Linha</th>
+                                                    <th>Tipo de Erro</th>
+                                                    <th>Descrição</th>
+                                                    <th>Dados da Linha</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="errorDetailsTable">
+                                                <!-- Erros serão inseridos aqui -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingIgnored">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapseIgnored" aria-expanded="false" aria-controls="collapseIgnored">
+                                    <i class="fas fa-eye-slash me-2"></i>Colunas Ignoradas
+                                </button>
+                            </h2>
+                            <div id="collapseIgnored" class="accordion-collapse collapse" 
+                                 aria-labelledby="headingIgnored" data-bs-parent="#errorAccordion">
+                                <div class="accordion-body">
+                                    <div id="ignoredColumnsList">
+                                        <!-- Lista de colunas ignoradas será inserida aqui -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingMapped">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapseMapped" aria-expanded="false" aria-controls="collapseMapped">
+                                    <i class="fas fa-check-circle me-2"></i>Colunas Processadas
+                                </button>
+                            </h2>
+                            <div id="collapseMapped" class="accordion-collapse collapse" 
+                                 aria-labelledby="headingMapped" data-bs-parent="#errorAccordion">
+                                <div class="accordion-body">
+                                    <div id="mappedColumnsList">
+                                        <!-- Lista de colunas processadas será inserida aqui -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Barra de Progresso -->
     <div class="row mb-4" id="progressSection" style="display: none;">
         <div class="col-12">
@@ -527,7 +640,8 @@ function fazerUploadComProgresso() {
         return;
     }
     
-    // Mostrar seção de progresso
+    // Ocultar seção de erros e mostrar progresso
+    document.getElementById('errorLogsSection').style.display = 'none';
     document.getElementById('progressSection').style.display = 'block';
     
     // Resetar contadores
@@ -549,15 +663,20 @@ function fazerUploadComProgresso() {
         if (data.success) {
             // Simular progresso baseado nos dados retornados
             simularProgresso(data);
+            
+            // Se houver erros ou colunas ignoradas, mostrar logs
+            if (data.erros && data.erros.length > 0 || data.colunas_ignoradas && data.colunas_ignoradas.length > 0) {
+                exibirLogsErros(data);
+            }
         } else {
             document.getElementById('progressSection').style.display = 'none';
-            mostrarAlerta(data.error || 'Erro ao processar planilha', 'danger');
+            exibirErroDetalhado(data);
         }
     })
     .catch(error => {
         console.error('Erro:', error);
         document.getElementById('progressSection').style.display = 'none';
-        mostrarAlerta('Erro ao processar planilha', 'danger');
+        exibirErroConexao(error);
     });
 }
 
@@ -649,6 +768,168 @@ function mostrarConfirmacao(titulo, mensagem, callback) {
         callback();
         modal.hide();
     };
+}
+
+// Função para exibir logs de erros detalhados
+function exibirLogsErros(data) {
+    const errorSection = document.getElementById('errorLogsSection');
+    const totalErros = data.erros ? data.erros.length : 0;
+    const colunasIgnoradas = data.colunas_ignoradas ? data.colunas_ignoradas.length : 0;
+    const totalProcessados = data.total_processados || 0;
+    const sucessos = (data.novos_cadastros || 0) + (data.atualizados || 0);
+    const taxaSucesso = totalProcessados > 0 ? Math.round((sucessos / totalProcessados) * 100) : 100;
+    
+    // Atualizar estatísticas
+    document.getElementById('totalErros').textContent = totalErros;
+    document.getElementById('linhasComErro').textContent = totalErros;
+    document.getElementById('colunasIgnoradas').textContent = colunasIgnoradas;
+    document.getElementById('taxaSucesso').textContent = taxaSucesso + '%';
+    
+    // Preencher tabela de erros
+    const errorTable = document.getElementById('errorDetailsTable');
+    if (data.erros && data.erros.length > 0) {
+        errorTable.innerHTML = data.erros.map((erro, index) => {
+            return `
+                <tr>
+                    <td><span class="badge bg-danger">${index + 2}</span></td>
+                    <td><span class="badge bg-warning">Erro de Processamento</span></td>
+                    <td><small class="text-danger">${erro}</small></td>
+                    <td><small class="text-muted">Dados não disponíveis</small></td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        errorTable.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum erro encontrado</td></tr>';
+    }
+    
+    // Preencher colunas ignoradas
+    const ignoredList = document.getElementById('ignoredColumnsList');
+    if (data.colunas_ignoradas && data.colunas_ignoradas.length > 0) {
+        ignoredList.innerHTML = `
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-info-circle me-2"></i>Colunas encontradas mas não processadas:</h6>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    ${data.colunas_ignoradas.map(col => `<span class="badge bg-warning">${col}</span>`).join('')}
+                </div>
+                <small class="text-muted mt-2 d-block">Estas colunas foram encontradas na planilha mas não são suportadas pelo sistema.</small>
+            </div>
+        `;
+    } else {
+        ignoredList.innerHTML = '<div class="alert alert-success">Todas as colunas foram processadas com sucesso!</div>';
+    }
+    
+    // Preencher colunas processadas
+    const mappedList = document.getElementById('mappedColumnsList');
+    if (data.colunas_mapeadas && data.colunas_mapeadas.length > 0) {
+        mappedList.innerHTML = `
+            <div class="alert alert-success">
+                <h6><i class="fas fa-check-circle me-2"></i>Colunas processadas com sucesso:</h6>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    ${data.colunas_mapeadas.map(col => `<span class="badge bg-success">${col}</span>`).join('')}
+                </div>
+            </div>
+        `;
+    } else {
+        mappedList.innerHTML = '<div class="alert alert-info">Informações de mapeamento não disponíveis.</div>';
+    }
+    
+    // Mostrar seção de erros
+    errorSection.style.display = 'block';
+    
+    // Scroll suave para a seção de erros
+    setTimeout(() => {
+        errorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 500);
+}
+
+// Função para exibir erro detalhado do servidor
+function exibirErroDetalhado(data) {
+    const errorSection = document.getElementById('errorLogsSection');
+    
+    // Resetar estatísticas
+    document.getElementById('totalErros').textContent = '1';
+    document.getElementById('linhasComErro').textContent = '0';
+    document.getElementById('colunasIgnoradas').textContent = '0';
+    document.getElementById('taxaSucesso').textContent = '0%';
+    
+    // Preencher tabela com erro do servidor
+    const errorTable = document.getElementById('errorDetailsTable');
+    errorTable.innerHTML = `
+        <tr>
+            <td><span class="badge bg-danger">Servidor</span></td>
+            <td><span class="badge bg-danger">Erro Fatal</span></td>
+            <td><small class="text-danger">${data.error || 'Erro desconhecido no processamento'}</small></td>
+            <td><small class="text-muted">Erro ocorreu antes do processamento das linhas</small></td>
+        </tr>
+    `;
+    
+    // Limpar outras seções
+    document.getElementById('ignoredColumnsList').innerHTML = '<div class="alert alert-secondary">Não foi possível processar as colunas devido ao erro.</div>';
+    document.getElementById('mappedColumnsList').innerHTML = '<div class="alert alert-secondary">Não foi possível mapear as colunas devido ao erro.</div>';
+    
+    // Mostrar seção de erros
+    errorSection.style.display = 'block';
+    
+    // Mostrar alerta também
+    mostrarAlerta(data.error || 'Erro ao processar planilha', 'danger');
+    
+    // Scroll para a seção de erros
+    setTimeout(() => {
+        errorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 500);
+}
+
+// Função para exibir erro de conexão
+function exibirErroConexao(error) {
+    const errorSection = document.getElementById('errorLogsSection');
+    
+    // Resetar estatísticas
+    document.getElementById('totalErros').textContent = '1';
+    document.getElementById('linhasComErro').textContent = '0';
+    document.getElementById('colunasIgnoradas').textContent = '0';
+    document.getElementById('taxaSucesso').textContent = '0%';
+    
+    // Preencher tabela com erro de conexão
+    const errorTable = document.getElementById('errorDetailsTable');
+    errorTable.innerHTML = `
+        <tr>
+            <td><span class="badge bg-danger">Conexão</span></td>
+            <td><span class="badge bg-danger">Erro de Rede</span></td>
+            <td><small class="text-danger">Falha na comunicação com o servidor: ${error.message || 'Erro de conexão'}</small></td>
+            <td><small class="text-muted">Verifique sua conexão com a internet e tente novamente</small></td>
+        </tr>
+    `;
+    
+    // Limpar outras seções
+    document.getElementById('ignoredColumnsList').innerHTML = '<div class="alert alert-secondary">Não foi possível conectar ao servidor.</div>';
+    document.getElementById('mappedColumnsList').innerHTML = '<div class="alert alert-secondary">Não foi possível conectar ao servidor.</div>';
+    
+    // Mostrar seção de erros
+    errorSection.style.display = 'block';
+    
+    // Mostrar alerta também
+    mostrarAlerta('Erro de conexão ao processar planilha', 'danger');
+    
+    // Scroll para a seção de erros
+    setTimeout(() => {
+        errorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 500);
+}
+
+// Função para limpar logs de erros
+function limparLogsErros() {
+    document.getElementById('errorLogsSection').style.display = 'none';
+    
+    // Resetar conteúdo
+    document.getElementById('totalErros').textContent = '0';
+    document.getElementById('linhasComErro').textContent = '0';
+    document.getElementById('colunasIgnoradas').textContent = '0';
+    document.getElementById('taxaSucesso').textContent = '0%';
+    document.getElementById('errorDetailsTable').innerHTML = '';
+    document.getElementById('ignoredColumnsList').innerHTML = '';
+    document.getElementById('mappedColumnsList').innerHTML = '';
+    
+    mostrarAlerta('Logs de erros limpos com sucesso', 'info');
 }
 </script>
 {% endblock %}

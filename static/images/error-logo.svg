@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="90" fill="#dc3545" stroke="#b02a37" stroke-width="4"/>
+  
+  <!-- Inner circle for depth -->
+  <circle cx="100" cy="100" r="75" fill="#e74c3c" opacity="0.8"/>
+  
+  <!-- Warning triangle -->
+  <polygon points="100,40 140,120 60,120" fill="#fff" stroke="#dc3545" stroke-width="2"/>
+  
+  <!-- Exclamation mark -->
+  <rect x="95" y="55" width="10" height="40" fill="#dc3545" rx="2"/>
+  <circle cx="100" cy="105" r="6" fill="#dc3545"/>
+  
+  <!-- Document icon with X -->
+  <rect x="70" y="130" width="60" height="50" fill="#fff" stroke="#dc3545" stroke-width="2" rx="4"/>
+  <rect x="75" y="135" width="50" height="3" fill="#f8f9fa"/>
+  <rect x="75" y="142" width="35" height="2" fill="#f8f9fa"/>
+  <rect x="75" y="148" width="40" height="2" fill="#f8f9fa"/>
+  
+  <!-- X mark on document -->
+  <line x1="85" y1="155" x2="115" y2="170" stroke="#dc3545" stroke-width="3" stroke-linecap="round"/>
+  <line x1="115" y1="155" x2="85" y2="170" stroke="#dc3545" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Sparkle effects -->
+  <g fill="#fff" opacity="0.7">
+    <circle cx="140" cy="60" r="3"/>
+    <circle cx="160" cy="80" r="2"/>
+    <circle cx="40" cy="70" r="2"/>
+    <circle cx="50" cy="140" r="3"/>
+    <circle cx="150" cy="150" r="2"/>
+  </g>
+  
+  <!-- Animated pulse effect -->
+  <circle cx="100" cy="100" r="90" fill="none" stroke="#dc3545" stroke-width="2" opacity="0.3">
+    <animate attributeName="r" values="90;100;90" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2s" repeatCount="indefinite"/>
+  </circle>
+</svg>
