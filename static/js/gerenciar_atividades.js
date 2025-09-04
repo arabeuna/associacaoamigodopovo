@@ -193,3 +193,203 @@ function verDetalhesAtividade(nome) {
             alert('Erro ao carregar detalhes da atividade.');
         });
 }
+
+// Funcionalidades do Modal de Sincronização
+document.addEventListener('DOMContentLoaded', function() {
+    const syncCriterio = document.getElementById('sync_criterio');
+    const syncAtividadeOrigem = document.getElementById('sync_atividade_origem');
+    const syncAtividadeOrigemContainer = document.getElementById('sync_atividade_origem_container');
+    const syncAlunosContainer = document.getElementById('sync_alunos_container');
+    const syncFiltrosContainer = document.getElementById('sync_filtros_container');
+    const syncListaAlunos = document.getElementById('sync_lista_alunos');
+    const formSincronizar = document.getElementById('formSincronizarAtividades');
+
+    // Controlar exibição de campos baseado no critério
+    if (syncCriterio) {
+        syncCriterio.addEventListener('change', function() {
+            const criterio = this.value;
+            
+            // Resetar containers
+            syncAtividadeOrigemContainer.style.display = 'none';
+            syncAlunosContainer.style.display = 'none';
+            syncFiltrosContainer.style.display = 'none';
+            
+            if (criterio === 'todos') {
+                syncAtividadeOrigemContainer.style.display = 'block';
+            } else if (criterio === 'selecionados') {
+                syncAtividadeOrigemContainer.style.display = 'block';
+                syncAlunosContainer.style.display = 'block';
+            } else if (criterio === 'filtro') {
+                syncFiltrosContainer.style.display = 'block';
+            }
+        });
+    }
+
+    // Carregar alunos quando atividade de origem for selecionada
+    if (syncAtividadeOrigem) {
+        syncAtividadeOrigem.addEventListener('change', function() {
+            const atividade = this.value;
+            if (atividade && syncCriterio.value === 'selecionados') {
+                carregarAlunosAtividade(atividade);
+            }
+        });
+    }
+
+    // Submissão do formulário
+    if (formSincronizar) {
+        formSincronizar.addEventListener('submit', function(e) {
+            e.preventDefault();
+            sincronizarAtividades();
+        });
+    }
+});
+
+function carregarAlunosAtividade(atividade) {
+    const syncListaAlunos = document.getElementById('sync_lista_alunos');
+    
+    syncListaAlunos.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Carregando alunos...</div>';
+    
+    fetch(`/listar_alunos_atividade/${encodeURIComponent(atividade)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.alunos.length > 0) {
+                let html = '';
+                data.alunos.forEach(aluno => {
+                    html += `
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="${aluno.id}" id="aluno_${aluno.id}">
+                            <label class="form-check-label" for="aluno_${aluno.id}">
+                                <strong>${aluno.nome}</strong><br>
+                                <small class="text-muted">
+                                    ${aluno.telefone || 'Sem telefone'} | ${aluno.email || 'Sem email'}
+                                    ${aluno.turma ? ` | Turma: ${aluno.turma}` : ''}
+                                </small>
+                            </label>
+                        </div>
+                    `;
+                });
+                
+                // Adicionar botão para selecionar todos
+                html = `
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="selecionarTodosAlunos(true)">
+                            <i class="fas fa-check-square"></i> Selecionar Todos
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="selecionarTodosAlunos(false)">
+                            <i class="fas fa-square"></i> Desmarcar Todos
+                        </button>
+                    </div>
+                    <hr>
+                ` + html;
+                
+                syncListaAlunos.innerHTML = html;
+            } else {
+                syncListaAlunos.innerHTML = '<p class="text-muted">Nenhum aluno encontrado nesta atividade.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar alunos:', error);
+            syncListaAlunos.innerHTML = '<p class="text-danger">Erro ao carregar alunos. Tente novamente.</p>';
+        });
+}
+
+function selecionarTodosAlunos(selecionar) {
+    const checkboxes = document.querySelectorAll('#sync_lista_alunos input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selecionar;
+    });
+}
+
+function sincronizarAtividades() {
+    const form = document.getElementById('formSincronizarAtividades');
+    const formData = new FormData(form);
+    
+    const data = {
+        criterio: formData.get('criterio'),
+        atividade_destino: formData.get('atividade_destino'),
+        atividade_origem: formData.get('atividade_origem') || null
+    };
+    
+    // Adicionar dados específicos baseado no critério
+    if (data.criterio === 'selecionados') {
+        const alunosSelecionados = [];
+        const checkboxes = document.querySelectorAll('#sync_lista_alunos input[type="checkbox"]:checked');
+        checkboxes.forEach(checkbox => {
+            alunosSelecionados.push(checkbox.value);
+        });
+        
+        if (alunosSelecionados.length === 0) {
+            alert('Selecione pelo menos um aluno para migrar.');
+            return;
+        }
+        
+        data.alunos_selecionados = alunosSelecionados;
+    } else if (data.criterio === 'filtro') {
+        data.filtros = {
+            turma: document.getElementById('sync_filtro_turma').value || null,
+            status: document.getElementById('sync_filtro_status').value || null,
+            atividade_atual: document.getElementById('sync_filtro_atividade_atual').value || null
+        };
+    }
+    
+    // Validações
+    if (!data.criterio || !data.atividade_destino) {
+        alert('Preencha todos os campos obrigatórios.');
+        return;
+    }
+    
+    if ((data.criterio === 'todos' || data.criterio === 'selecionados') && !data.atividade_origem) {
+        alert('Selecione a atividade de origem.');
+        return;
+    }
+    
+    // Confirmar ação
+    let mensagem = `Confirma a migração `;
+    if (data.criterio === 'todos') {
+        mensagem += `de todos os alunos da atividade "${data.atividade_origem}" para "${data.atividade_destino}"?`;
+    } else if (data.criterio === 'selecionados') {
+        mensagem += `de ${data.alunos_selecionados.length} aluno(s) selecionado(s) para "${data.atividade_destino}"?`;
+    } else {
+        mensagem += `dos alunos filtrados para "${data.atividade_destino}"?`;
+    }
+    
+    if (!confirm(mensagem)) {
+        return;
+    }
+    
+    // Desabilitar botão e mostrar loading
+    const btnSubmit = form.querySelector('button[type="submit"]');
+    const originalText = btnSubmit.innerHTML;
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sincronizando...';
+    
+    fetch('/sincronizar_atividades', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert(`Sincronização concluída!\n\nMigrados: ${result.migrados}\nErros: ${result.erros}`);
+            
+            // Fechar modal e recarregar página
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalSincronizarAtividades'));
+            modal.hide();
+            location.reload();
+        } else {
+            alert('Erro na sincronização: ' + result.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao sincronizar atividades. Tente novamente.');
+    })
+    .finally(() => {
+        // Restaurar botão
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalText;
+    });
+}

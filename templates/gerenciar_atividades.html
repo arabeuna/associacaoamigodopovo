@@ -54,12 +54,16 @@
         </div>
     </div>
 
-    <!-- Botao para Nova Atividade -->
+    <!-- Botoes de Acao -->
     <div class="row mb-4">
         <div class="col-12 text-center">
-            <button class="btn btn-lg btn-success" data-bs-toggle="modal" data-bs-target="#modalNovaAtividade">
+            <button class="btn btn-lg btn-success me-3" data-bs-toggle="modal" data-bs-target="#modalNovaAtividade">
                 <i class="fas fa-plus me-2"></i>
                 Nova Atividade
+            </button>
+            <button class="btn btn-lg btn-info" data-bs-toggle="modal" data-bs-target="#modalSincronizarAtividades">
+                <i class="fas fa-sync-alt me-2"></i>
+                Sincronizar Atividades
             </button>
         </div>
     </div>
@@ -328,6 +332,102 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-2"></i>
                         Salvar Alteracoes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sincronizar Atividades -->
+<div class="modal fade" id="modalSincronizarAtividades" tabindex="-1" aria-labelledby="modalSincronizarAtividadesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalSincronizarAtividadesLabel">
+                    <i class="fas fa-sync-alt me-2"></i>
+                    Sincronizar Atividades
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formSincronizarAtividades">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Sincronização de Atividades:</strong> Esta funcionalidade permite migrar alunos entre atividades em massa.
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="sync_criterio" class="form-label">Critério de Migração *</label>
+                            <select class="form-select" id="sync_criterio" name="criterio" required>
+                                <option value="">Selecione o critério</option>
+                                <option value="todos">Todos os alunos de uma atividade</option>
+                                <option value="selecionados">Alunos específicos</option>
+                                <option value="filtro">Por filtros personalizados</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="sync_atividade_destino" class="form-label">Atividade de Destino *</label>
+                            <select class="form-select" id="sync_atividade_destino" name="atividade_destino" required>
+                                <option value="">Selecione a atividade</option>
+                                {% for nome_atividade in atividades.keys() %}
+                                <option value="{{ nome_atividade }}">{{ nome_atividade }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Campos condicionais -->
+                        <div class="col-12" id="sync_atividade_origem_container" style="display: none;">
+                            <label for="sync_atividade_origem" class="form-label">Atividade de Origem</label>
+                            <select class="form-select" id="sync_atividade_origem" name="atividade_origem">
+                                <option value="">Selecione a atividade de origem</option>
+                                {% for nome_atividade in atividades.keys() %}
+                                <option value="{{ nome_atividade }}">{{ nome_atividade }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-12" id="sync_alunos_container" style="display: none;">
+                            <label class="form-label">Alunos Disponíveis</label>
+                            <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                <div id="sync_lista_alunos">
+                                    <p class="text-muted">Selecione uma atividade para ver os alunos</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12" id="sync_filtros_container" style="display: none;">
+                            <label class="form-label">Filtros Personalizados</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" id="sync_filtro_turma" placeholder="Turma">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" id="sync_filtro_status" placeholder="Status">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" id="sync_filtro_atividade_atual" placeholder="Atividade Atual">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Atenção:</strong> Esta operação irá alterar a atividade dos alunos selecionados. Certifique-se de que esta é a ação desejada.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Sincronizar
                     </button>
                 </div>
             </form>

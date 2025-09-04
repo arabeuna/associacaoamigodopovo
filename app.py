@@ -4557,6 +4557,142 @@ def gerenciar_atividades():
                          professores=professores,
                          usuario_nome=usuario_nome)
 
+@app.route('/sincronizar_atividades', methods=['POST'])
+@apenas_admin_ou_master
+def sincronizar_atividades():
+    """Sincroniza/migra alunos entre atividades em massa"""
+    try:
+        data = request.get_json()
+        atividade_origem = data.get('atividade_origem')
+        atividade_destino = data.get('atividade_destino')
+        criterio = data.get('criterio', 'todos')  # 'todos', 'selecionados', 'filtro'
+        alunos_selecionados = data.get('alunos_selecionados', [])
+        filtros = data.get('filtros', {})
+        
+        if not atividade_destino:
+            return jsonify({'success': False, 'message': 'Atividade de destino é obrigatória'})
+        
+        # Verificar se a atividade de destino existe
+        if atividade_destino not in academia.atividades_cadastradas:
+            return jsonify({'success': False, 'message': 'Atividade de destino não encontrada'})
+        
+        alunos_migrados = 0
+        alunos_erros = 0
+        erros_detalhes = []
+        
+        # Obter integração com banco de dados
+        db_integration = get_db_integration()
+        
+        # Determinar quais alunos migrar
+        if criterio == 'todos' and atividade_origem:
+            # Migrar todos os alunos de uma atividade específica
+            alunos_para_migrar = [aluno for aluno in academia.alunos_reais 
+                                if aluno.get('atividade') == atividade_origem]
+        elif criterio == 'selecionados':
+            # Migrar alunos específicos por ID ou nome
+            alunos_para_migrar = []
+            for aluno in academia.alunos_reais:
+                if (aluno.get('id') in alunos_selecionados or 
+                    aluno.get('nome') in alunos_selecionados):
+                    alunos_para_migrar.append(aluno)
+        elif criterio == 'filtro':
+            # Migrar alunos baseado em filtros
+            alunos_para_migrar = []
+            for aluno in academia.alunos_reais:
+                match = True
+                for campo, valor in filtros.items():
+                    if campo in aluno and str(aluno[campo]).lower() != str(valor).lower():
+                        match = False
+                        break
+                if match:
+                    alunos_para_migrar.append(aluno)
+        else:
+            return jsonify({'success': False, 'message': 'Critério de migração inválido'})
+        
+        # Executar migração
+        for aluno in alunos_para_migrar:
+            try:
+                # Atualizar atividade do aluno
+                aluno_id = aluno.get('id') or aluno.get('_id')
+                if aluno_id:
+                    # Atualizar no banco de dados
+                    dados_atualizacao = {'atividade': atividade_destino}
+                    sucesso = db_integration.atualizar_aluno_db(aluno_id, dados_atualizacao)
+                    
+                    if sucesso:
+                        # Atualizar também na memória (compatibilidade)
+                        aluno['atividade'] = atividade_destino
+                        alunos_migrados += 1
+                    else:
+                        alunos_erros += 1
+                        erros_detalhes.append(f"Erro ao atualizar {aluno.get('nome', 'ID:' + str(aluno_id))} no banco")
+                else:
+                    # Fallback: atualizar apenas na memória
+                    aluno['atividade'] = atividade_destino
+                    alunos_migrados += 1
+                    
+            except Exception as e:
+                alunos_erros += 1
+                erros_detalhes.append(f"Erro ao migrar {aluno.get('nome', 'Desconhecido')}: {str(e)}")
+        
+        # Salvar alterações
+        if alunos_migrados > 0:
+            academia.salvar_dados_reais()
+            
+            # Atualizar contadores das atividades
+            for nome_atividade, dados_atividade in academia.atividades_cadastradas.items():
+                alunos_atividade = academia.get_alunos_por_atividade(nome_atividade)
+                dados_atividade['total_alunos'] = len(alunos_atividade)
+            academia.salvar_atividades()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Migração concluída! {alunos_migrados} alunos migrados para {atividade_destino}',
+            'alunos_migrados': alunos_migrados,
+            'alunos_erros': alunos_erros,
+            'erros_detalhes': erros_detalhes[:10],  # Limitar a 10 erros
+            'atividade_destino': atividade_destino
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao sincronizar atividades: {str(e)}'
+        }), 500
+
+@app.route('/listar_alunos_atividade/<atividade>')
+@apenas_admin_ou_master
+def listar_alunos_atividade(atividade):
+    """Lista alunos de uma atividade específica"""
+    try:
+        alunos_atividade = academia.get_alunos_por_atividade(atividade)
+        
+        # Formatar dados dos alunos
+        alunos_formatados = []
+        for aluno in alunos_atividade:
+            alunos_formatados.append({
+                'id': aluno.get('id') or aluno.get('_id'),
+                'nome': aluno.get('nome', ''),
+                'telefone': aluno.get('telefone', ''),
+                'email': aluno.get('email', ''),
+                'turma': aluno.get('turma', ''),
+                'data_cadastro': aluno.get('data_cadastro', ''),
+                'status_frequencia': aluno.get('status_frequencia', 'Ativo')
+            })
+        
+        return jsonify({
+            'success': True,
+            'atividade': atividade,
+            'total_alunos': len(alunos_formatados),
+            'alunos': alunos_formatados
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao listar alunos: {str(e)}'
+        }), 500
+
 @app.route('/dashboard_atividade/<nome_atividade>')
 @login_obrigatorio
 def dashboard_atividade(nome_atividade):
