@@ -4,6 +4,7 @@ import os
 import hashlib
 import json
 import tempfile
+import csv
 from werkzeug.utils import secure_filename
 import io
 from dotenv import load_dotenv
@@ -3879,27 +3880,53 @@ def processar_csv_basico(filepath):
         alunos_erros = 0
         erros_detalhes = []
         
-        # Tentar diferentes encodings
-        encodings = ['utf-8', 'latin-1', 'cp1252']
-        csv_data = None
+        # Tentar diferentes encodings e delimitadores
+        csv_configs = [
+            {'encoding': 'utf-8', 'delimiter': ','},
+            {'encoding': 'utf-8', 'delimiter': ';'},
+            {'encoding': 'latin-1', 'delimiter': ','},
+            {'encoding': 'latin-1', 'delimiter': ';'},
+            {'encoding': 'cp1252', 'delimiter': ','},
+            {'encoding': 'cp1252', 'delimiter': ';'}
+        ]
         
-        for encoding in encodings:
+        csv_data = None
+        last_error = None
+        
+        for config in csv_configs:
             try:
-                with open(filepath, 'r', encoding=encoding, newline='') as csvfile:
-                    # Detectar delimitador
-                    sample = csvfile.read(1024)
-                    csvfile.seek(0)
-                    sniffer = csv.Sniffer()
-                    delimiter = sniffer.sniff(sample).delimiter
+                with open(filepath, 'r', encoding=config['encoding'], newline='') as csvfile:
+                    # Tentar ler com delimitador específico
+                    reader = csv.DictReader(
+                        csvfile, 
+                        delimiter=config['delimiter'],
+                        quoting=csv.QUOTE_MINIMAL,
+                        skipinitialspace=True
+                    )
+                    csv_data = []
+                    line_num = 0
+                    for row in reader:
+                        line_num += 1
+                        try:
+                            # Filtrar linhas vazias ou problemáticas
+                            if any(value.strip() for value in row.values()):
+                                csv_data.append(row)
+                        except Exception as line_error:
+                            print(f"⚠️ Linha {line_num} ignorada: {str(line_error)}")
+                            continue
                     
-                    reader = csv.DictReader(csvfile, delimiter=delimiter)
-                    csv_data = list(reader)
-                    break
-            except (UnicodeDecodeError, Exception):
+                    if csv_data:
+                        print(f"✅ CSV básico lido com sucesso usando encoding={config['encoding']}, delimiter='{config['delimiter']}'")
+                        print(f"📊 Total de linhas válidas: {len(csv_data)}")
+                        break
+                        
+            except Exception as e:
+                last_error = e
+                print(f"⚠️ Tentativa básica falhou com {config}: {str(e)}")
                 continue
         
         if not csv_data:
-            return jsonify({'error': 'Não foi possível ler o arquivo CSV'}), 400
+            return jsonify({'error': f'Não foi possível ler o arquivo CSV: {str(last_error)}'}), 400
         
         # Mapear colunas (case-insensitive)
         colunas_mapeadas = {
@@ -4075,14 +4102,42 @@ def processar_planilha():
         # Ler arquivo (Excel ou CSV)
         try:
             if file.filename.lower().endswith('.csv'):
-                # Tentar diferentes encodings para CSV
-                try:
-                    df = pd.read_csv(filepath, encoding='utf-8')
-                except UnicodeDecodeError:
+                # Tentar diferentes encodings e configurações para CSV
+                csv_configs = [
+                    {'encoding': 'utf-8', 'sep': ','},
+                    {'encoding': 'utf-8', 'sep': ';'},
+                    {'encoding': 'latin-1', 'sep': ','},
+                    {'encoding': 'latin-1', 'sep': ';'},
+                    {'encoding': 'cp1252', 'sep': ','},
+                    {'encoding': 'cp1252', 'sep': ';'}
+                ]
+                
+                df = None
+                last_error = None
+                
+                for config in csv_configs:
                     try:
-                        df = pd.read_csv(filepath, encoding='latin-1')
-                    except UnicodeDecodeError:
-                        df = pd.read_csv(filepath, encoding='cp1252')
+                        df = pd.read_csv(
+                            filepath, 
+                            encoding=config['encoding'],
+                            sep=config['sep'],
+                            on_bad_lines='skip',  # Pular linhas problemáticas
+                            engine='python',      # Usar engine Python mais flexível
+                            quoting=csv.QUOTE_MINIMAL,
+                            skipinitialspace=True,
+                            error_bad_lines=False,  # Para versões antigas do pandas
+                            warn_bad_lines=True
+                        )
+                        print(f"✅ CSV lido com sucesso usando encoding={config['encoding']}, sep='{config['sep']}'")
+                        break
+                    except Exception as e:
+                        last_error = e
+                        print(f"⚠️ Tentativa falhou com {config}: {str(e)}")
+                        continue
+                
+                if df is None:
+                    return jsonify({'error': f'Erro ao ler arquivo CSV: {str(last_error)}'}), 400
+                    
             else:
                 df = pd.read_excel(filepath)
         except Exception as e:
