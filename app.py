@@ -1972,6 +1972,7 @@ def dashboard():
         atualizacoes_planilha = 0
         
         # Buscar logs de atividade relacionados a upload de planilhas
+        db_integration = get_db_integration()
         logs_upload = db_integration.log_atividade_dao.buscar_por_acao('Upload de Planilha')
         
         uploads_recentes = []

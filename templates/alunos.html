@@ -282,8 +282,9 @@ function atualizarTabela() {
     location.reload();
 }
 
-setTimeout(function() {
-    atualizarTabela();
-}, 30000);
+// Removido auto-refresh para evitar conflitos
+// setTimeout(function() {
+//     atualizarTabela();
+// }, 30000);
 </script>
 {% endblock %}
