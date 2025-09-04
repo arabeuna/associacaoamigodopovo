@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 import io
 from dotenv import load_dotenv
 from models import init_mongodb, get_db, verificar_conexao, AlunoDAO, AtividadeDAO, TurmaDAO, UsuarioDAO, PresencaDAO, BuscaSalvaDAO, LogAtividadeDAO
-from database_integration import get_db_integration
+from database_integration_robusto import get_db_integration
 
 # Importar pandas para processamento de planilhas
 try:
@@ -141,7 +141,7 @@ def allowed_file(filename):
 class SistemaAcademia:
     def __init__(self):
         # Inicializar integração com banco de dados
-        from database_integration import DatabaseIntegration
+        from database_integration_robusto import DatabaseIntegrationRobusto as DatabaseIntegration
         self.db_integration = DatabaseIntegration()
         
         self.arquivo_dados = 'dados_alunos.json'

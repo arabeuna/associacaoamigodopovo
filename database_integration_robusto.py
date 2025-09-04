@@ -189,19 +189,29 @@ class DatabaseIntegrationRobusto:
             """Operação interna de salvamento"""
             logger.info(f"[ROBUSTO] Iniciando salvamento: {dados_aluno.get('nome')}")
             
-            # Buscar atividade
+            # Buscar atividade usando DAO do MongoDB
             atividade = None
+            atividade_id = None
             if dados_aluno.get('atividade'):
-                atividade = self.db.query(Atividade).filter(
-                    Atividade.nome == dados_aluno['atividade']
-                ).first()
+                atividade_dao = AtividadeDAO(self.db)
+                atividades = atividade_dao.listar_todas()
+                for ativ in atividades:
+                    if ativ.get('nome') == dados_aluno['atividade']:
+                        atividade = ativ
+                        atividade_id = ativ.get('_id')
+                        break
             
-            # Buscar turma
+            # Buscar turma usando DAO do MongoDB
             turma = None
+            turma_id = None
             if dados_aluno.get('turma'):
-                turma = self.db.query(Turma).filter(
-                    Turma.nome == dados_aluno['turma']
-                ).first()
+                turma_dao = TurmaDAO(self.db)
+                turmas = turma_dao.listar_todas()
+                for t in turmas:
+                    if t.get('nome') == dados_aluno['turma']:
+                        turma = t
+                        turma_id = t.get('_id')
+                        break
             
             # Converter datas
             data_nascimento = None
@@ -232,35 +242,41 @@ class DatabaseIntegrationRobusto:
             import uuid
             id_unico = dados_aluno.get('id_unico') or str(uuid.uuid4())[:8]
             
-            # Criar novo aluno
-            novo_aluno = Aluno(
-                id_unico=id_unico,
-                nome=dados_aluno.get('nome', ''),
-                telefone=dados_aluno.get('telefone', ''),
-                endereco=dados_aluno.get('endereco', ''),
-                email=dados_aluno.get('email', ''),
-                data_nascimento=data_nascimento,
-                data_cadastro=data_cadastro,
-                titulo_eleitor=dados_aluno.get('titulo_eleitor', ''),
-                atividade_id=atividade.id if atividade else None,
-                turma_id=turma.id if turma else None,
-                status_frequencia=dados_aluno.get('status_frequencia', ''),
-                observacoes=dados_aluno.get('observacoes', ''),
-                ativo=dados_aluno.get('ativo', True),
-                criado_por=dados_aluno.get('criado_por', 'sistema')
-            )
+            # Criar dados do novo aluno para MongoDB
+            dados_novo_aluno = {
+                'id_unico': id_unico,
+                'nome': dados_aluno.get('nome', ''),
+                'telefone': dados_aluno.get('telefone', ''),
+                'endereco': dados_aluno.get('endereco', ''),
+                'email': dados_aluno.get('email', ''),
+                'data_nascimento': data_nascimento.isoformat() if data_nascimento else None,
+                'data_cadastro': data_cadastro.isoformat() if data_cadastro else None,
+                'titulo_eleitor': dados_aluno.get('titulo_eleitor', ''),
+                'atividade': dados_aluno.get('atividade', ''),
+                'atividade_id': atividade_id,
+                'turma': dados_aluno.get('turma', ''),
+                'turma_id': turma_id,
+                'status_frequencia': dados_aluno.get('status_frequencia', ''),
+                'observacoes': dados_aluno.get('observacoes', ''),
+                'ativo': dados_aluno.get('ativo', True),
+                'criado_por': dados_aluno.get('criado_por', 'sistema'),
+                'criado_em': datetime.now().isoformat()
+            }
             
-            self.db.add(novo_aluno)
-            self.db.commit()
+            # Salvar usando DAO do MongoDB
+            aluno_dao = AlunoDAO(self.db)
+            resultado = aluno_dao.criar(dados_novo_aluno)
             
             # Atualizar contadores
-            if atividade:
-                AtividadeDAO.atualizar_total_alunos(self.db, atividade.id)
-            if turma:
-                TurmaDAO.atualizar_total_alunos(self.db, turma.id)
+            if atividade_id:
+                atividade_dao = AtividadeDAO(self.db)
+                atividade_dao.atualizar_total_alunos(atividade_id)
+            if turma_id:
+                turma_dao = TurmaDAO(self.db)
+                turma_dao.atualizar_total_alunos(turma_id)
             
-            logger.info(f"[ROBUSTO] ✅ Aluno salvo com ID: {novo_aluno.id}")
-            return novo_aluno.id
+            logger.info(f"[ROBUSTO] ✅ Aluno salvo com ID: {resultado}")
+            return resultado
         
         try:
             # Tentar salvar no banco com retry
@@ -382,6 +398,108 @@ class DatabaseIntegrationRobusto:
                 status['fallback_records'] = 'erro_leitura'
         
         return status
+    
+    # Métodos de compatibilidade com a interface existente
+    def contar_alunos_db(self) -> int:
+        """Conta o total de alunos no banco"""
+        try:
+            if not self._test_connection():
+                return 0
+            aluno_dao = AlunoDAO(self.db)
+            return aluno_dao.contar_total()
+        except Exception as e:
+            logger.error(f"Erro ao contar alunos: {e}")
+            return 0
+    
+    def contar_atividades_db(self) -> int:
+        """Conta o total de atividades no banco"""
+        try:
+            if not self._test_connection():
+                return 0
+            atividade_dao = AtividadeDAO(self.db)
+            return atividade_dao.contar_total()
+        except Exception as e:
+            logger.error(f"Erro ao contar atividades: {e}")
+            return 0
+    
+    def contar_turmas_db(self) -> int:
+        """Conta o total de turmas no banco"""
+        try:
+            if not self._test_connection():
+                return 0
+            turma_dao = TurmaDAO(self.db)
+            return turma_dao.contar_total()
+        except Exception as e:
+            logger.error(f"Erro ao contar turmas: {e}")
+            return 0
+    
+    def listar_alunos_db(self) -> List[Dict[str, Any]]:
+        """Lista todos os alunos do banco"""
+        try:
+            if not self._test_connection():
+                return []
+            aluno_dao = AlunoDAO(self.db)
+            return aluno_dao.listar_todos()
+        except Exception as e:
+            logger.error(f"Erro ao listar alunos: {e}")
+            return []
+    
+    def listar_atividades_db(self) -> List[Dict[str, Any]]:
+        """Lista todas as atividades do banco"""
+        try:
+            if not self._test_connection():
+                return []
+            atividade_dao = AtividadeDAO(self.db)
+            return atividade_dao.listar_todas()
+        except Exception as e:
+            logger.error(f"Erro ao listar atividades: {e}")
+            return []
+    
+    def listar_turmas_db(self) -> List[Dict[str, Any]]:
+        """Lista todas as turmas do banco"""
+        try:
+            if not self._test_connection():
+                return []
+            turma_dao = TurmaDAO(self.db)
+            return turma_dao.listar_todas()
+        except Exception as e:
+            logger.error(f"Erro ao listar turmas: {e}")
+            return []
+    
+    def atualizar_aluno_db(self, aluno_id: str, dados_atualizados: Dict[str, Any]) -> bool:
+        """Atualiza um aluno no banco"""
+        try:
+            if not self._test_connection():
+                return False
+            aluno_dao = AlunoDAO(self.db)
+            return aluno_dao.atualizar(aluno_id, dados_atualizados)
+        except Exception as e:
+            logger.error(f"Erro ao atualizar aluno: {e}")
+            return False
+    
+    def registrar_atividade_db(self, usuario: str, acao: str, detalhes: str, tipo_usuario: str = "usuario") -> bool:
+        """Registra uma atividade no log"""
+        try:
+            if not self._test_connection():
+                return False
+            log_dao = LogAtividadeDAO(self.db)
+            dados_log = {
+                'usuario': usuario,
+                'acao': acao,
+                'detalhes': detalhes,
+                'tipo_usuario': tipo_usuario,
+                'timestamp': datetime.now().isoformat()
+            }
+            log_dao.criar(dados_log)
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao registrar atividade: {e}")
+            return False
 
 # Instância global para uso na aplicação
 db_integration_robusto = DatabaseIntegrationRobusto()
+
+# Função de compatibilidade para manter a interface existente
+def get_db_integration():
+    """Retorna a instância global do DatabaseIntegrationRobusto"""
+    return db_integration_robusto
