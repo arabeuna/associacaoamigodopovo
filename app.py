@@ -334,7 +334,7 @@ class SistemaAcademia:
         return sorted(list(atividades))
     
     def carregar_atividades(self):
-        """Carrega atividades cadastradas do banco PostgreSQL"""
+        """Carrega atividades cadastradas do banco MongoDB"""
         try:
             # Carregar atividades do banco de dados
             atividades_db = self.db_integration.listar_atividades_db()
@@ -392,7 +392,7 @@ class SistemaAcademia:
         return atividades_cadastradas
     
     def salvar_atividades(self, atividades=None):
-        """Sincroniza as atividades com o banco PostgreSQL"""
+        """Sincroniza as atividades com o banco MongoDB"""
         try:
             # Esta função agora é principalmente para compatibilidade
             # As atividades já são salvas diretamente no banco via database_integration
@@ -407,7 +407,7 @@ class SistemaAcademia:
             db_integration = get_db_integration()
             total_atividades_db = db_integration.contar_atividades_db()
             
-            print(f"💾 Atividades sincronizadas: {len(dados_para_verificar)} atividades em memória, {total_atividades_db} no banco PostgreSQL")
+            print(f"💾 Atividades sincronizadas: {len(dados_para_verificar)} atividades em memória, {total_atividades_db} no banco MongoDB")
             return True
         except Exception as e:
             print(f"❌ Erro ao sincronizar atividades: {e}")
@@ -537,9 +537,9 @@ class SistemaAcademia:
     # === GESTÃO DE TURMAS ===
     
     def carregar_turmas(self):
-        """Carrega turmas cadastradas do banco PostgreSQL"""
+        """Carrega turmas cadastradas do banco MongoDB"""
         try:
-            # Carregar turmas do banco PostgreSQL
+            # Carregar turmas do banco MongoDB
             turmas_db = self.db_integration.listar_turmas_db()
             
             if turmas_db:
@@ -560,7 +560,7 @@ class SistemaAcademia:
                         'total_alunos': turma.get('total_alunos', 0)
                     }
                 
-                print(f"📅 Turmas carregadas do banco PostgreSQL: {len(turmas)} turmas")
+                print(f"📅 Turmas carregadas do banco MongoDB: {len(turmas)} turmas")
                 return turmas
             else:
                 # Se não há turmas no banco, criar turmas básicas automaticamente
@@ -570,7 +570,7 @@ class SistemaAcademia:
                 return turmas_auto
                 
         except Exception as e:
-            print(f"❌ Erro ao carregar turmas do banco PostgreSQL: {e}")
+            print(f"❌ Erro ao carregar turmas do banco MongoDB: {e}")
             # Fallback: criar turmas automáticas em caso de erro
             try:
                 turmas_auto = self.criar_turmas_automaticas()
@@ -619,12 +619,12 @@ class SistemaAcademia:
         return turmas_cadastradas
     
     def salvar_turmas(self, turmas=None):
-        """Função de compatibilidade - dados das turmas são salvos no PostgreSQL via database_integration"""
+        """Função de compatibilidade - dados das turmas são salvos no MongoDB via database_integration"""
         try:
-            # Os dados das turmas agora são salvos diretamente no banco PostgreSQL
+            # Os dados das turmas agora são salvos diretamente no banco MongoDB
             # Esta função serve apenas para compatibilidade e verificação de sincronização
             total_turmas_db = self.db_integration.contar_turmas_db()
-            print(f"💾 Turmas no banco PostgreSQL: {total_turmas_db} turmas")
+            print(f"💾 Turmas no banco MongoDB: {total_turmas_db} turmas")
             print(f"ℹ️  Dados das turmas são persistidos automaticamente no banco de dados")
             return True
         except Exception as e:
@@ -1095,7 +1095,7 @@ class SistemaAcademia:
             return 0
     
     def registrar_presenca_manual(self, nome_aluno, data_hora=None):
-        """Registra presença manual de um aluno no banco PostgreSQL"""
+        """Registra presença manual de um aluno no banco MongoDB"""
         try:
             if not data_hora:
                 data_hora = datetime.now()
@@ -1113,7 +1113,7 @@ class SistemaAcademia:
             if not aluno_encontrado:
                 return False, "Aluno não encontrado"
             
-            # Registrar presença no banco de dados PostgreSQL
+            # Registrar presença no banco de dados MongoDB
             db_integration = get_db_integration()
             
             dados_presenca = {
@@ -1499,7 +1499,7 @@ class SistemaAcademia:
             }
 
     def salvar_dados(self, dados=None):
-        """Sincroniza os dados dos alunos com o banco PostgreSQL"""
+        """Sincroniza os dados dos alunos com o banco MongoDB"""
         try:
             # Esta função agora é principalmente para compatibilidade
             # Os dados já são salvos diretamente no banco via database_integration
@@ -1514,16 +1514,16 @@ class SistemaAcademia:
             db_integration = get_db_integration()
             total_alunos_db = db_integration.contar_alunos_db()
             
-            print(f"💾 Dados sincronizados: {len(dados_para_verificar)} alunos em memória, {total_alunos_db} no banco PostgreSQL")
+            print(f"💾 Dados sincronizados: {len(dados_para_verificar)} alunos em memória, {total_alunos_db} no banco MongoDB")
             return True
         except Exception as e:
             print(f"❌ Erro ao sincronizar dados: {e}")
             return False
     
     def adicionar_aluno(self, novo_aluno):
-        """Adiciona um novo aluno e salva os dados no banco PostgreSQL"""
+        """Adiciona um novo aluno e salva os dados no banco MongoDB"""
         try:
-            # Salvar no banco de dados PostgreSQL com sistema robusto
+            # Salvar no banco de dados MongoDB com sistema robusto
             resultado = db_integration_robusto.salvar_aluno_db_robusto(novo_aluno)
             
             if resultado.get('success'):
@@ -1537,7 +1537,7 @@ class SistemaAcademia:
                 if resultado.get('method') == 'fallback':
                     print(f"⚠️ Aluno {novo_aluno.get('nome')} salvo em fallback (conexão indisponível)")
                 else:
-                    print(f"✅ Aluno {novo_aluno.get('nome')} salvo no banco PostgreSQL (ID: {aluno_id})")
+                    print(f"✅ Aluno {novo_aluno.get('nome')} salvo no banco MongoDB (ID: {aluno_id})")
                 return True
             else:
                 print(f"❌ Falha ao salvar aluno: {resultado.get('message')}")
@@ -1547,7 +1547,7 @@ class SistemaAcademia:
             return False
     
     def atualizar_aluno(self, indice, dados_atualizados):
-        """Atualiza um aluno existente e salva os dados no banco PostgreSQL"""
+        """Atualiza um aluno existente e salva os dados no banco MongoDB"""
         try:
             if 0 <= indice < len(self.alunos_reais):
                 # Obter ID do aluno para atualizar no banco
@@ -1555,7 +1555,7 @@ class SistemaAcademia:
                 aluno_id = aluno_atual.get('id')
                 
                 if aluno_id:
-                    # Atualizar no banco de dados PostgreSQL
+                    # Atualizar no banco de dados MongoDB
                     db_integration = get_db_integration()
                     sucesso = db_integration.atualizar_aluno_db(aluno_id, dados_atualizados)
                     
@@ -1563,7 +1563,7 @@ class SistemaAcademia:
                         # Também manter compatibilidade com sistema antigo (temporário)
                         self.alunos_reais[indice].update(dados_atualizados)
                         self.salvar_dados()  # Backup em JSON
-                        print(f"✅ Aluno {dados_atualizados.get('nome', 'ID:' + str(aluno_id))} atualizado no banco PostgreSQL")
+                        print(f"✅ Aluno {dados_atualizados.get('nome', 'ID:' + str(aluno_id))} atualizado no banco MongoDB")
                         return True
                     else:
                         print("❌ Falha ao atualizar aluno no banco de dados")
@@ -3341,12 +3341,12 @@ def obter_aluno(aluno_id):
 @app.route('/salvar_dados_manualmente')
 @login_obrigatorio  
 def salvar_dados_manualmente():
-    """Rota para verificar sincronização dos dados no banco PostgreSQL"""
+    """Rota para verificar sincronização dos dados no banco MongoDB"""
     try:
         # Obter integração com banco de dados
         db_integration = get_db_integration()
         
-        # Contar dados no banco PostgreSQL
+        # Contar dados no banco MongoDB
         total_alunos = db_integration.contar_alunos_db()
         total_atividades = db_integration.contar_atividades_db()
         total_turmas = db_integration.contar_turmas_db()
@@ -3355,26 +3355,26 @@ def salvar_dados_manualmente():
         if total_alunos > 0 or total_atividades > 0 or total_turmas > 0:
             return jsonify({
                 'success': True,
-                'message': f'Dados verificados no banco PostgreSQL! Alunos: {total_alunos}, Atividades: {total_atividades}, Turmas: {total_turmas}',
+                'message': f'Dados verificados no banco MongoDB! Alunos: {total_alunos}, Atividades: {total_atividades}, Turmas: {total_turmas}',
                 'total_alunos': total_alunos,
                 'total_atividades': total_atividades,
                 'total_turmas': total_turmas,
-                'database_status': 'PostgreSQL ativo'
+                'database_status': 'MongoDB ativo'
             })
         else:
             return jsonify({
                 'success': False, 
-                'message': 'Nenhum dado encontrado no banco PostgreSQL',
+                'message': 'Nenhum dado encontrado no banco MongoDB',
                 'total_alunos': 0,
                 'total_atividades': 0,
                 'total_turmas': 0,
-                'database_status': 'PostgreSQL vazio'
+                'database_status': 'MongoDB vazio'
             })
             
     except Exception as e:
         return jsonify({
             'success': False, 
-            'message': f'Erro ao verificar dados no banco PostgreSQL: {str(e)}',
+            'message': f'Erro ao verificar dados no banco MongoDB: {str(e)}',
             'database_status': 'Erro de conexão'
         })
 
@@ -5130,9 +5130,9 @@ import json
 from datetime import datetime, timedelta
 
 def registrar_atividade(usuario, acao, detalhes, tipo_usuario="usuario"):
-    """Registra uma atividade no sistema de logs usando PostgreSQL"""
+    """Registra uma atividade no sistema de logs usando MongoDB"""
     try:
-        # Registrar no banco de dados PostgreSQL
+        # Registrar no banco de dados MongoDB
         sucesso = db_integration.registrar_atividade_db(
             usuario=usuario,
             acao=acao,
@@ -5177,7 +5177,7 @@ def registrar_atividade(usuario, acao, detalhes, tipo_usuario="usuario"):
         print(f"Erro ao registrar atividade: {e}")
 
 def carregar_logs(filtro_periodo="todos"):
-    """Carrega logs do banco de dados PostgreSQL com filtro por período"""
+    """Carrega logs do banco de dados MongoDB com filtro por período"""
     try:
         # Carregar logs do banco de dados
         logs = db_integration.listar_logs_db(filtro=filtro_periodo, limite=1000)
