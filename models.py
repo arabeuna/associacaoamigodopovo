@@ -217,8 +217,12 @@ class AlunoDAO:
                 return aluno_id
             else:
                 # Usar MongoDB
+                import uuid
                 dados_aluno['data_cadastro'] = datetime.now()
                 dados_aluno['ativo'] = True
+                # Gerar id_unico se não existir
+                if 'id_unico' not in dados_aluno or not dados_aluno['id_unico']:
+                    dados_aluno['id_unico'] = str(uuid.uuid4())[:8] + '_' + str(int(datetime.now().timestamp()))
                 resultado = db.alunos.insert_one(dados_aluno)
                 return str(resultado.inserted_id)
         except Exception as e:
