@@ -339,28 +339,31 @@ function limparFormulario() {
 }
 
 // Submissão do formulário de presença
-document.getElementById('formPresenca').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    var formData = new FormData(this);
-    
-    fetch('{{ url_for("marcar_presenca_detalhada") }}', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Presença registrada com sucesso!');
-            location.reload();
-        } else {
-            alert('Erro ao registrar presença: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao registrar presença. Tente novamente.');
+var formPresenca = document.getElementById('formPresenca');
+if (formPresenca) {
+    formPresenca.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = new FormData(this);
+        
+        fetch('{{ url_for("marcar_presenca_detalhada") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Presença registrada com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro ao registrar presença: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao registrar presença. Tente novamente.');
+        });
     });
-});
+}
 </script>
 {% endblock %}

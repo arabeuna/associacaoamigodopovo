@@ -7,7 +7,7 @@ import tempfile
 from werkzeug.utils import secure_filename
 import io
 from dotenv import load_dotenv
-from models import SessionLocal, engine, Base, Aluno, Atividade, Turma, Usuario, Presenca, get_db
+from models import init_mongodb, get_db, verificar_conexao, AlunoDAO, AtividadeDAO, TurmaDAO, UsuarioDAO, PresencaDAO, BuscaSalvaDAO, LogAtividadeDAO
 from database_integration import get_db_integration
 from database_integration_robusto import db_integration_robusto
 
@@ -38,17 +38,30 @@ app.config['SESSION_FILE_DIR'] = tempfile.gettempdir()
 app.config['SESSION_FILE_THRESHOLD'] = 500
 app.config['SESSION_FILE_MODE'] = 384
 
-# Inicializar banco de dados
+# Inicializar MongoDB
 try:
-    Base.metadata.create_all(bind=engine)
-    print("Tabelas do banco de dados criadas/verificadas com sucesso!")
+    mongodb = init_mongodb()
+    if mongodb:
+        print("✅ MongoDB Atlas conectado e inicializado com sucesso!")
+    else:
+        print("❌ Falha ao conectar ao MongoDB Atlas")
 except Exception as e:
-    print(f"Erro ao inicializar banco de dados: {e}")
+    print(f"❌ Erro ao inicializar MongoDB: {e}")
 
-# Função para fechar sessão do banco de dados
+# Função para verificar conexão MongoDB
 def close_db(db):
-    if db:
-        db.close()
+    # MongoDB não precisa de fechamento explícito de sessão
+    pass
+
+def check_mongodb_connection():
+    """Verifica se a conexão MongoDB está ativa"""
+    return verificar_conexao()
+
+def get_mongodb():
+    """Retorna a instância do banco MongoDB"""
+    return get_db()
+
+# MongoDB connection handled by models.py
 
 # Usuários do sistema com controle hierárquico
 USUARIOS = {
@@ -144,29 +157,28 @@ class SistemaAcademia:
         self.atualizar_status_frequencia_informatica()
     
     def carregar_dados_reais(self):
-        """Carrega dados dos alunos do banco PostgreSQL"""
+        """Carrega dados dos alunos do banco MongoDB"""
         try:
-            db = SessionLocal()
-            alunos = db.query(Aluno).filter(Aluno.ativo == True).all()
+            db_integration = get_db_integration()
+            alunos = db_integration.aluno_dao.listar_todos()
             
             dados_alunos = []
             for aluno in alunos:
                 dados_alunos.append({
-                    'id': aluno.id,
-                    'nome': aluno.nome,
-                    'telefone': aluno.telefone or '',
-                    'endereco': aluno.endereco or '',
-                    'email': aluno.email or '',
-                    'data_nascimento': aluno.data_nascimento.strftime('%Y-%m-%d') if aluno.data_nascimento else 'A definir',
-                    'data_cadastro': aluno.data_cadastro.strftime('%d/%m/%Y') if aluno.data_cadastro else 'A definir',
-                    'atividade': aluno.atividade.nome if aluno.atividade else 'A definir',
-                    'turma': aluno.turma.nome if aluno.turma else 'A definir',
-                    'status_frequencia': aluno.status_frequencia or 'Sem dados',
-                    'observacoes': aluno.observacoes or ''
+                    'id': aluno.get('_id', ''),
+                    'nome': aluno.get('nome', ''),
+                    'telefone': aluno.get('telefone', ''),
+                    'endereco': aluno.get('endereco', ''),
+                    'email': aluno.get('email', ''),
+                    'data_nascimento': aluno.get('data_nascimento', 'A definir'),
+                    'data_cadastro': aluno.get('data_cadastro', 'A definir'),
+                    'atividade': aluno.get('atividade', 'A definir'),
+                    'turma': aluno.get('turma', 'A definir'),
+                    'status_frequencia': aluno.get('status_frequencia', 'Sem dados'),
+                    'observacoes': aluno.get('observacoes', '')
                 })
             
-            db.close()
-            print(f"📦 Carregados {len(dados_alunos)} alunos do banco PostgreSQL")
+            print(f"📦 Carregados {len(dados_alunos)} alunos do banco MongoDB")
             return dados_alunos
             
         except Exception as e:
@@ -1748,27 +1760,28 @@ def obter_alunos_usuario():
     
     print(f"🔍 DEBUG obter_alunos_usuario: usuario_logado={usuario_logado}, nivel_usuario={nivel_usuario}")
     
-    db = SessionLocal()
     try:
+        db_integration = get_db_integration()
+        
         # Admin Master e Admin veem todos os alunos
         if nivel_usuario in ['admin_master', 'admin']:
             print(f"🔍 DEBUG: Entrando na condição admin/admin_master")
-            alunos = db.query(Aluno).filter(Aluno.ativo == True).all()
+            alunos = db_integration.aluno_dao.listar_todos()
             print(f"🔍 DEBUG: Encontrados {len(alunos)} alunos no banco")
             return [{
-                'id': aluno.id,
-                'id_unico': aluno.id_unico,
-                'nome': aluno.nome,
-                'telefone': aluno.telefone or '',
-                'endereco': aluno.endereco or '',
-                'email': aluno.email or '',
-                'data_nascimento': aluno.data_nascimento.strftime('%d/%m/%Y') if aluno.data_nascimento else '',
-                'data_cadastro': aluno.data_cadastro.strftime('%d/%m/%Y') if aluno.data_cadastro else '',
-                'atividade': aluno.atividade.nome if aluno.atividade else '',
-                'turma': aluno.turma.nome if aluno.turma else '',
-                'status_frequencia': aluno.status_frequencia or '',
-                'observacoes': aluno.observacoes or ''
-            } for aluno in alunos]
+                'id': aluno.get('_id', ''),
+                'id_unico': aluno.get('id_unico', ''),
+                'nome': aluno.get('nome', ''),
+                'telefone': aluno.get('telefone', ''),
+                'endereco': aluno.get('endereco', ''),
+                'email': aluno.get('email', ''),
+                'data_nascimento': aluno.get('data_nascimento', ''),
+                'data_cadastro': aluno.get('data_cadastro', ''),
+                'atividade': aluno.get('atividade', ''),
+                'turma': aluno.get('turma', ''),
+                'status_frequencia': aluno.get('status_frequencia', ''),
+                'observacoes': aluno.get('observacoes', '')
+            } for aluno in alunos if aluno.get('ativo', True)]
         
         # Usuários veem apenas seus alunos atribuídos
         if nivel_usuario == 'usuario' and usuario_logado in USUARIOS:
@@ -1776,33 +1789,23 @@ def obter_alunos_usuario():
             atividade_responsavel = usuario_dados.get('atividade_responsavel')
             
             if atividade_responsavel:
-                # Buscar atividade no banco
-                atividade = db.query(Atividade).filter(
-                    Atividade.nome.ilike(f"%{atividade_responsavel}%"),
-                    Atividade.ativa == True
-                ).first()
+                # Buscar alunos por atividade
+                alunos = db_integration.aluno_dao.buscar_por_atividade(atividade_responsavel)
                 
-                if atividade:
-                    # Retornar alunos da atividade do professor
-                    alunos = db.query(Aluno).filter(
-                        Aluno.atividade_id == atividade.id,
-                        Aluno.ativo == True
-                    ).all()
-                    
-                    return [{
-                        'id': aluno.id,
-                        'id_unico': aluno.id_unico,
-                        'nome': aluno.nome,
-                        'telefone': aluno.telefone or '',
-                        'endereco': aluno.endereco or '',
-                        'email': aluno.email or '',
-                        'data_nascimento': aluno.data_nascimento.strftime('%d/%m/%Y') if aluno.data_nascimento else '',
-                        'data_cadastro': aluno.data_cadastro.strftime('%d/%m/%Y') if aluno.data_cadastro else '',
-                        'atividade': aluno.atividade.nome if aluno.atividade else '',
-                        'turma': aluno.turma.nome if aluno.turma else '',
-                        'status_frequencia': aluno.status_frequencia or '',
-                        'observacoes': aluno.observacoes or ''
-                    } for aluno in alunos]
+                return [{
+                    'id': aluno.get('_id', ''),
+                    'id_unico': aluno.get('id_unico', ''),
+                    'nome': aluno.get('nome', ''),
+                    'telefone': aluno.get('telefone', ''),
+                    'endereco': aluno.get('endereco', ''),
+                    'email': aluno.get('email', ''),
+                    'data_nascimento': aluno.get('data_nascimento', ''),
+                    'data_cadastro': aluno.get('data_cadastro', ''),
+                    'atividade': aluno.get('atividade', ''),
+                    'turma': aluno.get('turma', ''),
+                    'status_frequencia': aluno.get('status_frequencia', ''),
+                    'observacoes': aluno.get('observacoes', '')
+                } for aluno in alunos if aluno.get('ativo', True)]
         
         return []
         
@@ -1817,8 +1820,6 @@ def obter_alunos_usuario():
             if atividade_responsavel:
                 return academia.get_alunos_por_atividade(atividade_responsavel)
         return []
-    finally:
-        close_db(db)
 
 def salvar_usuarios():
     """Salva dados de usuários em arquivo JSON"""
@@ -1963,9 +1964,64 @@ def dashboard():
         print(f"❌ Erro ao processar presenças: {e}")
         presencas_hoje = []
     
+    # Obter estatísticas de upload de planilhas
+    try:
+        # Contar uploads de hoje usando LogAtividadeDAO
+        data_hoje_str = datetime.now().strftime('%Y-%m-%d')
+        uploads_hoje = 0
+        novos_alunos_planilha = 0
+        atualizacoes_planilha = 0
+        
+        # Buscar logs de atividade relacionados a upload de planilhas
+        logs_upload = db_integration.log_atividade_dao.buscar_por_acao('Upload de Planilha')
+        
+        uploads_recentes = []
+        for log in logs_upload[-5:]:  # Últimos 5 uploads
+            if log.get('data_acao'):
+                data_log = log['data_acao'].strftime('%Y-%m-%d') if hasattr(log['data_acao'], 'strftime') else str(log['data_acao'])[:10]
+                if data_log == data_hoje_str:
+                    uploads_hoje += 1
+                
+                # Extrair informações do log
+                detalhes = log.get('detalhes', '')
+                if 'novos:' in detalhes:
+                    try:
+                        novos = int(detalhes.split('novos:')[1].split(',')[0].strip())
+                        novos_alunos_planilha += novos
+                    except:
+                        pass
+                
+                if 'atualizações:' in detalhes:
+                    try:
+                        atualizacoes = int(detalhes.split('atualizações:')[1].split(',')[0].strip())
+                        atualizacoes_planilha += atualizacoes
+                    except:
+                        pass
+                
+                uploads_recentes.append({
+                    'data_hora': log['data_acao'].strftime('%d/%m/%Y %H:%M') if hasattr(log['data_acao'], 'strftime') else str(log['data_acao']),
+                    'nome_arquivo': log.get('detalhes', '').split('arquivo:')[1].split(',')[0].strip() if 'arquivo:' in log.get('detalhes', '') else 'N/A',
+                    'novos_alunos': novos,
+                    'atualizacoes': atualizacoes,
+                    'status': 'sucesso' if 'sucesso' in log.get('detalhes', '').lower() else 'erro'
+                })
+        
+        # Adicionar estatísticas de upload ao stats
+        stats['uploads_hoje'] = uploads_hoje
+        stats['novos_alunos_planilha'] = novos_alunos_planilha
+        stats['atualizacoes_planilha'] = atualizacoes_planilha
+        
+    except Exception as e:
+        print(f"❌ Erro ao obter estatísticas de upload: {e}")
+        stats['uploads_hoje'] = 0
+        stats['novos_alunos_planilha'] = 0
+        stats['atualizacoes_planilha'] = 0
+        uploads_recentes = []
+    
     return render_template('dashboard.html', 
                          stats=stats, 
                          presencas_hoje=presencas_hoje, 
+                         uploads_recentes=uploads_recentes,
                          usuario_nome=usuario_nome,
                          nivel_usuario=nivel_usuario)
 
@@ -2322,7 +2378,6 @@ def processar_busca_avancada():
 def salvar_busca():
     """Salva uma busca avançada para uso posterior"""
     try:
-        from models import SessionLocal, BuscaSalvaDAO
         import json
         
         data = request.get_json()
@@ -2354,19 +2409,20 @@ def salvar_busca():
         # Em um sistema real, você teria o ID do usuário na sessão
         usuario_id = hash(usuario_nome) % 1000000  # Simular ID baseado no nome
         
-        db = SessionLocal()
         try:
-            # Salvar busca no banco
-            busca = BuscaSalvaDAO.salvar_busca(
-                db=db,
-                nome=nome,
-                descricao=descricao,
-                criterios=json.dumps(criterios),
-                usuario_id=usuario_id
-            )
+            # Salvar busca usando MongoDB
+            db_integration = get_db_integration()
+            busca_data = {
+                'nome': nome,
+                'descricao': descricao,
+                'criterios': json.dumps(criterios),
+                'usuario_id': usuario_id,
+                'data_criacao': datetime.now().isoformat()
+            }
+            busca_id = db_integration.busca_dao.criar(busca_data)
             
             # Registrar atividade
-            sistema_busca.registrar_atividade(
+            registrar_atividade(
                 usuario=usuario_nome,
                 acao=f'Busca salva: {nome}',
                 detalhes=f'Critérios: {json.dumps(criterios)}'
@@ -2375,11 +2431,15 @@ def salvar_busca():
             return jsonify({
                 'success': True,
                 'message': f'Busca "{nome}" salva com sucesso!',
-                'busca_id': busca.id
+                'busca_id': str(busca_id)
             })
             
-        finally:
-            db.close()
+        except Exception as db_error:
+            print(f"❌ Erro ao salvar no MongoDB: {db_error}")
+            return jsonify({
+                'success': False,
+                'message': f'Erro ao salvar busca: {str(db_error)}'
+            })
             
     except Exception as e:
         print(f"❌ Erro ao salvar busca: {e}")
@@ -2393,7 +2453,6 @@ def salvar_busca():
 def listar_buscas_salvas():
     """Lista as buscas salvas do usuário atual"""
     try:
-        from models import SessionLocal, BuscaSalvaDAO
         import json
         
         usuario_nome = session.get('usuario_nome')
@@ -2405,19 +2464,19 @@ def listar_buscas_salvas():
         
         usuario_id = hash(usuario_nome) % 1000000  # Simular ID baseado no nome
         
-        db = SessionLocal()
         try:
-            buscas = BuscaSalvaDAO.listar_por_usuario(db, usuario_id)
+            db_integration = get_db_integration()
+            buscas = db_integration.busca_dao.buscar_por_usuario(usuario_id)
             
             buscas_data = []
             for busca in buscas:
                 buscas_data.append({
-                    'id': busca.id,
-                    'nome': busca.nome,
-                    'descricao': busca.descricao or 'Sem descrição',
-                    'criterios': json.loads(busca.criterios),
-                    'data_criacao': busca.data_criacao.strftime('%d/%m/%Y %H:%M'),
-                    'data_ultima_execucao': busca.data_ultima_execucao.strftime('%d/%m/%Y %H:%M') if busca.data_ultima_execucao else None
+                    'id': str(busca.get('_id', busca.get('id', ''))),
+                    'nome': busca.get('nome', ''),
+                    'descricao': busca.get('descricao', 'Sem descrição'),
+                    'criterios': json.loads(busca.get('criterios', '{}')),
+                    'data_criacao': busca.get('data_criacao', ''),
+                    'data_ultima_execucao': busca.get('data_ultima_execucao', None)
                 })
             
             return jsonify({
@@ -2425,8 +2484,13 @@ def listar_buscas_salvas():
                 'buscas': buscas_data
             })
             
-        finally:
-            db.close()
+        except Exception as db_error:
+            print(f"❌ Erro ao listar buscas no MongoDB: {db_error}")
+            return jsonify({
+                'success': False,
+                'message': f'Erro ao listar buscas: {str(db_error)}',
+                'buscas': []
+            })
             
     except Exception as e:
         print(f"❌ Erro ao listar buscas salvas: {e}")
@@ -2441,7 +2505,6 @@ def listar_buscas_salvas():
 def executar_busca_salva(busca_id):
     """Executa uma busca salva"""
     try:
-        from models import SessionLocal, BuscaSalvaDAO
         import json
         
         usuario_nome = session.get('usuario_nome')
@@ -2453,18 +2516,20 @@ def executar_busca_salva(busca_id):
         
         usuario_id = hash(usuario_nome) % 1000000  # Simular ID baseado no nome
         
-        db = SessionLocal()
         try:
+            db_integration = get_db_integration()
             # Buscar a busca salva
-            busca = BuscaSalvaDAO.buscar_por_id(db, busca_id, usuario_id)
-            if not busca:
+            busca = db_integration.busca_dao.buscar_por_id(str(busca_id))
+            if not busca or busca.get('usuario_id') != usuario_id:
                 return jsonify({
                     'success': False,
                     'message': 'Busca não encontrada'
                 })
             
             # Atualizar data da última execução
-            BuscaSalvaDAO.atualizar_ultima_execucao(db, busca_id)
+            db_integration.busca_dao.atualizar(str(busca_id), {
+                'data_ultima_execucao': datetime.now().isoformat()
+            })
             
             # Executar a busca com os critérios salvos
             criterios = json.loads(busca.criterios)
@@ -2535,7 +2600,7 @@ def executar_busca_salva(busca_id):
 def excluir_busca_salva(busca_id):
     """Exclui uma busca salva"""
     try:
-        from models import SessionLocal, BuscaSalvaDAO
+        db_integration = get_db_integration()
         
         usuario_nome = session.get('usuario_nome')
         if not usuario_nome:
@@ -2546,31 +2611,26 @@ def excluir_busca_salva(busca_id):
         
         usuario_id = hash(usuario_nome) % 1000000  # Simular ID baseado no nome
         
-        db = SessionLocal()
-        try:
-            # Excluir busca
-            sucesso = BuscaSalvaDAO.excluir_busca(db, busca_id, usuario_id)
+        # Excluir busca
+        sucesso = db_integration.busca_dao.excluir(str(busca_id), usuario_id)
+        
+        if sucesso:
+            # Registrar atividade
+            registrar_atividade(
+                usuario=usuario_nome,
+                acao=f'Busca excluída: ID {busca_id}',
+                detalhes='Busca salva removida pelo usuário'
+            )
             
-            if sucesso:
-                # Registrar atividade
-                sistema_busca.registrar_atividade(
-                    usuario=usuario_nome,
-                    acao=f'Busca excluída: ID {busca_id}',
-                    detalhes='Busca salva removida pelo usuário'
-                )
-                
-                return jsonify({
-                    'success': True,
-                    'message': 'Busca excluída com sucesso!'
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'message': 'Busca não encontrada'
-                })
-            
-        finally:
-            db.close()
+            return jsonify({
+                'success': True,
+                'message': 'Busca excluída com sucesso!'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Busca não encontrada'
+            })
             
     except Exception as e:
         print(f"❌ Erro ao excluir busca salva: {e}")
@@ -2989,19 +3049,12 @@ def cadastrar_aluno():
         
         # Verificar se aluno já existe no banco de dados (nome + telefone)
         # Permitir nomes duplicados, mas não nome + telefone duplicados
-        db = next(get_db())
-        try:
-            if telefone:  # Só validar se telefone foi fornecido
-                aluno_existente = db.query(Aluno).filter(
-                    Aluno.nome.ilike(nome),
-                    Aluno.telefone == telefone,
-                    Aluno.ativo == True
-                ).first()
-                
-                if aluno_existente:
-                    return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome e telefone'})
-        finally:
-            db.close()
+        if telefone:  # Só validar se telefone foi fornecido
+            aluno_dao = AlunoDAO()
+            aluno_existente = aluno_dao.buscar_por_nome_telefone(nome, telefone)
+            
+            if aluno_existente:
+                return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome e telefone'})
         
         # Manter data de nascimento no formato YYYY-MM-DD para o banco de dados
         data_nasc_formatada = data_nascimento
@@ -3026,20 +3079,25 @@ def cadastrar_aluno():
             'atividade': atividade if atividade else 'A definir',
             'turma': turma if turma else 'A definir',
             'status_frequencia': 'Novo cadastro',
-            'observacoes': observacoes
+            'observacoes': observacoes,
+            'ativo': True
         }
         
-        # Adicionar ao sistema e salvar
+        # Adicionar ao MongoDB
         print(f"[DEBUG] Tentando salvar aluno: {novo_aluno}")
-        sucesso = academia.adicionar_aluno(novo_aluno)
+        aluno_dao = AlunoDAO()
+        resultado = aluno_dao.criar(novo_aluno)
+        sucesso = resultado is not None
         print(f"[DEBUG] Resultado do salvamento: {sucesso}")
         
         if sucesso:
             print(f"[DEBUG] Cadastro bem-sucedido para {nome}")
+            # Contar total de alunos ativos
+            total_alunos = aluno_dao.contar_ativos()
             return jsonify({
                 'success': True, 
                 'message': f'Aluno {nome} cadastrado com sucesso!',
-                'total_alunos': len(academia.alunos_reais)
+                'total_alunos': total_alunos
             })
         else:
             print(f"[DEBUG] Falha no cadastro para {nome}")
@@ -3052,10 +3110,10 @@ def cadastrar_aluno():
 @app.route('/editar_aluno/<aluno_id>', methods=['GET', 'PUT', 'POST'])
 @apenas_admin_ou_master
 def editar_aluno(aluno_id):
-    db = SessionLocal()
     try:
-        # Buscar aluno diretamente no banco de dados
-        aluno_db = db.query(Aluno).filter(Aluno.id == int(aluno_id)).first()
+        # Buscar aluno no MongoDB
+        aluno_dao = AlunoDAO()
+        aluno_db = aluno_dao.buscar_por_id(aluno_id)
         
         if not aluno_db:
             if request.method == 'GET':
@@ -3091,82 +3149,58 @@ def editar_aluno(aluno_id):
         # Verificar se outro aluno já tem este nome E telefone (validação mais específica)
         # Permitir nomes duplicados, mas não nome + telefone duplicados
         if telefone:  # Só validar se telefone foi fornecido
-            aluno_existente = db.query(Aluno).filter(
-                Aluno.nome.ilike(nome),
-                Aluno.telefone == telefone,
-                Aluno.id != aluno_db.id
-            ).first()
+            aluno_existente = aluno_dao.buscar_por_nome_telefone(nome, telefone)
             
-            if aluno_existente:
+            if aluno_existente and str(aluno_existente.get('_id')) != aluno_id:
                 return jsonify({'success': False, 'message': 'Já existe outro aluno cadastrado com este nome e telefone'})
         
         # Converter data de nascimento se fornecida
+        data_nasc_formatada = data_nascimento
         if data_nascimento:
             try:
-                # Converter de YYYY-MM-DD para objeto date
+                # Validar formato da data
                 from datetime import datetime as dt
                 data_obj = dt.strptime(data_nascimento, '%Y-%m-%d')
-                aluno_db.data_nascimento = data_obj.date()
+                data_nasc_formatada = data_nascimento  # Manter formato original
             except ValueError as e:
                 return jsonify({'success': False, 'message': f'Formato de data inválido. Use YYYY-MM-DD. Erro: {str(e)}'})
             except Exception as e:
                 return jsonify({'success': False, 'message': f'Erro ao processar data de nascimento: {str(e)}'})
         
-        # Buscar IDs de atividade e turma
-        atividade_id = None
-        turma_id = None
-        
-        if atividade and atividade != 'A definir':
-            atividade_obj = db.query(Atividade).filter(Atividade.nome == atividade).first()
-            if atividade_obj:
-                atividade_id = atividade_obj.id
-        
-        if turma and turma != 'A definir':
-            turma_obj = db.query(Turma).filter(Turma.nome == turma).first()
-            if turma_obj:
-                turma_id = turma_obj.id
-        
-        # Atualizar dados no banco
-        aluno_db.nome = nome
-        aluno_db.telefone = telefone
-        aluno_db.email = email if email else ''
-        aluno_db.endereco = endereco if endereco else ''
-        aluno_db.atividade_id = atividade_id
-        aluno_db.turma_id = turma_id
-        aluno_db.observacoes = observacoes if observacoes else ''
-        aluno_db.titulo_eleitor = titulo_eleitor if titulo_eleitor else ''
-        
-        # Salvar alterações
-        db.commit()
-        
-        # Preparar resposta com nomes das atividades e turmas
-        atividade_nome = ''
-        turma_nome = ''
-        
-        if aluno_db.atividade_id:
-            atividade_obj = db.query(Atividade).filter(Atividade.id == aluno_db.atividade_id).first()
-            if atividade_obj:
-                atividade_nome = atividade_obj.nome
-        
-        if aluno_db.turma_id:
-            turma_obj = db.query(Turma).filter(Turma.id == aluno_db.turma_id).first()
-            if turma_obj:
-                turma_nome = turma_obj.nome
-        
-        aluno_atualizado = {
-            'id_unico': aluno_db.id_unico,
-            'nome': aluno_db.nome,
-            'telefone': aluno_db.telefone,
-            'email': aluno_db.email,
-            'endereco': aluno_db.endereco,
-            'data_nascimento': str(aluno_db.data_nascimento) if aluno_db.data_nascimento else '',
-            'atividade': atividade_nome,
-            'turma': turma_nome,
-            'observacoes': aluno_db.observacoes,
-            'titulo_eleitor': aluno_db.titulo_eleitor if aluno_db.titulo_eleitor else ''
+        # Preparar dados atualizados
+        dados_atualizados = {
+            'nome': nome,
+            'telefone': telefone,
+            'email': email if email else '',
+            'endereco': endereco if endereco else '',
+            'data_nascimento': data_nasc_formatada if data_nasc_formatada else '',
+            'atividade': atividade if atividade else 'A definir',
+            'turma': turma if turma else 'A definir',
+            'observacoes': observacoes if observacoes else '',
+            'titulo_eleitor': titulo_eleitor if titulo_eleitor else ''
         }
         
-        close_db(db)
+        # Atualizar no MongoDB
+        sucesso = aluno_dao.atualizar(aluno_id, dados_atualizados)
+        
+        if not sucesso:
+            return jsonify({'success': False, 'message': 'Erro ao atualizar dados do aluno'})
+        
+        # Buscar aluno atualizado
+        aluno_atualizado_db = aluno_dao.buscar_por_id(aluno_id)
+        
+        aluno_atualizado = {
+            'id_unico': str(aluno_atualizado_db['_id']),
+            'nome': aluno_atualizado_db.get('nome', ''),
+            'telefone': aluno_atualizado_db.get('telefone', ''),
+            'email': aluno_atualizado_db.get('email', ''),
+            'endereco': aluno_atualizado_db.get('endereco', ''),
+            'data_nascimento': aluno_atualizado_db.get('data_nascimento', ''),
+            'atividade': aluno_atualizado_db.get('atividade', ''),
+            'turma': aluno_atualizado_db.get('turma', ''),
+            'observacoes': aluno_atualizado_db.get('observacoes', ''),
+            'titulo_eleitor': aluno_atualizado_db.get('titulo_eleitor', '')
+        }
         
         return jsonify({
             'success': True, 
@@ -3175,37 +3209,38 @@ def editar_aluno(aluno_id):
         })
         
     except Exception as e:
-        close_db(db)
         return jsonify({'success': False, 'message': f'Erro ao editar aluno: {str(e)}'})
 
 @app.route('/excluir_aluno/<aluno_id>', methods=['DELETE', 'POST'])
 @apenas_admin_ou_master
 def excluir_aluno(aluno_id):
-    db = SessionLocal()
     try:
-        # Buscar aluno diretamente no banco de dados
-        aluno_db = db.query(Aluno).filter(Aluno.id == int(aluno_id)).first()
+        # Buscar aluno no MongoDB
+        aluno_dao = AlunoDAO()
+        aluno_db = aluno_dao.buscar_por_id(aluno_id)
         
         if not aluno_db:
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
         # Obter nome do aluno e dados de frequência antes de excluir
-        nome_aluno = aluno_db.nome
+        nome_aluno = aluno_db.get('nome', 'Aluno')
         
         # Verificar se há registros de presença
-        presencas = db.query(Presenca).filter(Presenca.aluno_id == aluno_db.id).all()
+        presenca_dao = PresencaDAO()
+        presencas = presenca_dao.buscar_por_aluno_id(aluno_id)
         tem_frequencia = len(presencas) > 0
         registros_frequencia = len(presencas) if tem_frequencia else 0
         
         # Excluir registros de presença primeiro (se houver)
         if tem_frequencia:
-            db.query(Presenca).filter(Presenca.aluno_id == aluno_db.id).delete()
+            for presenca in presencas:
+                presenca_dao.excluir(str(presenca['_id']))
         
         # Excluir o aluno
-        db.delete(aluno_db)
-        db.commit()
+        sucesso = aluno_dao.excluir(aluno_id)
         
-        close_db(db)
+        if not sucesso:
+            return jsonify({'success': False, 'message': 'Erro ao excluir aluno'})
         
         # Mensagem detalhada sobre o que foi removido
         mensagem = f'Aluno {nome_aluno} excluído com sucesso!'
@@ -3220,67 +3255,68 @@ def excluir_aluno(aluno_id):
         })
         
     except Exception as e:
-        close_db(db)
         return jsonify({'success': False, 'message': f'Erro ao excluir aluno: {str(e)}'})
 
 @app.route('/obter_aluno/<aluno_id>')
 @login_obrigatorio
 def obter_aluno(aluno_id):
-    db = SessionLocal()
+    db_integration = get_db_integration()
     try:
-        # Buscar aluno diretamente no banco de dados
-        aluno_db = db.query(Aluno).filter(Aluno.id_unico == str(aluno_id)).first()
+        # Buscar aluno usando DAO do MongoDB
+        aluno_db = db_integration.aluno_dao.buscar_por_id_unico(str(aluno_id))
         
         if not aluno_db:
             return jsonify({'success': False, 'message': 'Aluno não encontrado'})
         
-        # Converter para dicionário, evitando relacionamentos SQLAlchemy
+        # Converter para dicionário usando .get() para MongoDB
         aluno = {
-            'id_unico': aluno_db.id_unico,
-            'nome': aluno_db.nome,
-            'telefone': aluno_db.telefone,
-            'email': aluno_db.email or '',
-            'endereco': aluno_db.endereco or '',
-            'data_nascimento': str(aluno_db.data_nascimento) if aluno_db.data_nascimento else '',
+            'id_unico': aluno_db.get('id_unico'),
+            'nome': aluno_db.get('nome'),
+            'telefone': aluno_db.get('telefone'),
+            'email': aluno_db.get('email', ''),
+            'endereco': aluno_db.get('endereco', ''),
+            'data_nascimento': str(aluno_db.get('data_nascimento', '')) if aluno_db.get('data_nascimento') else '',
             'atividade': '',  # Será preenchido separadamente
             'turma': '',      # Será preenchido separadamente
-            'observacoes': aluno_db.observacoes or '',
-            'data_cadastro': str(aluno_db.data_cadastro) if aluno_db.data_cadastro else '',
-            'status_frequencia': aluno_db.status_frequencia or 'Sem dados',
-            'titulo_eleitor': aluno_db.titulo_eleitor or ''
+            'observacoes': aluno_db.get('observacoes', ''),
+            'data_cadastro': str(aluno_db.get('data_cadastro', '')) if aluno_db.get('data_cadastro') else '',
+            'status_frequencia': aluno_db.get('status_frequencia', 'Sem dados'),
+            'titulo_eleitor': aluno_db.get('titulo_eleitor', '')
         }
         
         # Buscar nome da atividade separadamente se houver atividade_id
-        if aluno_db.atividade_id:
-            atividade_obj = db.query(Atividade).filter(Atividade.id == aluno_db.atividade_id).first()
+        if aluno_db.get('atividade_id'):
+            atividade_obj = db_integration.atividade_dao.buscar_por_id(aluno_db.get('atividade_id'))
             if atividade_obj:
-                aluno['atividade'] = atividade_obj.nome
+                aluno['atividade'] = atividade_obj.get('nome', '')
         
         # Buscar nome da turma separadamente se houver turma_id
-        if aluno_db.turma_id:
-            turma_obj = db.query(Turma).filter(Turma.id == aluno_db.turma_id).first()
+        if aluno_db.get('turma_id'):
+            turma_obj = db_integration.turma_dao.buscar_por_id(aluno_db.get('turma_id'))
             if turma_obj:
-                aluno['turma'] = turma_obj.nome
+                aluno['turma'] = turma_obj.get('nome', '')
         
-        # Buscar dados de presença
+        # Buscar dados de presença usando MongoDB
         dados_presenca = None
         try:
-            presencas = db.query(Presenca).filter(Presenca.aluno_id == aluno_db.id).all()
+            # Para MongoDB, usar o id_unico do aluno
+            presencas = db_integration.presenca_dao.buscar_por_aluno_id(aluno_db.get('id_unico'))
             
             if presencas:
-                # Tentar acessar a coluna status, se não existir, usar valores padrão
-                try:
-                    total_presencas = sum(1 for p in presencas if hasattr(p, 'status') and p.status == 'P')
-                    total_faltas = sum(1 for p in presencas if hasattr(p, 'status') and p.status == 'F')
-                except:
-                    # Se a coluna status não existir, contar todas como presentes
-                    total_presencas = len(presencas)
-                    total_faltas = 0
+                # Contar presenças e faltas
+                total_presencas = sum(1 for p in presencas if p.get('status') == 'P')
+                total_faltas = sum(1 for p in presencas if p.get('status') == 'F')
                 
                 dados_presenca = {
                     'total_presencas': total_presencas,
                     'total_faltas': total_faltas,
                     'total_registros': len(presencas)
+                }
+            else:
+                dados_presenca = {
+                    'total_presencas': 0,
+                    'total_faltas': 0,
+                    'total_registros': 0
                 }
         except Exception as e:
             # Se houver erro ao buscar presenças, continuar sem dados de presença
@@ -3290,8 +3326,6 @@ def obter_aluno(aluno_id):
                 'total_faltas': 0,
                 'total_registros': 0
             }
-        
-        close_db(db)
         
         return jsonify({
             'success': True,
@@ -3823,22 +3857,21 @@ def processar_csv_basico(filepath):
     from datetime import datetime
     
     try:
-        db = SessionLocal()
+        db_integration = get_db_integration()
         
         # Usar atividade padrão "Cadastro Geral" para planilhas de cadastro
         atividade_nome = "Cadastro Geral"
-        atividade_obj = db.query(Atividade).filter(Atividade.nome == atividade_nome).first()
+        atividade_obj = db_integration.atividade_dao.buscar_por_nome(atividade_nome)
         if not atividade_obj:
             # Criar atividade padrão se não existir
-            atividade_obj = Atividade(
-                nome=atividade_nome,
-                descricao='Atividade padrão para cadastros gerais importados via planilha',
-                ativa=True,
-                data_criacao=datetime.now().date(),
-                criado_por=session.get('usuario_logado', 'admin')
-            )
-            db.add(atividade_obj)
-            db.commit()
+            nova_atividade = {
+                'nome': atividade_nome,
+                'descricao': 'Atividade padrão para cadastros gerais importados via planilha',
+                'ativa': True,
+                'data_criacao': datetime.now().date(),
+                'criado_por': session.get('usuario_logado', 'admin')
+            }
+            atividade_obj = db_integration.atividade_dao.criar(nova_atividade)
         
         alunos_processados = 0
         novos_cadastros = 0
@@ -4096,22 +4129,21 @@ def processar_planilha():
         alunos_erros = 0
         erros_detalhes = []
         
-        db = SessionLocal()
+        db_integration = get_db_integration()
         try:
             # Usar atividade padrão "Cadastro Geral" para planilhas de cadastro
             atividade_nome = "Cadastro Geral"
-            atividade_obj = db.query(Atividade).filter(Atividade.nome == atividade_nome).first()
+            atividade_obj = db_integration.atividade_dao.buscar_por_nome(atividade_nome)
             if not atividade_obj:
                 # Criar atividade padrão se não existir
-                atividade_obj = Atividade(
-                    nome=atividade_nome,
-                    descricao='Atividade padrão para cadastros gerais importados via planilha',
-                    ativa=True,
-                    data_criacao=datetime.now().date(),
-                    criado_por=session.get('usuario_logado', 'admin')
-                )
-                db.add(atividade_obj)
-                db.commit()
+                nova_atividade = {
+                    'nome': atividade_nome,
+                    'descricao': 'Atividade padrão para cadastros gerais importados via planilha',
+                    'ativa': True,
+                    'data_criacao': datetime.now().date(),
+                    'criado_por': session.get('usuario_logado', 'admin')
+                }
+                atividade_obj = db_integration.atividade_dao.criar(nova_atividade)
             
             for index, row in df.iterrows():
                 try:
@@ -4155,39 +4187,39 @@ def processar_planilha():
                             except:
                                 pass
                     
-                    # Verificar se aluno já existe
-                    aluno_existente = db.query(Aluno).filter(
-                        Aluno.nome == nome,
-                        Aluno.telefone == telefone
-                    ).first()
+                    # Verificar se aluno já existe usando MongoDB
+                    aluno_existente = db_integration.aluno_dao.buscar_por_nome_telefone(nome, telefone)
                     
                     if aluno_existente:
                         # Atualizar aluno existente
-                        aluno_existente.email = email if email != 'nan' else aluno_existente.email
-                        aluno_existente.endereco = endereco if endereco != 'nan' else aluno_existente.endereco
-                        aluno_existente.observacoes = observacoes if observacoes != 'nan' else aluno_existente.observacoes
-                        aluno_existente.titulo_eleitor = titulo_eleitor if titulo_eleitor != 'nan' else aluno_existente.titulo_eleitor
-                        aluno_existente.atividade_id = atividade_obj.id
-                        aluno_existente.ativo = True
+                        dados_atualizacao = {
+                            'email': email if email != 'nan' else aluno_existente.get('email'),
+                            'endereco': endereco if endereco != 'nan' else aluno_existente.get('endereco'),
+                            'observacoes': observacoes if observacoes != 'nan' else aluno_existente.get('observacoes'),
+                            'titulo_eleitor': titulo_eleitor if titulo_eleitor != 'nan' else aluno_existente.get('titulo_eleitor'),
+                            'atividade_id': atividade_obj.get('_id') if atividade_obj else None,
+                            'ativo': True
+                        }
                         if data_nascimento:
-                            aluno_existente.data_nascimento = data_nascimento
+                            dados_atualizacao['data_nascimento'] = data_nascimento
+                        db_integration.aluno_dao.atualizar(aluno_existente.get('_id'), dados_atualizacao)
                         atualizados += 1
                     else:
-                        # Criar novo aluno
-                        novo_aluno = Aluno(
-                            id_unico=id_unico,
-                            nome=nome,
-                            telefone=telefone if telefone != 'nan' else None,
-                            email=email if email != 'nan' else None,
-                            endereco=endereco if endereco != 'nan' else None,
-                            titulo_eleitor=titulo_eleitor if titulo_eleitor != 'nan' else None,
-                            data_nascimento=data_nascimento,
-                            data_cadastro=datetime.now().date(),
-                            atividade_id=atividade_obj.id,
-                            observacoes=observacoes if observacoes != 'nan' else None,
-                            ativo=True
-                        )
-                        db.add(novo_aluno)
+                        # Criar novo aluno usando MongoDB
+                        novo_aluno = {
+                            'id_unico': id_unico,
+                            'nome': nome,
+                            'telefone': telefone if telefone != 'nan' else None,
+                            'email': email if email != 'nan' else None,
+                            'endereco': endereco if endereco != 'nan' else None,
+                            'titulo_eleitor': titulo_eleitor if titulo_eleitor != 'nan' else None,
+                            'data_nascimento': data_nascimento,
+                            'data_cadastro': datetime.now().date(),
+                            'atividade_id': atividade_obj.get('_id') if atividade_obj else None,
+                            'observacoes': observacoes if observacoes != 'nan' else None,
+                            'ativo': True
+                        }
+                        db_integration.aluno_dao.criar(novo_aluno)
                         novos_cadastros += 1
                     
                     alunos_processados += 1
@@ -4199,7 +4231,6 @@ def processar_planilha():
                     erros_detalhes.append(erro_msg)
                     continue
             
-            db.commit()
             print(f"[PROCESSAR_PLANILHA] SUCESSO: {alunos_processados} processados, {novos_cadastros} novos, {atualizados} atualizados, {alunos_erros} erros")
             
             return jsonify({
@@ -4217,14 +4248,12 @@ def processar_planilha():
             
         except Exception as db_error:
             print(f"[PROCESSAR_PLANILHA] ERRO DE BANCO: {str(db_error)}")
-            db.rollback()
             return jsonify({
                 'error': f'Erro de banco de dados: {str(db_error)}',
                 'tipo_erro': 'database_error'
             }), 500
         finally:
-            if db:
-                db.close()
+            pass  # MongoDB não precisa de close manual
             # Limpar arquivo temporário
             if filepath and os.path.exists(filepath):
                 try:

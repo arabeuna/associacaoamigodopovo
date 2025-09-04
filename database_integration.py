@@ -8,20 +8,25 @@ import os
 import json
 from datetime import datetime, date
 from typing import List, Dict, Optional, Any
-from sqlalchemy.orm import Session
 from models import (
-    get_db, Usuario, Atividade, Turma, Aluno, Presenca, LogAtividade,
-    AlunoDAO, PresencaDAO, AtividadeDAO, TurmaDAO, LogAtividadeDAO
+    get_db, AlunoDAO, PresencaDAO, AtividadeDAO, TurmaDAO, LogAtividadeDAO, UsuarioDAO
 )
 
 class DatabaseIntegration:
     """
-    Classe para integrar o sistema existente com o banco de dados PostgreSQL
+    Classe para integrar o sistema existente com o banco de dados MongoDB
     Substitui os métodos de salvamento em JSON por operações no banco
     """
     
     def __init__(self):
-        self.db = next(get_db())
+        self.db = get_db()
+        # Inicializar DAOs do MongoDB
+        self.aluno_dao = AlunoDAO()
+        self.atividade_dao = AtividadeDAO()
+        self.turma_dao = TurmaDAO()
+        self.presenca_dao = PresencaDAO()
+        self.log_atividade_dao = LogAtividadeDAO()
+        self.usuario_dao = UsuarioDAO()
     
     def migrar_dados_json_para_db(self):
         """

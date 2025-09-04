@@ -54,6 +54,37 @@
         </div>
     </div>
 
+    <!-- Cards de Upload de Planilhas -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card text-white bg-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-upload fa-2x mb-2"></i>
+                    <h3 class="card-title">{{ stats.uploads_hoje if stats.uploads_hoje is defined else 0 }}</h3>
+                    <p class="card-text">Uploads Hoje</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card text-white bg-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-plus fa-2x mb-2"></i>
+                    <h3 class="card-title">{{ stats.novos_alunos_planilha if stats.novos_alunos_planilha is defined else 0 }}</h3>
+                    <p class="card-text">Novos por Planilha</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card text-white bg-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-sync-alt fa-2x mb-2"></i>
+                    <h3 class="card-title">{{ stats.atualizacoes_planilha if stats.atualizacoes_planilha is defined else 0 }}</h3>
+                    <p class="card-text">Atualizações por Planilha</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Ações Rápidas -->
     <div class="row mb-4">
         <div class="col-12">
@@ -88,6 +119,12 @@
                             <a href="{{ url_for('relatorios') }}" class="btn btn-warning w-100">
                                 <i class="fas fa-chart-bar me-2"></i>
                                 Relatórios
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('backup_planilhas') }}" class="btn btn-secondary w-100">
+                                <i class="fas fa-file-upload me-2"></i>
+                                Upload Planilhas
                             </a>
                         </div>
                     </div>
@@ -129,6 +166,62 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Últimos Uploads de Planilhas -->
+    {% if uploads_recentes %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-upload me-2"></i>
+                        Últimos Uploads de Planilhas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Arquivo</th>
+                                    <th>Novos Alunos</th>
+                                    <th>Atualizações</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for upload in uploads_recentes %}
+                                <tr>
+                                    <td>{{ upload.data_hora }}</td>
+                                    <td>{{ upload.nome_arquivo }}</td>
+                                    <td><span class="badge bg-success">{{ upload.novos_alunos }}</span></td>
+                                    <td><span class="badge bg-info">{{ upload.atualizacoes }}</span></td>
+                                    <td>
+                                        {% if upload.status == 'sucesso' %}
+                                            <span class="badge bg-success">Sucesso</span>
+                                        {% elif upload.status == 'erro' %}
+                                            <span class="badge bg-danger">Erro</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Processando</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('backup_planilhas') }}" class="btn btn-primary">
+                            <i class="fas fa-file-upload me-2"></i>
+                            Fazer Novo Upload
+                        </a>
                     </div>
                 </div>
             </div>

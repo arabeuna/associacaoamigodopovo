@@ -355,7 +355,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // Inicializar gráficos
 function inicializarGraficos() {
     // Gráfico de atividades por usuário
-    var ctxUsuarios = document.getElementById('usuariosChart').getContext('2d');
+    var usuariosChartElement = document.getElementById('usuariosChart');
+    if (!usuariosChartElement) return;
+    var ctxUsuarios = usuariosChartElement.getContext('2d');
     usuariosChart = new Chart(ctxUsuarios, {
         type: 'doughnut',
         data: {
@@ -379,7 +381,9 @@ function inicializarGraficos() {
     });
 
     // Gráfico de atividades por dia
-    var ctxAtividades = document.getElementById('atividadesChart').getContext('2d');
+    var atividadesChartElement = document.getElementById('atividadesChart');
+    if (!atividadesChartElement) return;
+    var ctxAtividades = atividadesChartElement.getContext('2d');
     atividadesChart = new Chart(ctxAtividades, {
         type: 'bar',
         data: {

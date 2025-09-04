@@ -22,9 +22,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from models import (
-        get_db, Usuario, Atividade, Turma, Aluno, Presenca, LogAtividade,
-        AlunoDAO, PresencaDAO, AtividadeDAO, TurmaDAO, LogAtividadeDAO,
-        SessionLocal, engine
+        get_db, AlunoDAO, PresencaDAO, AtividadeDAO, TurmaDAO, LogAtividadeDAO, UsuarioDAO
     )
 except ImportError as e:
     logger.error(f"Erro ao importar models: {e}")

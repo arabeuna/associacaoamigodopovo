@@ -1,453 +1,663 @@
-"""
-Modelos SQLAlchemy para o sistema da Academia Amigo do Povo
-"""
+"""Modelos MongoDB para o sistema da Academia Amigo do Povo"""
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, Date, Time, ForeignKey, CheckConstraint
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime
+from pymongo import MongoClient, ASCENDING
+from flask_pymongo import PyMongo
+from datetime import datetime, date
+from bson import ObjectId
 import os
+import json
+import logging
+from typing import Optional, Dict, List, Any
+from collections import defaultdict
+import uuid
 
-# Configuração do banco de dados
-# Tentar carregar variáveis de ambiente primeiro
+# Configuração do banco de dados MongoDB
 from dotenv import load_dotenv
 load_dotenv()
 
-# Configurar URL do banco de dados com fallback para SQLite
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if not DATABASE_URL:
-    # Construir URL do PostgreSQL a partir das variáveis individuais
-    db_host = os.environ.get('DB_HOST', 'localhost')
-    db_port = os.environ.get('DB_PORT', '5432')
-    db_user = os.environ.get('DB_USER', 'postgres')
-    db_password = os.environ.get('DB_PASSWORD', 'postgres')
-    db_name = os.environ.get('DB_NAME', 'academia_amigo_povo')
-    
-    if all([db_host, db_port, db_user, db_password, db_name]):
-        DATABASE_URL = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
-    else:
-        # Fallback para SQLite se PostgreSQL não estiver configurado
-        DATABASE_URL = 'sqlite:///academia_amigo_povo.db'
-        print("⚠️  PostgreSQL não configurado, usando SQLite como fallback")
+# Configurar conexão MongoDB Atlas
+MONGO_USERNAME = os.environ.get('MONGO_USERNAME', 'amigodopovoassociacao_db_user')
+MONGO_PASSWORD = os.environ.get('MONGO_PASSWORD', 'Lp816oHvdl2nHVeO')
+MONGO_CLUSTER = os.environ.get('MONGO_CLUSTER', 'cluster0.mongodb.net')
+MONGO_DATABASE = os.environ.get('MONGO_DATABASE', 'amigodopovoassociacao_db')
 
-# Criar engine do SQLAlchemy
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Construir URI do MongoDB - usar URI completa primeiro
+MONGO_URI = os.environ.get('MONGO_URI')
+if not MONGO_URI:
+    # Tentar diferentes formatos de cluster
+    if not MONGO_CLUSTER.startswith('cluster'):
+        MONGO_CLUSTER = f'cluster0.{MONGO_CLUSTER}'
+    MONGO_URI = f'mongodb+srv://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_CLUSTER}/{MONGO_DATABASE}?retryWrites=true&w=majority'
 
-# Base para os modelos
-Base = declarative_base()
+print(f'🔗 Conectando ao MongoDB Atlas...')
+print(f'📍 Cluster: {MONGO_CLUSTER}')
+print(f'🗄️ Database: {MONGO_DATABASE}')
 
-class Usuario(Base):
-    """Modelo para usuários do sistema"""
-    __tablename__ = "usuarios"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, nullable=False, index=True)
-    senha_hash = Column(String(255), nullable=False)
-    nome = Column(String(100), nullable=False)
-    nivel = Column(String(20), nullable=False)
-    permissoes = Column(String(500))  # JSON string for SQLite
-    atividade_responsavel = Column(String(100))
-    alunos_atribuidos = Column(String(500))  # JSON string for SQLite
-    ativo = Column(Boolean, default=True)
-    data_criacao = Column(DateTime, default=datetime.utcnow)
-    criado_por = Column(String(50))
-    ultimo_acesso = Column(DateTime)
-    
-    # Relacionamentos
-    turmas_responsavel = relationship("Turma", back_populates="professor")
-    presencas_registradas = relationship("Presenca", foreign_keys="Presenca.registrado_por")
-    
-    __table_args__ = (
-        CheckConstraint("nivel IN ('admin_master', 'admin', 'usuario')", name='check_nivel_usuario'),
-    )
+# Cliente MongoDB
+client = None
+db = None
 
-class Atividade(Base):
-    """Modelo para atividades da academia"""
-    __tablename__ = "atividades"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(100), unique=True, nullable=False, index=True)
-    descricao = Column(Text)
-    ativa = Column(Boolean, default=True)
-    data_criacao = Column(DateTime, default=datetime.utcnow)
-    criado_por = Column(String(50))
-    professores_vinculados = Column(String(500))  # JSON string for SQLite
-    total_alunos = Column(Integer, default=0)
-    
-    # Relacionamentos
-    turmas = relationship("Turma", back_populates="atividade")
-    alunos = relationship("Aluno", back_populates="atividade")
-    presencas = relationship("Presenca", back_populates="atividade")
+# Sistema de fallback em memória
+USE_MEMORY_FALLBACK = False
+memory_db = {
+    'alunos': {},
+    'atividades': {},
+    'turmas': {},
+    'presencas': {},
+    'usuarios': {},
+    'busca_salva': {},
+    'log_atividade': {}
+}
 
-class Turma(Base):
-    """Modelo para turmas das atividades"""
-    __tablename__ = "turmas"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(100), nullable=False)
-    atividade_id = Column(Integer, ForeignKey("atividades.id"), nullable=False)
-    horario = Column(String(20), nullable=False)
-    dias_semana = Column(String(100))
-    periodo = Column(String(20))
-    capacidade_maxima = Column(Integer, default=20)
-    professor_responsavel = Column(Integer, ForeignKey("usuarios.id"))
-    ativa = Column(Boolean, default=True)
-    data_criacao = Column(DateTime, default=datetime.utcnow)
-    criado_por = Column(String(50))
-    total_alunos = Column(Integer, default=0)
-    descricao = Column(Text)
-    
-    # Relacionamentos
-    atividade = relationship("Atividade", back_populates="turmas")
-    professor = relationship("Usuario", back_populates="turmas_responsavel")
-    alunos = relationship("Aluno", back_populates="turma")
-    presencas = relationship("Presenca", back_populates="turma")
+# Contadores para IDs em memória
+memory_counters = defaultdict(int)
 
-class Aluno(Base):
-    """Modelo para alunos da academia"""
-    __tablename__ = "alunos"
+def init_mongodb(app=None):
+    """Inicializa a conexão com MongoDB"""
+    global client, db, USE_MEMORY_FALLBACK
     
-    id = Column(Integer, primary_key=True, index=True)
-    id_unico = Column(String(50), unique=True, nullable=False, index=True)
-    nome = Column(String(200), nullable=False, index=True)
-    telefone = Column(String(20))
-    endereco = Column(Text)
-    email = Column(String(200))
-    data_nascimento = Column(Date)
-    data_cadastro = Column(Date, default=datetime.utcnow().date())
-    titulo_eleitor = Column(String(20))  # Campo não obrigatório para título de eleitor
-    atividade_id = Column(Integer, ForeignKey("atividades.id"))
-    turma_id = Column(Integer, ForeignKey("turmas.id"))
-    status_frequencia = Column(String(200))
-    observacoes = Column(Text)
-    ativo = Column(Boolean, default=True)
-    data_criacao = Column(DateTime, default=datetime.utcnow)
-    criado_por = Column(String(50))
+    # Tentar diferentes formatos de URI
+    uris_para_testar = [
+        MONGO_URI,
+        f'mongodb+srv://{MONGO_USERNAME}:{MONGO_PASSWORD}@cluster0.mongodb.net/{MONGO_DATABASE}?retryWrites=true&w=majority',
+        f'mongodb+srv://{MONGO_USERNAME}:{MONGO_PASSWORD}@cluster0.mongodb.net/?retryWrites=true&w=majority'
+    ]
     
-    # Relacionamentos
-    atividade = relationship("Atividade", back_populates="alunos")
-    turma = relationship("Turma", back_populates="alunos")
-    presencas = relationship("Presenca", back_populates="aluno")
+    for i, uri in enumerate(uris_para_testar):
+        try:
+            print(f'🔄 Tentativa {i+1}: Testando URI...')
+            client = MongoClient(uri, serverSelectionTimeoutMS=5000)
+            db = client[MONGO_DATABASE]
+            
+            # Testar conexão
+            client.admin.command('ping')
+            print(f'✅ Conectado ao MongoDB Atlas: {MONGO_DATABASE}')
+            USE_MEMORY_FALLBACK = False
+            
+            # Criar índices
+            criar_indices()
+            
+            return db
+        except Exception as e:
+            print(f'❌ Tentativa {i+1} falhou: {e}')
+            if i < len(uris_para_testar) - 1:
+                print('🔄 Tentando próxima URI...')
+            continue
+    
+    print('❌ Todas as tentativas de conexão falharam')
+    print('🔄 Ativando sistema de fallback em memória...')
+    USE_MEMORY_FALLBACK = True
+    
+    # Inicializar dados de exemplo em memória
+    _init_memory_data()
+    
+    print('✓ Sistema funcionando com dados em memória')
+    print('💡 Possíveis soluções para conectar ao MongoDB:')
+    print('   - Verifique se o cluster MongoDB Atlas existe e está ativo')
+    print('   - Confirme as credenciais (username/password)')
+    print('   - Verifique se o IP está na lista de acesso permitido')
+    print('   - Cluster pode estar pausado (M0 clusters pausam após 60 dias de inatividade)')
+    return None
 
-class Presenca(Base):
-    """Modelo para registros de presença"""
-    __tablename__ = "presencas"
+def _init_memory_data():
+    """Inicializa dados de exemplo em memória"""
+    global memory_db, memory_counters
     
-    id = Column(Integer, primary_key=True, index=True)
-    aluno_id = Column(Integer, ForeignKey("alunos.id"), nullable=False)
-    data_presenca = Column(Date, nullable=False, index=True)
-    horario = Column(Time)
-    turma_id = Column(Integer, ForeignKey("turmas.id"))
-    atividade_id = Column(Integer, ForeignKey("atividades.id"))
-    status = Column(String(10))  # P=Presente, F=Faltou, J=Justificado
-    observacoes = Column(Text)
-    tipo_registro = Column(String(20), default='MANUAL')
-    data_registro = Column(DateTime, default=datetime.utcnow)
-    registrado_por = Column(Integer, ForeignKey("usuarios.id"))
+    # Dados de exemplo para atividades
+    atividades_exemplo = [
+        {'_id': '1', 'nome': 'Informática', 'descricao': 'Curso de informática básica', 'ativo': True},
+        {'_id': '2', 'nome': 'Fisioterapia', 'descricao': 'Sessões de fisioterapia', 'ativo': True},
+        {'_id': '3', 'nome': 'Dança', 'descricao': 'Aulas de dança', 'ativo': True},
+        {'_id': '4', 'nome': 'Hidroginástica', 'descricao': 'Exercícios aquáticos', 'ativo': True},
+        {'_id': '5', 'nome': 'Funcional', 'descricao': 'Treinamento funcional', 'ativo': True}
+    ]
     
-    # Relacionamentos
-    aluno = relationship("Aluno", back_populates="presencas")
-    turma = relationship("Turma", back_populates="presencas")
-    atividade = relationship("Atividade", back_populates="presencas")
-    registrador = relationship("Usuario", foreign_keys=[registrado_por], overlaps="presencas_registradas")
+    for atividade in atividades_exemplo:
+        memory_db['atividades'][atividade['_id']] = atividade
     
-    __table_args__ = (
-        CheckConstraint("status IN ('P', 'F', 'J')", name='check_status_presenca'),
-    )
+    memory_counters['atividades'] = len(atividades_exemplo)
+    memory_counters['alunos'] = 0
+    memory_counters['turmas'] = 0
+    memory_counters['presencas'] = 0
+    memory_counters['usuarios'] = 0
+    memory_counters['busca_salva'] = 0
+    memory_counters['log_atividade'] = 0
 
-class BuscaSalva(Base):
-    """Modelo para buscas salvas pelos usuários"""
-    __tablename__ = "buscas_salvas"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    nome = Column(String(100), nullable=False)
-    descricao = Column(Text)
-    criterios = Column(Text, nullable=False)  # JSON string com os critérios da busca
-    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
-    data_criacao = Column(DateTime, default=datetime.utcnow)
-    data_ultima_execucao = Column(DateTime)
-    ativa = Column(Boolean, default=True)
-    
-    # Relacionamentos
-    usuario = relationship("Usuario")
-
-class LogAtividade(Base):
-    """Modelo para logs de atividades do sistema"""
-    __tablename__ = "logs_atividades"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    usuario = Column(String(100), nullable=False, index=True)
-    tipo_usuario = Column(String(20), nullable=False)
-    acao = Column(String(200), nullable=False, index=True)
-    detalhes = Column(Text)
-    data_registro = Column(DateTime, default=datetime.utcnow)
-
-# Funções auxiliares para o banco de dados
 def get_db():
-    """Retorna uma sessão do banco de dados"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """Retorna a instância do banco de dados MongoDB"""
+    global db
+    if USE_MEMORY_FALLBACK:
+        return None  # Indica que está usando fallback
+    if db is None:
+        db = init_mongodb()
+    return db
 
-def criar_tabelas():
-    """Cria todas as tabelas no banco de dados"""
-    Base.metadata.create_all(bind=engine)
+def criar_indices():
+    """Cria índices necessários nas coleções"""
+    try:
+        # Índices para usuários
+        db.usuarios.create_index('username', unique=True)
+        db.usuarios.create_index('nivel')
+        
+        # Índices para atividades
+        db.atividades.create_index('nome', unique=True)
+        db.atividades.create_index('ativa')
+        
+        # Índices para alunos
+        db.alunos.create_index('id_unico', unique=True)
+        db.alunos.create_index('nome')
+        db.alunos.create_index('ativo')
+        
+        # Índices para presenças
+        db.presencas.create_index([('aluno_id', 1), ('data_presenca', -1)])
+        db.presencas.create_index('data_presenca')
+        
+        # Índices para logs
+        db.logs_atividades.create_index([('timestamp', -1)])
+        db.logs_atividades.create_index('usuario')
+        
+        print('✅ Índices MongoDB criados com sucesso')
+    except Exception as e:
+        print(f'⚠️ Erro ao criar índices: {e}')
 
 def verificar_conexao():
     """Verifica se a conexão com o banco está funcionando"""
     try:
-        db = SessionLocal()
-        db.execute("SELECT 1")
-        db.close()
+        client.admin.command('ping')
         return True
     except Exception as e:
-        print(f"Erro na conexão com o banco: {e}")
+        print(f'Erro na conexão com o MongoDB: {e}')
         return False
 
-# Funções de consulta comuns
-class AlunoDAO:
-    """Data Access Object para operações com alunos"""
+# Classes DAO para operações MongoDB
+class UsuarioDAO:
+    """Data Access Object para operações com usuários"""
     
-    @staticmethod
-    def buscar_por_nome(db, nome):
-        """Busca aluno por nome"""
-        return db.query(Aluno).filter(Aluno.nome.ilike(f"%{nome}%")).all()
+    def criar(self, dados):
+        """Cria um novo usuário"""
+        dados['data_criacao'] = datetime.utcnow()
+        dados['ultimo_acesso'] = None
+        result = db.usuarios.insert_one(dados)
+        return result.inserted_id
     
-    @staticmethod
-    def buscar_por_atividade(db, atividade_id):
-        """Busca alunos por atividade"""
-        return db.query(Aluno).filter(Aluno.atividade_id == atividade_id, Aluno.ativo == True).all()
+    def buscar_por_username(self, username):
+        """Busca usuário por username"""
+        return db.usuarios.find_one({'username': username})
     
-    @staticmethod
-    def buscar_por_turma(db, turma_id):
-        """Busca alunos por turma"""
-        return db.query(Aluno).filter(Aluno.turma_id == turma_id, Aluno.ativo == True).all()
-    
-    @staticmethod
-    def calcular_frequencia(db, aluno_id, data_inicio=None, data_fim=None):
-        """Calcula frequência de um aluno"""
-        query = db.query(Presenca).filter(Presenca.aluno_id == aluno_id)
-        
-        if data_inicio:
-            query = query.filter(Presenca.data_presenca >= data_inicio)
-        if data_fim:
-            query = query.filter(Presenca.data_presenca <= data_fim)
-        
-        presencas = query.all()
-        total = len(presencas)
-        # presentes = len([p for p in presencas if p.status == 'P'])  # TEMPORARIAMENTE COMENTADO
-        presentes = len(presencas)  # Por enquanto, considerar todas como presentes
-        
-        if total == 0:
-            return 0
-        
-        return (presentes / total) * 100
+    def listar_todos(self):
+        """Lista todos os usuários"""
+        return list(db.usuarios.find())
 
-class PresencaDAO:
-    """Data Access Object para operações com presenças"""
+class AlunoDAO:
+    """Data Access Object para Alunos"""
     
     @staticmethod
-    def registrar_presenca(db, aluno_id, data_presenca, status=None, turma_id=None, 
-                          atividade_id=None, observacoes=None, registrado_por=None):
-        """Registra uma nova presença"""
-        presenca = Presenca(
-            aluno_id=aluno_id,
-            data_presenca=data_presenca,
-            # status=status,  # TEMPORARIAMENTE COMENTADO
-            turma_id=turma_id,
-            atividade_id=atividade_id,
-            observacoes=observacoes,
-            registrado_por=registrado_por
-        )
-        db.add(presenca)
-        db.commit()
-        db.refresh(presenca)
-        return presenca
+    def criar(dados_aluno):
+        """Cria um novo aluno"""
+        try:
+            # Converter date para datetime se necessário
+            if 'data_nascimento' in dados_aluno and dados_aluno['data_nascimento']:
+                from datetime import date
+                if isinstance(dados_aluno['data_nascimento'], date):
+                    dados_aluno['data_nascimento'] = datetime.combine(dados_aluno['data_nascimento'], datetime.min.time())
+            
+            if 'data_cadastro' in dados_aluno and dados_aluno['data_cadastro']:
+                from datetime import date
+                if isinstance(dados_aluno['data_cadastro'], date):
+                    dados_aluno['data_cadastro'] = datetime.combine(dados_aluno['data_cadastro'], datetime.min.time())
+            
+            if USE_MEMORY_FALLBACK:
+                # Usar dados em memória
+                memory_counters['alunos'] += 1
+                aluno_id = str(memory_counters['alunos'])
+                dados_aluno['_id'] = aluno_id
+                dados_aluno['data_cadastro'] = datetime.now()
+                dados_aluno['ativo'] = True
+                memory_db['alunos'][aluno_id] = dados_aluno
+                return aluno_id
+            else:
+                # Usar MongoDB
+                dados_aluno['data_cadastro'] = datetime.now()
+                dados_aluno['ativo'] = True
+                resultado = db.alunos.insert_one(dados_aluno)
+                return str(resultado.inserted_id)
+        except Exception as e:
+            print(f"Erro ao criar aluno: {e}")
+            return None
     
     @staticmethod
-    def buscar_por_aluno(db, aluno_id, data_inicio=None, data_fim=None):
-        """Busca presenças de um aluno"""
-        query = db.query(Presenca).filter(Presenca.aluno_id == aluno_id)
-        
-        if data_inicio:
-            query = query.filter(Presenca.data_presenca >= data_inicio)
-        if data_fim:
-            query = query.filter(Presenca.data_presenca <= data_fim)
-        
-        return query.order_by(Presenca.data_presenca.desc()).all()
+    def buscar_por_id(aluno_id):
+        """Busca aluno por ID"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                return memory_db['alunos'].get(str(aluno_id))
+            else:
+                from bson import ObjectId
+                return db.alunos.find_one({'_id': ObjectId(aluno_id)})
+        except Exception as e:
+            print(f"Erro ao buscar aluno: {e}")
+            return None
     
     @staticmethod
-    def buscar_por_turma_data(db, turma_id, data_presenca):
-        """Busca presenças de uma turma em uma data específica"""
-        return db.query(Presenca).filter(
-            Presenca.turma_id == turma_id,
-            Presenca.data_presenca == data_presenca
-        ).all()
+    def buscar_por_nome(nome):
+        """Busca aluno por nome"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                for aluno in memory_db['alunos'].values():
+                    if nome.lower() in aluno.get('nome', '').lower():
+                        return aluno
+                return None
+            else:
+                return db.alunos.find_one({'nome': {'$regex': nome, '$options': 'i'}})
+        except Exception as e:
+            print(f"Erro ao buscar aluno por nome: {e}")
+            return None
+    
+    @staticmethod
+    def buscar_por_telefone(telefone):
+        """Busca aluno por telefone"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                for aluno in memory_db['alunos'].values():
+                    if aluno.get('telefone') == telefone:
+                        return aluno
+                return None
+            else:
+                return db.alunos.find_one({'telefone': telefone})
+        except Exception as e:
+            print(f"Erro ao buscar aluno por telefone: {e}")
+            return None
+    
+    @staticmethod
+    def buscar_por_nome_telefone(nome, telefone):
+        """Busca aluno por nome e telefone"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                for aluno in memory_db['alunos'].values():
+                    if (aluno.get('nome', '').lower() == nome.lower() and 
+                        aluno.get('telefone') == telefone):
+                        return aluno
+                return None
+            else:
+                return db.alunos.find_one({
+                    '$or': [
+                        {'nome': {'$regex': f'^{nome}$', '$options': 'i'}},
+                        {'telefone': telefone}
+                    ],
+                    'ativo': True
+                })
+        except Exception as e:
+            print(f"Erro ao buscar aluno por nome e telefone: {e}")
+            return None
+    
+    @staticmethod
+    def listar_todos():
+        """Lista todos os alunos"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                return [aluno for aluno in memory_db['alunos'].values() if aluno.get('ativo', True)]
+            else:
+                return list(db.alunos.find({'ativo': True}))
+        except Exception as e:
+            print(f"Erro ao listar alunos: {e}")
+            return []
+    
+    @staticmethod
+    def atualizar(aluno_id, dados_atualizacao):
+        """Atualiza dados do aluno"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                aluno_id = str(aluno_id)
+                if aluno_id in memory_db['alunos']:
+                    dados_atualizacao['data_atualizacao'] = datetime.now()
+                    memory_db['alunos'][aluno_id].update(dados_atualizacao)
+                    return True
+                return False
+            else:
+                from bson import ObjectId
+                dados_atualizacao['data_atualizacao'] = datetime.now()
+                resultado = db.alunos.update_one(
+                    {'_id': ObjectId(aluno_id)},
+                    {'$set': dados_atualizacao}
+                )
+                return resultado.modified_count > 0
+        except Exception as e:
+            print(f"Erro ao atualizar aluno: {e}")
+            return False
+    
+    @staticmethod
+    def excluir(aluno_id):
+        """Exclui aluno (soft delete)"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                aluno_id = str(aluno_id)
+                if aluno_id in memory_db['alunos']:
+                    memory_db['alunos'][aluno_id]['ativo'] = False
+                    memory_db['alunos'][aluno_id]['data_exclusao'] = datetime.now()
+                    return True
+                return False
+            else:
+                from bson import ObjectId
+                resultado = db.alunos.update_one(
+                    {'_id': ObjectId(aluno_id)},
+                    {'$set': {'ativo': False, 'data_exclusao': datetime.now()}}
+                )
+                return resultado.modified_count > 0
+        except Exception as e:
+            print(f"Erro ao excluir aluno: {e}")
+            return False
+    
+    @staticmethod
+    def contar_ativos():
+        """Conta alunos ativos"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                return len([aluno for aluno in memory_db['alunos'].values() if aluno.get('ativo', True)])
+            else:
+                return db.alunos.count_documents({'ativo': True})
+        except Exception as e:
+            print(f"Erro ao contar alunos: {e}")
+            return 0
 
 class AtividadeDAO:
-    """Data Access Object para operações com atividades"""
+    """Data Access Object para Atividades"""
     
     @staticmethod
-    def listar_ativas(db):
+    def criar(dados_atividade):
+        """Cria uma nova atividade"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                memory_counters['atividades'] += 1
+                atividade_id = str(memory_counters['atividades'])
+                dados_atividade['_id'] = atividade_id
+                dados_atividade['data_criacao'] = datetime.now()
+                dados_atividade['ativo'] = True
+                memory_db['atividades'][atividade_id] = dados_atividade
+                return atividade_id
+            else:
+                dados_atividade['data_criacao'] = datetime.now()
+                dados_atividade['ativo'] = True
+                resultado = db.atividades.insert_one(dados_atividade)
+                return str(resultado.inserted_id)
+        except Exception as e:
+            print(f"Erro ao criar atividade: {e}")
+            return None
+    
+    @staticmethod
+    def listar_todas():
         """Lista todas as atividades ativas"""
-        return db.query(Atividade).filter(Atividade.ativa == True).all()
+        try:
+            if USE_MEMORY_FALLBACK:
+                return [atividade for atividade in memory_db['atividades'].values() if atividade.get('ativo', True)]
+            else:
+                return list(db.atividades.find({'ativo': True}))
+        except Exception as e:
+            print(f"Erro ao listar atividades: {e}")
+            return []
     
     @staticmethod
-    def buscar_por_nome(db, nome):
+    def buscar_por_id(atividade_id):
+        """Busca atividade por ID"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                return memory_db['atividades'].get(str(atividade_id))
+            else:
+                from bson import ObjectId
+                return db.atividades.find_one({'_id': ObjectId(atividade_id)})
+        except Exception as e:
+            print(f"Erro ao buscar atividade: {e}")
+            return None
+    
+    @staticmethod
+    def buscar_por_nome(nome):
         """Busca atividade por nome"""
-        return db.query(Atividade).filter(Atividade.nome.ilike(f"%{nome}%")).first()
+        try:
+            if USE_MEMORY_FALLBACK:
+                for atividade in memory_db['atividades'].values():
+                    if nome.lower() in atividade.get('nome', '').lower():
+                        return atividade
+                return None
+            else:
+                return db.atividades.find_one({'nome': {'$regex': nome, '$options': 'i'}})
+        except Exception as e:
+            print(f"Erro ao buscar atividade por nome: {e}")
+            return None
     
     @staticmethod
-    def atualizar_total_alunos(db, atividade_id):
-        """Atualiza o total de alunos de uma atividade"""
-        total = db.query(Aluno).filter(
-            Aluno.atividade_id == atividade_id,
-            Aluno.ativo == True
-        ).count()
-        
-        atividade = db.query(Atividade).filter(Atividade.id == atividade_id).first()
-        if atividade:
-            atividade.total_alunos = total
-            db.commit()
+    def atualizar(atividade_id, dados_atualizacao):
+        """Atualiza dados de uma atividade"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                atividade_id = str(atividade_id)
+                if atividade_id in memory_db['atividades']:
+                    dados_atualizacao['data_atualizacao'] = datetime.now()
+                    memory_db['atividades'][atividade_id].update(dados_atualizacao)
+                    return True
+                return False
+            else:
+                from bson import ObjectId
+                dados_atualizacao['data_atualizacao'] = datetime.now()
+                resultado = db.atividades.update_one(
+                    {'_id': ObjectId(atividade_id)},
+                    {'$set': dados_atualizacao}
+                )
+                return resultado.modified_count > 0
+        except Exception as e:
+            print(f"Erro ao atualizar atividade: {e}")
+            return False
+    
+    @staticmethod
+    def excluir(atividade_id):
+        """Exclui atividade (soft delete)"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                atividade_id = str(atividade_id)
+                if atividade_id in memory_db['atividades']:
+                    memory_db['atividades'][atividade_id]['ativo'] = False
+                    memory_db['atividades'][atividade_id]['data_exclusao'] = datetime.now()
+                    return True
+                return False
+            else:
+                from bson import ObjectId
+                resultado = db.atividades.update_one(
+                    {'_id': ObjectId(atividade_id)},
+                    {'$set': {'ativo': False, 'data_exclusao': datetime.now()}}
+                )
+                return resultado.modified_count > 0
+        except Exception as e:
+            print(f"Erro ao excluir atividade: {e}")
+            return False
 
 class TurmaDAO:
     """Data Access Object para operações com turmas"""
     
-    @staticmethod
-    def listar_por_atividade(db, atividade_id):
+    def criar(self, dados):
+        """Cria uma nova turma"""
+        dados['data_criacao'] = datetime.utcnow()
+        dados['ativa'] = True
+        result = db.turmas.insert_one(dados)
+        return result.inserted_id
+    
+    def listar_por_atividade(self, atividade_id):
         """Lista turmas de uma atividade"""
-        return db.query(Turma).filter(
-            Turma.atividade_id == atividade_id,
-            Turma.ativa == True
-        ).all()
+        return list(db.turmas.find({
+            'atividade_id': atividade_id,
+            'ativa': True
+        }))
+
+class PresencaDAO:
+    """Data Access Object para Presenças"""
     
     @staticmethod
-    def atualizar_total_alunos(db, turma_id):
-        """Atualiza o total de alunos de uma turma"""
-        total = db.query(Aluno).filter(
-            Aluno.turma_id == turma_id,
-            Aluno.ativo == True
-        ).count()
-        
-        turma = db.query(Turma).filter(Turma.id == turma_id).first()
-        if turma:
-            turma.total_alunos = total
-            db.commit()
+    def registrar(dados_presenca):
+        """Registra presença de um aluno"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                memory_counters['presencas'] += 1
+                presenca_id = str(memory_counters['presencas'])
+                dados_presenca['_id'] = presenca_id
+                dados_presenca['data_registro'] = datetime.now()
+                memory_db['presencas'][presenca_id] = dados_presenca
+                return presenca_id
+            else:
+                dados_presenca['data_registro'] = datetime.now()
+                resultado = db.presencas.insert_one(dados_presenca)
+                return str(resultado.inserted_id)
+        except Exception as e:
+            print(f"Erro ao registrar presença: {e}")
+            return None
+    
+    @staticmethod
+    def buscar_por_aluno(aluno_id):
+        """Busca presenças de um aluno"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                aluno_id = str(aluno_id)
+                return [presenca for presenca in memory_db['presencas'].values() 
+                       if presenca.get('aluno_id') == aluno_id]
+            else:
+                from bson import ObjectId
+                return list(db.presencas.find({'aluno_id': ObjectId(aluno_id)}))
+        except Exception as e:
+            print(f"Erro ao buscar presenças por aluno: {e}")
+            return []
+    
+    @staticmethod
+    def buscar_por_data(data_inicio, data_fim):
+        """Busca presenças por período"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                resultado = []
+                for presenca in memory_db['presencas'].values():
+                    data_presenca = presenca.get('data_presenca')
+                    if data_presenca and data_inicio <= data_presenca <= data_fim:
+                        resultado.append(presenca)
+                return resultado
+            else:
+                return list(db.presencas.find({
+                    'data_presenca': {
+                        '$gte': data_inicio,
+                        '$lte': data_fim
+                    }
+                }))
+        except Exception as e:
+            print(f"Erro ao buscar presenças por data: {e}")
+            return []
+    
+    @staticmethod
+    def excluir_por_aluno(aluno_id):
+        """Exclui todas as presenças de um aluno"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                aluno_id = str(aluno_id)
+                presencas_removidas = 0
+                presencas_para_remover = []
+                for presenca_id, presenca in memory_db['presencas'].items():
+                    if presenca.get('aluno_id') == aluno_id:
+                        presencas_para_remover.append(presenca_id)
+                
+                for presenca_id in presencas_para_remover:
+                    del memory_db['presencas'][presenca_id]
+                    presencas_removidas += 1
+                
+                return presencas_removidas
+            else:
+                from bson import ObjectId
+                resultado = db.presencas.delete_many({'aluno_id': ObjectId(aluno_id)})
+                return resultado.deleted_count
+        except Exception as e:
+            print(f"Erro ao excluir presenças por aluno: {e}")
+            return 0
+    
+    @staticmethod
+    def excluir(presenca_id):
+        """Exclui uma presença"""
+        try:
+            if USE_MEMORY_FALLBACK:
+                presenca_id = str(presenca_id)
+                if presenca_id in memory_db['presencas']:
+                    del memory_db['presencas'][presenca_id]
+                    return True
+                return False
+            else:
+                from bson import ObjectId
+                resultado = db.presencas.delete_one({'_id': ObjectId(presenca_id)})
+                return resultado.deleted_count > 0
+        except Exception as e:
+            print(f"Erro ao excluir presença: {e}")
+            return False
 
 class BuscaSalvaDAO:
     """Data Access Object para operações com buscas salvas"""
     
-    @staticmethod
-    def salvar_busca(db, nome, descricao, criterios, usuario_id):
+    def criar(self, dados):
         """Salva uma nova busca"""
-        busca = BuscaSalva(
-            nome=nome,
-            descricao=descricao,
-            criterios=criterios,
-            usuario_id=usuario_id
-        )
-        db.add(busca)
-        db.commit()
-        db.refresh(busca)
-        return busca
+        dados['data_criacao'] = datetime.utcnow()
+        dados['ativa'] = True
+        result = db.buscas_salvas.insert_one(dados)
+        return result.inserted_id
     
-    @staticmethod
-    def listar_por_usuario(db, usuario_id):
+    def listar_por_usuario(self, usuario_id):
         """Lista buscas salvas de um usuário"""
-        return db.query(BuscaSalva).filter(
-            BuscaSalva.usuario_id == usuario_id,
-            BuscaSalva.ativa == True
-        ).order_by(BuscaSalva.data_criacao.desc()).all()
+        return list(db.buscas_salvas.find({
+            'usuario_id': usuario_id,
+            'ativa': True
+        }).sort('data_criacao', -1))
     
-    @staticmethod
-    def buscar_por_id(db, busca_id, usuario_id):
-        """Busca uma busca salva por ID e usuário"""
-        return db.query(BuscaSalva).filter(
-            BuscaSalva.id == busca_id,
-            BuscaSalva.usuario_id == usuario_id,
-            BuscaSalva.ativa == True
-        ).first()
-    
-    @staticmethod
-    def excluir_busca(db, busca_id, usuario_id):
-        """Exclui uma busca salva (soft delete)"""
-        busca = db.query(BuscaSalva).filter(
-            BuscaSalva.id == busca_id,
-            BuscaSalva.usuario_id == usuario_id
-        ).first()
-        if busca:
-            busca.ativa = False
-            db.commit()
-            return True
-        return False
-    
-    @staticmethod
-    def atualizar_ultima_execucao(db, busca_id):
-        """Atualiza a data da última execução de uma busca"""
-        busca = db.query(BuscaSalva).filter(BuscaSalva.id == busca_id).first()
-        if busca:
-            busca.data_ultima_execucao = datetime.utcnow()
-            db.commit()
-            return True
-        return False
+    def excluir(self, busca_id):
+        """Exclui uma busca salva"""
+        if isinstance(busca_id, str):
+            busca_id = ObjectId(busca_id)
+        result = db.buscas_salvas.update_one(
+            {'_id': busca_id}, 
+            {'$set': {'ativa': False}}
+        )
+        return result.modified_count > 0
 
 class LogAtividadeDAO:
     """Data Access Object para operações com logs de atividades"""
     
-    @staticmethod
-    def registrar_log(db, usuario, acao, detalhes, tipo_usuario="usuario"):
+    def criar(self, dados):
         """Registra um novo log de atividade"""
-        log = LogAtividade(
-            usuario=usuario,
-            tipo_usuario=tipo_usuario,
-            acao=acao,
-            detalhes=detalhes
-        )
-        db.add(log)
-        db.commit()
-        db.refresh(log)
-        return log
+        dados['timestamp'] = datetime.utcnow()
+        dados['data_registro'] = datetime.utcnow()
+        result = db.logs_atividades.insert_one(dados)
+        return result.inserted_id
     
-    @staticmethod
-    def listar_logs(db, filtro=None, limite=1000):
+    def listar_logs(self, filtro=None, limite=1000):
         """Lista logs de atividades com filtros opcionais"""
-        query = db.query(LogAtividade).order_by(LogAtividade.timestamp.desc())
+        filtro_query = {}
         
         if filtro and filtro != 'todos':
             if filtro == 'hoje':
-                from datetime import date
-                hoje = date.today()
-                query = query.filter(LogAtividade.timestamp >= hoje)
+                hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                filtro_query['timestamp'] = {'$gte': hoje}
             elif filtro == 'semana':
-                from datetime import date, timedelta
-                uma_semana_atras = date.today() - timedelta(days=7)
-                query = query.filter(LogAtividade.timestamp >= uma_semana_atras)
+                from datetime import timedelta
+                uma_semana_atras = datetime.now() - timedelta(days=7)
+                filtro_query['timestamp'] = {'$gte': uma_semana_atras}
             elif filtro == 'mes':
-                from datetime import date, timedelta
-                um_mes_atras = date.today() - timedelta(days=30)
-                query = query.filter(LogAtividade.timestamp >= um_mes_atras)
+                from datetime import timedelta
+                um_mes_atras = datetime.now() - timedelta(days=30)
+                filtro_query['timestamp'] = {'$gte': um_mes_atras}
         
-        return query.limit(limite).all()
+        return list(db.logs_atividades.find(filtro_query)
+                   .sort('timestamp', -1)
+                   .limit(limite))
     
-    @staticmethod
-    def limpar_logs_antigos(db, dias_manter=90):
-        """Remove logs mais antigos que o número de dias especificado"""
-        from datetime import date, timedelta
-        data_limite = date.today() - timedelta(days=dias_manter)
+    def buscar_por_acao(self, acao, limite=None):
+        """Busca logs por tipo de ação específica"""
+        filtro_query = {'acao': acao}
         
-        logs_removidos = db.query(LogAtividade).filter(
-            LogAtividade.timestamp < data_limite
-        ).delete()
+        query = db.logs_atividades.find(filtro_query).sort('timestamp', -1)
         
-        db.commit()
-        return logs_removidos
+        if limite:
+            query = query.limit(limite)
+            
+        return list(query)
 
-# Inicialização das tabelas
-if __name__ == "__main__":
-    print("Criando tabelas do banco de dados...")
-    criar_tabelas()
-    print("Tabelas criadas com sucesso!")
+# Inicialização
+if __name__ == '__main__':
+    print('Inicializando MongoDB...')
+    init_mongodb()
+    print('MongoDB inicializado com sucesso!')

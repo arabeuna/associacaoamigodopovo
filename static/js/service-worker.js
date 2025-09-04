@@ -4,7 +4,6 @@ const CACHE_NAME = 'amigo-do-povo-v1';
 // Lista de recursos para armazenar em cache
 const urlsToCache = [
   '/',
-  '/static/js/formManager.js',
   '/static/images/icons/icon-192x192.png',
   '/static/images/icons/icon-512x512.png',
   '/static/images/icons/maskable-icon.png',
