@@ -1,7 +1,4 @@
-Deploy trigger - 2025-09-04 00:31:30
-Forçando novo deploy para ativar serviço no Render
-Force redeploy: PWA corrections applied - pwa.js updated
-Deploy trigger - 2025-09-04 11:50:00
-Forçando redeploy após configuração PostgreSQL local
-Deploy trigger - 2025-09-04 17:16:00
-Forçando redeploy após migração de dados para MongoDB Atlas
+# Deploy trigger for MongoDB Atlas whitelist fix
+# Deploy 2025-01-09 17:40 - Fix MongoDB Atlas Network Access whitelist
+# Configurar 0.0.0.0/0 no MongoDB Atlas para permitir conexões do Render
+# Expected result: 312 students loaded in production dashboard
