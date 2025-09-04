@@ -10,11 +10,6 @@ import time
 import logging
 from datetime import datetime, date
 from typing import List, Dict, Optional, Any, Union
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import OperationalError, DisconnectionError, TimeoutError as SQLTimeoutError
-from sqlalchemy import create_engine, text
-import psycopg2
-from psycopg2 import OperationalError as PsycopgOperationalError
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -60,8 +55,8 @@ class DatabaseIntegrationRobusto:
             if self.db is None:
                 return False
             
-            # Teste simples de conexão
-            self.db.execute(text("SELECT 1"))
+            # Teste simples de conexão MongoDB
+            self.db.command('ping')
             return True
             
         except Exception as e:
@@ -107,7 +102,9 @@ class DatabaseIntegrationRobusto:
             'could not connect',
             'connection failed',
             'database is not available',
-            'postgresql connection'
+            'mongodb connection',
+            'dns query name does not exist',
+            'serverselectiontimeouterror'
         ]
         
         return any(err in error_str for err in connection_errors)

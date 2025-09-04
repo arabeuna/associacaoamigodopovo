@@ -9,7 +9,6 @@ import io
 from dotenv import load_dotenv
 from models import init_mongodb, get_db, verificar_conexao, AlunoDAO, AtividadeDAO, TurmaDAO, UsuarioDAO, PresencaDAO, BuscaSalvaDAO, LogAtividadeDAO
 from database_integration import get_db_integration
-from database_integration_robusto import db_integration_robusto
 
 # Importar pandas para processamento de planilhas
 try:
