@@ -13,36 +13,64 @@ if ('serviceWorker' in navigator) {
 
 // Função para mostrar o prompt de instalação
 let deferredPrompt;
-const installButton = document.getElementById('install-button');
+let installButton;
+
+// Aguarda o DOM estar carregado
+document.addEventListener('DOMContentLoaded', () => {
+  installButton = document.getElementById('install-button');
+  console.log('PWA: DOM carregado, botão encontrado:', !!installButton);
+});
 
 window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('PWA: Evento beforeinstallprompt disparado');
   // Previne o comportamento padrão do navegador
   e.preventDefault();
   // Armazena o evento para uso posterior
   deferredPrompt = e;
+  
+  // Aguarda o DOM estar carregado se necessário
+  if (!installButton) {
+    installButton = document.getElementById('install-button');
+  }
+  
   // Mostra o botão de instalação se ele existir
   if (installButton) {
+    console.log('PWA: Mostrando botão de instalação');
     installButton.style.display = 'block';
     
-    installButton.addEventListener('click', () => {
-      // Mostra o prompt de instalação
-      deferredPrompt.prompt();
-      
-      // Espera o usuário responder ao prompt
-      deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('Usuário aceitou a instalação do PWA');
-        } else {
-          console.log('Usuário recusou a instalação do PWA');
-        }
-        // Limpa a referência ao prompt
-        deferredPrompt = null;
-        // Esconde o botão de instalação
-        installButton.style.display = 'none';
-      });
-    });
+    // Remove listeners anteriores para evitar duplicação
+    installButton.removeEventListener('click', handleInstallClick);
+    installButton.addEventListener('click', handleInstallClick);
+  } else {
+    console.warn('PWA: Botão de instalação não encontrado');
   }
 });
+
+// Função separada para lidar com o clique de instalação
+function handleInstallClick() {
+  console.log('PWA: Botão de instalação clicado');
+  if (deferredPrompt) {
+    // Mostra o prompt de instalação
+    deferredPrompt.prompt();
+    
+    // Espera o usuário responder ao prompt
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('PWA: Usuário aceitou a instalação');
+      } else {
+        console.log('PWA: Usuário recusou a instalação');
+      }
+      // Limpa a referência ao prompt
+      deferredPrompt = null;
+      // Esconde o botão de instalação
+      if (installButton) {
+        installButton.style.display = 'none';
+      }
+    });
+  } else {
+    console.warn('PWA: deferredPrompt não disponível');
+  }
+}
 
 // Detecta quando o PWA foi instalado
 window.addEventListener('appinstalled', (evt) => {

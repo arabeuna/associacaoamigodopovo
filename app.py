@@ -11,6 +11,14 @@ from models import SessionLocal, engine, Base, Aluno, Atividade, Turma, Usuario,
 from database_integration import get_db_integration
 from database_integration_robusto import db_integration_robusto
 
+# Importar pandas para processamento de planilhas
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+    print("⚠️ Pandas não disponível. Funcionalidade de planilhas Excel limitada.")
+
 # Carregar variáveis de ambiente
 # Tenta carregar .env.production primeiro (para ambiente de produção)
 if os.path.exists('.env.production'):
@@ -4009,10 +4017,8 @@ def processar_planilha():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Importar pandas para processar arquivos
-        try:
-            import pandas as pd
-        except ImportError:
+        # Verificar se pandas está disponível
+        if not PANDAS_AVAILABLE:
             # Se pandas não estiver disponível, usar processamento básico para CSV
             if file.filename.lower().endswith('.csv'):
                 return processar_csv_basico(filepath)
