@@ -3785,6 +3785,397 @@ def upload_planilha():
     except Exception as e:
         return jsonify({'error': f'Erro no upload: {str(e)}'}), 500
 
+def truncar_dados_aluno(dados):
+    """Trunca dados do aluno para respeitar limites do banco de dados"""
+    # Limites baseados no modelo Aluno
+    limites = {
+        'id_unico': 50,
+        'nome': 200,
+        'telefone': 20,
+        'email': 200,
+        'titulo_eleitor': 20,
+        'status_frequencia': 200,
+        'criado_por': 50
+    }
+    
+    dados_truncados = dados.copy()
+    
+    for campo, limite in limites.items():
+        if campo in dados_truncados and dados_truncados[campo]:
+            valor = str(dados_truncados[campo])
+            if len(valor) > limite:
+                dados_truncados[campo] = valor[:limite]
+                print(f"⚠️  Campo '{campo}' truncado de {len(valor)} para {limite} caracteres")
+    
+    return dados_truncados
+
+def processar_csv_basico(filepath):
+    """Processa CSV básico sem pandas quando a biblioteca não está disponível"""
+    import csv
+    from datetime import datetime
+    
+    try:
+        db = SessionLocal()
+        
+        # Usar atividade padrão "Cadastro Geral" para planilhas de cadastro
+        atividade_nome = "Cadastro Geral"
+        atividade_obj = db.query(Atividade).filter(Atividade.nome == atividade_nome).first()
+        if not atividade_obj:
+            # Criar atividade padrão se não existir
+            atividade_obj = Atividade(
+                nome=atividade_nome,
+                descricao='Atividade padrão para cadastros gerais importados via planilha',
+                ativa=True,
+                data_criacao=datetime.now().date(),
+                criado_por=session.get('usuario_logado', 'admin')
+            )
+            db.add(atividade_obj)
+            db.commit()
+        
+        alunos_processados = 0
+        novos_cadastros = 0
+        atualizados = 0
+        alunos_erros = 0
+        erros_detalhes = []
+        
+        # Tentar diferentes encodings
+        encodings = ['utf-8', 'latin-1', 'cp1252']
+        csv_data = None
+        
+        for encoding in encodings:
+            try:
+                with open(filepath, 'r', encoding=encoding, newline='') as csvfile:
+                    # Detectar delimitador
+                    sample = csvfile.read(1024)
+                    csvfile.seek(0)
+                    sniffer = csv.Sniffer()
+                    delimiter = sniffer.sniff(sample).delimiter
+                    
+                    reader = csv.DictReader(csvfile, delimiter=delimiter)
+                    csv_data = list(reader)
+                    break
+            except (UnicodeDecodeError, Exception):
+                continue
+        
+        if not csv_data:
+            return jsonify({'error': 'Não foi possível ler o arquivo CSV'}), 400
+        
+        # Mapear colunas (case-insensitive)
+        colunas_mapeadas = {
+            'nome': ['nome', 'Name', 'NOME', 'name'],
+            'telefone': ['telefone', 'Telefone', 'TELEFONE', 'phone', 'celular'],
+            'email': ['email', 'Email', 'EMAIL', 'e-mail'],
+            'endereco': ['endereco', 'Endereco', 'ENDERECO', 'endereço', 'address'],
+            'data_nascimento': ['data_nascimento', 'Data Nascimento', 'nascimento', 'birth_date'],
+            'observacoes': ['observacoes', 'Observacoes', 'obs', 'observações']
+        }
+        
+        # Encontrar colunas correspondentes
+        mapeamento_final = {}
+        if csv_data:
+            colunas_csv = list(csv_data[0].keys())
+            for campo, possiveis_nomes in colunas_mapeadas.items():
+                for col in colunas_csv:
+                    if col.lower() in [nome.lower() for nome in possiveis_nomes]:
+                        mapeamento_final[campo] = col
+                        break
+        
+        # Processar dados
+        for index, row in enumerate(csv_data):
+            try:
+                # Extrair dados da linha
+                nome = str(row.get(mapeamento_final.get('nome', ''), '')).strip()
+                if not nome or nome.lower() in ['', 'nan', 'none']:
+                    continue
+                
+                telefone = str(row.get(mapeamento_final.get('telefone', ''), '')).strip()
+                email = str(row.get(mapeamento_final.get('email', ''), '')).strip()
+                endereco = str(row.get(mapeamento_final.get('endereco', ''), '')).strip()
+                observacoes = str(row.get(mapeamento_final.get('observacoes', ''), '')).strip()
+                
+                # Truncar dados para respeitar limites do banco
+                dados_aluno = {
+                    'nome': nome,
+                    'telefone': telefone,
+                    'email': email,
+                    'id_unico': f'CSV_{datetime.now().strftime("%Y%m%d_%H%M%S")}_{index}'
+                }
+                dados_aluno = truncar_dados_aluno(dados_aluno)
+                
+                nome = dados_aluno['nome']
+                telefone = dados_aluno['telefone']
+                email = dados_aluno['email']
+                id_unico = dados_aluno['id_unico']
+                
+                # Processar data de nascimento
+                data_nascimento = None
+                if 'data_nascimento' in mapeamento_final:
+                    data_nasc_raw = row.get(mapeamento_final['data_nascimento'], '').strip()
+                    if data_nasc_raw and data_nasc_raw.lower() not in ['', 'nan', 'none']:
+                        try:
+                            data_nascimento = datetime.strptime(data_nasc_raw, '%d/%m/%Y').date()
+                        except:
+                            try:
+                                data_nascimento = datetime.strptime(data_nasc_raw, '%Y-%m-%d').date()
+                            except:
+                                pass
+                
+                # Verificar se aluno já existe
+                aluno_existente = db.query(Aluno).filter(
+                    Aluno.nome == nome,
+                    Aluno.telefone == telefone
+                ).first()
+                
+                if aluno_existente:
+                    # Atualizar aluno existente
+                    if email and email.lower() not in ['', 'nan', 'none']:
+                        aluno_existente.email = email
+                    if endereco and endereco.lower() not in ['', 'nan', 'none']:
+                        aluno_existente.endereco = endereco
+                    if observacoes and observacoes.lower() not in ['', 'nan', 'none']:
+                        aluno_existente.observacoes = observacoes
+                    aluno_existente.atividade_id = atividade_obj.id
+                    aluno_existente.ativo = True
+                    if data_nascimento:
+                        aluno_existente.data_nascimento = data_nascimento
+                    atualizados += 1
+                else:
+                    # Criar novo aluno
+                    novo_aluno = Aluno(
+                        id_unico=id_unico,
+                        nome=nome,
+                        telefone=telefone if telefone and telefone.lower() not in ['', 'nan', 'none'] else None,
+                        email=email if email and email.lower() not in ['', 'nan', 'none'] else None,
+                        endereco=endereco if endereco and endereco.lower() not in ['', 'nan', 'none'] else None,
+                        data_nascimento=data_nascimento,
+                        data_cadastro=datetime.now().date(),
+                        atividade_id=atividade_obj.id,
+                        observacoes=observacoes if observacoes and observacoes.lower() not in ['', 'nan', 'none'] else None,
+                        ativo=True
+                    )
+                    db.add(novo_aluno)
+                    novos_cadastros += 1
+                
+                alunos_processados += 1
+                
+            except Exception as e:
+                alunos_erros += 1
+                erros_detalhes.append(f'Linha {index + 2}: {str(e)}')
+                continue
+        
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'CSV processado com sucesso! {novos_cadastros} novos cadastros, {atualizados} atualizações',
+            'total_processados': alunos_processados,
+            'novos_cadastros': novos_cadastros,
+            'atualizados': atualizados,
+            'alunos_erros': alunos_erros,
+            'erros_detalhes': erros_detalhes[:10],  # Limitar a 10 erros
+            'colunas_encontradas': list(mapeamento_final.keys()),
+            'total_linhas': len(csv_data),
+            'processamento': 'CSV básico (sem pandas)'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Erro ao processar CSV: {str(e)}'}), 500
+    finally:
+        if 'db' in locals():
+            db.close()
+
+@app.route('/processar_planilha', methods=['POST'])
+@login_obrigatorio
+def processar_planilha():
+    """Processa uma planilha Excel e importa os dados para o banco"""
+    if session.get('usuario_nivel') != 'admin':
+        return jsonify({'error': 'Acesso negado'}), 403
+    
+    try:
+        # Verificar se há arquivo no upload
+        if 'arquivo' not in request.files:
+            return jsonify({'error': 'Nenhum arquivo foi enviado'}), 400
+        
+        file = request.files['arquivo']
+        if file.filename == '':
+            return jsonify({'error': 'Nenhum arquivo selecionado'}), 400
+        
+        # Verificar extensão do arquivo
+        if not file.filename.lower().endswith(('.xlsx', '.xls', '.csv')):
+            return jsonify({'error': 'Apenas arquivos Excel (.xlsx, .xls) e CSV (.csv) são aceitos'}), 400
+        
+        # Salvar arquivo temporariamente
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Importar pandas para processar arquivos
+        try:
+            import pandas as pd
+        except ImportError:
+            # Se pandas não estiver disponível, usar processamento básico para CSV
+            if file.filename.lower().endswith('.csv'):
+                return processar_csv_basico(filepath)
+            else:
+                return jsonify({'error': 'Biblioteca pandas não instalada. Para Excel: pip install pandas openpyxl. Para CSV, use formato simples.'}), 500
+        
+        # Ler arquivo (Excel ou CSV)
+        try:
+            if file.filename.lower().endswith('.csv'):
+                # Tentar diferentes encodings para CSV
+                try:
+                    df = pd.read_csv(filepath, encoding='utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        df = pd.read_csv(filepath, encoding='latin-1')
+                    except UnicodeDecodeError:
+                        df = pd.read_csv(filepath, encoding='cp1252')
+            else:
+                df = pd.read_excel(filepath)
+        except Exception as e:
+            return jsonify({'error': f'Erro ao ler arquivo: {str(e)}'}), 400
+        
+        # Mapear colunas comuns
+        colunas_mapeadas = {
+            'nome': ['nome', 'Nome', 'NOME', 'name'],
+            'telefone': ['telefone', 'Telefone', 'TELEFONE', 'phone', 'celular'],
+            'email': ['email', 'Email', 'EMAIL', 'e-mail'],
+            'endereco': ['endereco', 'Endereco', 'ENDERECO', 'endereço', 'address'],
+            'data_nascimento': ['data_nascimento', 'Data Nascimento', 'nascimento', 'birth_date'],
+            'observacoes': ['observacoes', 'Observacoes', 'obs', 'observações']
+        }
+        
+        # Encontrar colunas correspondentes
+        mapeamento_final = {}
+        for campo, possiveis_nomes in colunas_mapeadas.items():
+            for col in df.columns:
+                if col in possiveis_nomes:
+                    mapeamento_final[campo] = col
+                    break
+        
+        # Processar dados
+        alunos_processados = 0
+        novos_cadastros = 0
+        atualizados = 0
+        alunos_erros = 0
+        erros_detalhes = []
+        
+        db = SessionLocal()
+        try:
+            # Usar atividade padrão "Cadastro Geral" para planilhas de cadastro
+            atividade_nome = "Cadastro Geral"
+            atividade_obj = db.query(Atividade).filter(Atividade.nome == atividade_nome).first()
+            if not atividade_obj:
+                # Criar atividade padrão se não existir
+                atividade_obj = Atividade(
+                    nome=atividade_nome,
+                    descricao='Atividade padrão para cadastros gerais importados via planilha',
+                    ativa=True,
+                    data_criacao=datetime.now().date(),
+                    criado_por=session.get('usuario_logado', 'admin')
+                )
+                db.add(atividade_obj)
+                db.commit()
+            
+            for index, row in df.iterrows():
+                try:
+                    # Extrair dados da linha
+                    nome = str(row.get(mapeamento_final.get('nome', ''), '')).strip()
+                    if not nome or nome == 'nan':
+                        continue
+                    
+                    telefone = str(row.get(mapeamento_final.get('telefone', ''), '')).strip()
+                    email = str(row.get(mapeamento_final.get('email', ''), '')).strip()
+                    endereco = str(row.get(mapeamento_final.get('endereco', ''), '')).strip()
+                    observacoes = str(row.get(mapeamento_final.get('observacoes', ''), '')).strip()
+                    
+                    # Truncar dados para respeitar limites do banco
+                    dados_aluno = {
+                        'nome': nome,
+                        'telefone': telefone,
+                        'email': email,
+                        'id_unico': f'IMP_{datetime.now().strftime("%Y%m%d_%H%M%S")}_{index}'
+                    }
+                    dados_aluno = truncar_dados_aluno(dados_aluno)
+                    
+                    nome = dados_aluno['nome']
+                    telefone = dados_aluno['telefone']
+                    email = dados_aluno['email']
+                    id_unico = dados_aluno['id_unico']
+                    
+                    # Processar data de nascimento
+                    data_nascimento = None
+                    if 'data_nascimento' in mapeamento_final:
+                        data_nasc_raw = row.get(mapeamento_final['data_nascimento'])
+                        if pd.notna(data_nasc_raw):
+                            try:
+                                if isinstance(data_nasc_raw, str):
+                                    data_nascimento = datetime.strptime(data_nasc_raw, '%d/%m/%Y').date()
+                                else:
+                                    data_nascimento = data_nasc_raw.date() if hasattr(data_nasc_raw, 'date') else None
+                            except:
+                                pass
+                    
+                    # Verificar se aluno já existe
+                    aluno_existente = db.query(Aluno).filter(
+                        Aluno.nome == nome,
+                        Aluno.telefone == telefone
+                    ).first()
+                    
+                    if aluno_existente:
+                        # Atualizar aluno existente
+                        aluno_existente.email = email if email != 'nan' else aluno_existente.email
+                        aluno_existente.endereco = endereco if endereco != 'nan' else aluno_existente.endereco
+                        aluno_existente.observacoes = observacoes if observacoes != 'nan' else aluno_existente.observacoes
+                        aluno_existente.atividade_id = atividade_obj.id
+                        aluno_existente.ativo = True
+                        if data_nascimento:
+                            aluno_existente.data_nascimento = data_nascimento
+                        atualizados += 1
+                    else:
+                        # Criar novo aluno
+                        novo_aluno = Aluno(
+                            id_unico=id_unico,
+                            nome=nome,
+                            telefone=telefone if telefone != 'nan' else None,
+                            email=email if email != 'nan' else None,
+                            endereco=endereco if endereco != 'nan' else None,
+                            data_nascimento=data_nascimento,
+                            data_cadastro=datetime.now().date(),
+                            atividade_id=atividade_obj.id,
+                            observacoes=observacoes if observacoes != 'nan' else None,
+                            ativo=True
+                        )
+                        db.add(novo_aluno)
+                        novos_cadastros += 1
+                    
+                    alunos_processados += 1
+                    
+                except Exception as e:
+                    alunos_erros += 1
+                    erros_detalhes.append(f'Linha {index + 2}: {str(e)}')
+                    continue
+            
+            db.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Planilha processada com sucesso! {novos_cadastros} novos cadastros, {atualizados} atualizações',
+                'total_processados': alunos_processados,
+                'novos_cadastros': novos_cadastros,
+                'atualizados': atualizados,
+                'alunos_erros': alunos_erros,
+                'erros_detalhes': erros_detalhes[:10],  # Limitar a 10 erros
+                'colunas_encontradas': list(mapeamento_final.keys()),
+                'total_linhas': len(df)
+            })
+            
+        finally:
+            db.close()
+            
+    except Exception as e:
+        return jsonify({'error': f'Erro ao processar planilha: {str(e)}'}), 500
+
 @app.route('/listar_backups')
 @login_obrigatorio
 def listar_backups():
@@ -3816,6 +4207,8 @@ def listar_backups():
         
     except Exception as e:
         return jsonify({'error': f'Erro ao listar backups: {str(e)}'}), 500
+
+
 
 @app.route('/baixar_cadastros')
 @login_obrigatorio
