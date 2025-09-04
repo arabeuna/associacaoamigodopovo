@@ -1,0 +1,2 @@
+Deploy trigger - " + new Date().toISOString() + "
+Forçando redeploy no Render com melhorias na importação de planilhas
