@@ -39,13 +39,13 @@ class DatabaseIntegrationRobusto:
         self.db = None
         self.fallback_file = 'cadastros_fallback.json'
         
-        # Inicializar DAOs como None
-        self.aluno_dao = None
-        self.atividade_dao = None
-        self.turma_dao = None
-        self.presenca_dao = None
-        self.log_atividade_dao = None
-        self.usuario_dao = None
+        # Inicializar DAOs (são classes estáticas)
+        self.aluno_dao = AlunoDAO
+        self.atividade_dao = AtividadeDAO
+        self.turma_dao = TurmaDAO
+        self.presenca_dao = PresencaDAO
+        self.log_atividade_dao = LogAtividadeDAO
+        self.usuario_dao = UsuarioDAO
         
         self._init_connection()
     
@@ -81,12 +81,14 @@ class DatabaseIntegrationRobusto:
         except Exception as e:
             logger.error(f"❌ Erro ao conectar com banco: {e}")
             self.db = None
-            self.aluno_dao = None
-            self.atividade_dao = None
-            self.turma_dao = None
-            self.presenca_dao = None
-            self.log_atividade_dao = None
-            self.usuario_dao = None
+            # Inicializar DAOs mesmo em caso de erro (são classes estáticas)
+            self.aluno_dao = AlunoDAO
+            self.atividade_dao = AtividadeDAO
+            self.turma_dao = TurmaDAO
+            self.presenca_dao = PresencaDAO
+            self.log_atividade_dao = LogAtividadeDAO
+            self.usuario_dao = UsuarioDAO
+            logger.info("✅ DAOs inicializados em modo fallback após erro")
     
     def _test_connection(self) -> bool:
         """Testa se a conexão com o banco está ativa"""
@@ -143,12 +145,13 @@ class DatabaseIntegrationRobusto:
         except Exception as e:
             logger.error(f"❌ Erro durante reconexão: {e}")
             self.db = None
-            self.aluno_dao = None
-            self.atividade_dao = None
-            self.turma_dao = None
-            self.presenca_dao = None
-            self.log_atividade_dao = None
-            self.usuario_dao = None
+            # Manter DAOs inicializados mesmo em caso de erro (são classes estáticas)
+            self.aluno_dao = AlunoDAO
+            self.atividade_dao = AtividadeDAO
+            self.turma_dao = TurmaDAO
+            self.presenca_dao = PresencaDAO
+            self.log_atividade_dao = LogAtividadeDAO
+            self.usuario_dao = UsuarioDAO
             return False
     
     def _is_connection_error(self, error: Exception) -> bool:
