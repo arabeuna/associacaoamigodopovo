@@ -3875,6 +3875,7 @@ def processar_csv_basico(filepath):
             'email': ['email', 'Email', 'EMAIL', 'e-mail'],
             'endereco': ['endereco', 'Endereco', 'ENDERECO', 'endereço', 'address'],
             'data_nascimento': ['data_nascimento', 'Data Nascimento', 'nascimento', 'birth_date'],
+            'titulo_eleitor': ['titulo_eleitor', 'Titulo Eleitor', 'TITULO_ELEITOR', 'titulo'],
             'observacoes': ['observacoes', 'Observacoes', 'obs', 'observações']
         }
         
@@ -3882,11 +3883,18 @@ def processar_csv_basico(filepath):
         mapeamento_final = {}
         if csv_data:
             colunas_csv = list(csv_data[0].keys())
+            print(f"📋 Colunas encontradas na planilha: {colunas_csv}")
+            
             for campo, possiveis_nomes in colunas_mapeadas.items():
                 for col in colunas_csv:
                     if col.lower() in [nome.lower() for nome in possiveis_nomes]:
                         mapeamento_final[campo] = col
                         break
+            
+            print(f"✅ Colunas mapeadas: {list(mapeamento_final.keys())}")
+            colunas_ignoradas = set(colunas_csv) - set(mapeamento_final.values())
+            if colunas_ignoradas:
+                print(f"⚠️  Colunas ignoradas: {list(colunas_ignoradas)}")
         
         # Processar dados
         for index, row in enumerate(csv_data):
@@ -3899,6 +3907,7 @@ def processar_csv_basico(filepath):
                 telefone = str(row.get(mapeamento_final.get('telefone', ''), '')).strip()
                 email = str(row.get(mapeamento_final.get('email', ''), '')).strip()
                 endereco = str(row.get(mapeamento_final.get('endereco', ''), '')).strip()
+                titulo_eleitor = str(row.get(mapeamento_final.get('titulo_eleitor', ''), '')).strip()
                 observacoes = str(row.get(mapeamento_final.get('observacoes', ''), '')).strip()
                 
                 # Truncar dados para respeitar limites do banco
@@ -3906,6 +3915,7 @@ def processar_csv_basico(filepath):
                     'nome': nome,
                     'telefone': telefone,
                     'email': email,
+                    'titulo_eleitor': titulo_eleitor,
                     'id_unico': f'CSV_{datetime.now().strftime("%Y%m%d_%H%M%S")}_{index}'
                 }
                 dados_aluno = truncar_dados_aluno(dados_aluno)
@@ -3913,6 +3923,7 @@ def processar_csv_basico(filepath):
                 nome = dados_aluno['nome']
                 telefone = dados_aluno['telefone']
                 email = dados_aluno['email']
+                titulo_eleitor = dados_aluno['titulo_eleitor']
                 id_unico = dados_aluno['id_unico']
                 
                 # Processar data de nascimento
@@ -3940,6 +3951,8 @@ def processar_csv_basico(filepath):
                         aluno_existente.email = email
                     if endereco and endereco.lower() not in ['', 'nan', 'none']:
                         aluno_existente.endereco = endereco
+                    if titulo_eleitor and titulo_eleitor.lower() not in ['', 'nan', 'none']:
+                        aluno_existente.titulo_eleitor = titulo_eleitor
                     if observacoes and observacoes.lower() not in ['', 'nan', 'none']:
                         aluno_existente.observacoes = observacoes
                     aluno_existente.atividade_id = atividade_obj.id
@@ -3955,6 +3968,7 @@ def processar_csv_basico(filepath):
                         telefone=telefone if telefone and telefone.lower() not in ['', 'nan', 'none'] else None,
                         email=email if email and email.lower() not in ['', 'nan', 'none'] else None,
                         endereco=endereco if endereco and endereco.lower() not in ['', 'nan', 'none'] else None,
+                        titulo_eleitor=titulo_eleitor if titulo_eleitor and titulo_eleitor.lower() not in ['', 'nan', 'none'] else None,
                         data_nascimento=data_nascimento,
                         data_cadastro=datetime.now().date(),
                         atividade_id=atividade_obj.id,
@@ -4048,7 +4062,8 @@ def processar_planilha():
             'email': ['email', 'Email', 'EMAIL', 'e-mail'],
             'endereco': ['endereco', 'Endereco', 'ENDERECO', 'endereço', 'address'],
             'data_nascimento': ['data_nascimento', 'Data Nascimento', 'nascimento', 'birth_date'],
-            'observacoes': ['observacoes', 'Observacoes', 'obs', 'observações']
+            'observacoes': ['observacoes', 'Observacoes', 'obs', 'observações'],
+            'titulo_eleitor': ['titulo_eleitor', 'Titulo Eleitor', 'titulo eleitor', 'TITULO_ELEITOR', 'titulo de eleitor']
         }
         
         # Encontrar colunas correspondentes
@@ -4058,6 +4073,21 @@ def processar_planilha():
                 if col in possiveis_nomes:
                     mapeamento_final[campo] = col
                     break
+        
+        # Log das colunas encontradas e mapeadas
+        print(f"[PROCESSAR_PLANILHA] Colunas encontradas no arquivo: {list(df.columns)}")
+        print(f"[PROCESSAR_PLANILHA] Colunas mapeadas: {mapeamento_final}")
+        colunas_ignoradas = [col for col in df.columns if col not in mapeamento_final.values()]
+        print(f"[PROCESSAR_PLANILHA] Colunas ignoradas: {colunas_ignoradas}")
+        
+        # Verificar se pelo menos o campo nome foi encontrado
+        if 'nome' not in mapeamento_final:
+            print("[PROCESSAR_PLANILHA] ERRO: Campo 'nome' não encontrado")
+            return jsonify({
+                'error': 'Campo obrigatório "nome" não encontrado na planilha',
+                'colunas_encontradas': list(df.columns),
+                'colunas_esperadas': colunas_mapeadas['nome']
+            }), 400
         
         # Processar dados
         alunos_processados = 0
@@ -4094,12 +4124,14 @@ def processar_planilha():
                     email = str(row.get(mapeamento_final.get('email', ''), '')).strip()
                     endereco = str(row.get(mapeamento_final.get('endereco', ''), '')).strip()
                     observacoes = str(row.get(mapeamento_final.get('observacoes', ''), '')).strip()
+                    titulo_eleitor = str(row.get(mapeamento_final.get('titulo_eleitor', ''), '')).strip()
                     
                     # Truncar dados para respeitar limites do banco
                     dados_aluno = {
                         'nome': nome,
                         'telefone': telefone,
                         'email': email,
+                        'titulo_eleitor': titulo_eleitor,
                         'id_unico': f'IMP_{datetime.now().strftime("%Y%m%d_%H%M%S")}_{index}'
                     }
                     dados_aluno = truncar_dados_aluno(dados_aluno)
@@ -4107,6 +4139,7 @@ def processar_planilha():
                     nome = dados_aluno['nome']
                     telefone = dados_aluno['telefone']
                     email = dados_aluno['email']
+                    titulo_eleitor = dados_aluno['titulo_eleitor']
                     id_unico = dados_aluno['id_unico']
                     
                     # Processar data de nascimento
@@ -4133,6 +4166,7 @@ def processar_planilha():
                         aluno_existente.email = email if email != 'nan' else aluno_existente.email
                         aluno_existente.endereco = endereco if endereco != 'nan' else aluno_existente.endereco
                         aluno_existente.observacoes = observacoes if observacoes != 'nan' else aluno_existente.observacoes
+                        aluno_existente.titulo_eleitor = titulo_eleitor if titulo_eleitor != 'nan' else aluno_existente.titulo_eleitor
                         aluno_existente.atividade_id = atividade_obj.id
                         aluno_existente.ativo = True
                         if data_nascimento:
@@ -4146,6 +4180,7 @@ def processar_planilha():
                             telefone=telefone if telefone != 'nan' else None,
                             email=email if email != 'nan' else None,
                             endereco=endereco if endereco != 'nan' else None,
+                            titulo_eleitor=titulo_eleitor if titulo_eleitor != 'nan' else None,
                             data_nascimento=data_nascimento,
                             data_cadastro=datetime.now().date(),
                             atividade_id=atividade_obj.id,
@@ -4159,10 +4194,13 @@ def processar_planilha():
                     
                 except Exception as e:
                     alunos_erros += 1
-                    erros_detalhes.append(f'Linha {index + 2}: {str(e)}')
+                    erro_msg = f'Linha {index + 2}: {str(e)}'
+                    print(f"[PROCESSAR_PLANILHA] ERRO: {erro_msg}")
+                    erros_detalhes.append(erro_msg)
                     continue
             
             db.commit()
+            print(f"[PROCESSAR_PLANILHA] SUCESSO: {alunos_processados} processados, {novos_cadastros} novos, {atualizados} atualizados, {alunos_erros} erros")
             
             return jsonify({
                 'success': True,
@@ -4173,14 +4211,39 @@ def processar_planilha():
                 'alunos_erros': alunos_erros,
                 'erros_detalhes': erros_detalhes[:10],  # Limitar a 10 erros
                 'colunas_encontradas': list(mapeamento_final.keys()),
+                'colunas_ignoradas': colunas_ignoradas,
                 'total_linhas': len(df)
             })
             
+        except Exception as db_error:
+            print(f"[PROCESSAR_PLANILHA] ERRO DE BANCO: {str(db_error)}")
+            db.rollback()
+            return jsonify({
+                'error': f'Erro de banco de dados: {str(db_error)}',
+                'tipo_erro': 'database_error'
+            }), 500
         finally:
-            db.close()
+            if db:
+                db.close()
+            # Limpar arquivo temporário
+            if filepath and os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except:
+                    pass
             
     except Exception as e:
-        return jsonify({'error': f'Erro ao processar planilha: {str(e)}'}), 500
+        print(f"[PROCESSAR_PLANILHA] ERRO GERAL: {str(e)}")
+        # Limpar arquivo temporário em caso de erro
+        if 'filepath' in locals() and filepath and os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except:
+                pass
+        return jsonify({
+            'error': f'Erro ao processar planilha: {str(e)}',
+            'tipo_erro': 'general_error'
+        }), 500
 
 @app.route('/listar_backups')
 @login_obrigatorio
