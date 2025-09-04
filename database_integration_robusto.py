@@ -65,13 +65,13 @@ class DatabaseIntegrationRobusto:
                 else:
                     self.db = db_connection
             
-            # Inicializar todos os DAOs (funcionam com None em modo fallback)
-            self.aluno_dao = AlunoDAO(self.db)
-            self.atividade_dao = AtividadeDAO(self.db)
-            self.turma_dao = TurmaDAO(self.db)
-            self.presenca_dao = PresencaDAO(self.db)
-            self.log_atividade_dao = LogAtividadeDAO(self.db)
-            self.usuario_dao = UsuarioDAO(self.db)
+            # Inicializar todos os DAOs (são classes estáticas)
+            self.aluno_dao = AlunoDAO
+            self.atividade_dao = AtividadeDAO
+            self.turma_dao = TurmaDAO
+            self.presenca_dao = PresencaDAO
+            self.log_atividade_dao = LogAtividadeDAO
+            self.usuario_dao = UsuarioDAO
             
             if self.db is None:
                 logger.info("✅ DAOs inicializados em modo fallback (memória)")
@@ -121,13 +121,13 @@ class DatabaseIntegrationRobusto:
                 else:
                     self.db = db_connection
             
-            # Reinicializar todos os DAOs (funcionam com None em modo fallback)
-            self.aluno_dao = AlunoDAO(self.db)
-            self.atividade_dao = AtividadeDAO(self.db)
-            self.turma_dao = TurmaDAO(self.db)
-            self.presenca_dao = PresencaDAO(self.db)
-            self.log_atividade_dao = LogAtividadeDAO(self.db)
-            self.usuario_dao = UsuarioDAO(self.db)
+            # Reinicializar todos os DAOs (são classes estáticas)
+            self.aluno_dao = AlunoDAO
+            self.atividade_dao = AtividadeDAO
+            self.turma_dao = TurmaDAO
+            self.presenca_dao = PresencaDAO
+            self.log_atividade_dao = LogAtividadeDAO
+            self.usuario_dao = UsuarioDAO
             
             # Testar a nova conexão (ou confirmar modo fallback)
             if self.db is None or self._test_connection():
