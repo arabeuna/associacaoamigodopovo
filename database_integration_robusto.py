@@ -60,9 +60,13 @@ class DatabaseIntegrationRobusto:
                 logger.warning("⚠️ Usando modo fallback - MongoDB não disponível")
             else:
                 # Usar generator se necessário
-                if hasattr(db_connection, '__next__'):
-                    self.db = next(db_connection)
-                else:
+                try:
+                    if hasattr(db_connection, '__next__'):
+                        self.db = next(db_connection)
+                    else:
+                        self.db = db_connection
+                except TypeError:
+                    # Se não for iterável, usar diretamente
                     self.db = db_connection
             
             # Inicializar todos os DAOs (são classes estáticas)
@@ -107,7 +111,7 @@ class DatabaseIntegrationRobusto:
     def _reconnect(self) -> bool:
         """Tenta reconectar com o banco de dados e reinicializar DAOs"""
         try:
-            if self.db:
+            if self.db is not None:
                 self.db.close()
             
             # Obter nova conexão do banco
@@ -132,7 +136,8 @@ class DatabaseIntegrationRobusto:
             self.usuario_dao = UsuarioDAO
             
             # Testar a nova conexão (ou confirmar modo fallback)
-            if self.db is None or self._test_connection():
+            connection_ok = self.db is None or self._test_connection()
+            if connection_ok:
                 if self.db is None:
                     logger.info("✅ Reconexão em modo fallback bem-sucedida")
                 else:

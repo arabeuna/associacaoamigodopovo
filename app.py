@@ -4764,20 +4764,46 @@ def limpar_banco_dados():
         # Obter integração com banco de dados
         db_integration = get_db_integration()
         
-        if not db_integration or not db_integration.db:
+        if not db_integration or db_integration.db is None:
             return jsonify({'success': False, 'message': 'Banco de dados não conectado'}), 500
         
         # Contar documentos antes da limpeza
-        count_alunos_antes = db_integration.db.alunos.count_documents({})
-        count_atividades_antes = db_integration.db.atividades.count_documents({})
-        count_turmas_antes = db_integration.db.turmas.count_documents({})
-        count_presenca_antes = db_integration.db.presenca.count_documents({})
+        try:
+            count_alunos_antes = len(db_integration.listar_alunos_db())
+            count_atividades_antes = len(db_integration.listar_atividades_db())
+            count_turmas_antes = len(db_integration.listar_turmas_db())
+            count_presenca_antes = 0  # Será implementado quando houver método específico
+        except Exception as e:
+            print(f"Erro ao contar documentos: {e}")
+            count_alunos_antes = count_atividades_antes = count_turmas_antes = count_presenca_antes = 0
         
-        # Limpar todas as coleções
-        resultado_alunos = db_integration.db.alunos.delete_many({})
-        resultado_atividades = db_integration.db.atividades.delete_many({})
-        resultado_turmas = db_integration.db.turmas.delete_many({})
-        resultado_presenca = db_integration.db.presenca.delete_many({})
+        # Limpar todas as coleções usando métodos da integração
+        try:
+            # Limpar alunos
+            alunos_existentes = db_integration.listar_alunos_db()
+            for aluno in alunos_existentes:
+                if 'id' in aluno:
+                    db_integration.excluir_aluno_db(aluno['id'])
+            
+            # Limpar atividades
+            atividades_existentes = db_integration.listar_atividades_db()
+            for atividade in atividades_existentes:
+                if 'nome' in atividade:
+                    db_integration.excluir_atividade_db(atividade['nome'])
+            
+            # Limpar turmas
+            turmas_existentes = db_integration.listar_turmas_db()
+            for turma in turmas_existentes:
+                if 'nome' in turma:
+                    db_integration.excluir_turma_db(turma['nome'])
+                    
+            resultado_alunos = {'deleted_count': len(alunos_existentes)}
+            resultado_atividades = {'deleted_count': len(atividades_existentes)}
+            resultado_turmas = {'deleted_count': len(turmas_existentes)}
+            resultado_presenca = {'deleted_count': 0}
+        except Exception as e:
+            print(f"Erro ao limpar coleções: {e}")
+            resultado_alunos = resultado_atividades = resultado_turmas = resultado_presenca = {'deleted_count': 0}
         
         # Limpar dados em memória
         academia.alunos_reais.clear()
@@ -4823,14 +4849,34 @@ def limpar_banco_dados():
             }
         }
         
-        # Inserir atividades e turmas padrão no banco
-        for nome, atividade in atividades_padrao.items():
-            db_integration.db.atividades.insert_one(atividade)
-            academia.atividades_cadastradas[nome] = atividade
-        
-        for nome, turma in turmas_padrao.items():
-            db_integration.db.turmas.insert_one(turma)
-            academia.turmas_cadastradas[nome] = turma
+        # Inserir atividades e turmas padrão no banco usando métodos da integração
+        try:
+            for nome, atividade in atividades_padrao.items():
+                db_integration.criar_atividade_db(
+                    nome=atividade['nome'],
+                    descricao=atividade['descricao'],
+                    ativa=atividade['ativa'],
+                    professor=atividade.get('professor', ''),
+                    horario=atividade.get('horario', ''),
+                    local=atividade.get('local', '')
+                )
+                academia.atividades_cadastradas[nome] = atividade
+            
+            for nome, turma in turmas_padrao.items():
+                db_integration.criar_turma_db(
+                    nome=turma['nome'],
+                    horario=turma['horario'],
+                    ativa=turma['ativa'],
+                    descricao=turma.get('descricao', '')
+                )
+                academia.turmas_cadastradas[nome] = turma
+        except Exception as e:
+            print(f"Erro ao inserir dados padrão: {e}")
+            # Em caso de erro, manter apenas em memória
+            for nome, atividade in atividades_padrao.items():
+                academia.atividades_cadastradas[nome] = atividade
+            for nome, turma in turmas_padrao.items():
+                academia.turmas_cadastradas[nome] = turma
         
         # Salvar dados em arquivos JSON (backup local)
         academia.salvar_dados_reais()
