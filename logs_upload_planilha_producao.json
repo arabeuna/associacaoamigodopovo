@@ -1,0 +1,146 @@
+[
+  {
+    "timestamp": "2025-09-05T08:45:41.978908",
+    "data_hora": "05/09/2025 às 08:45:41",
+    "acao": "INICIO_MONITORAMENTO",
+    "detalhes": "Iniciando monitoramento de upload de planilha",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:45:41.979801",
+    "data_hora": "05/09/2025 às 08:45:41",
+    "acao": "VERIFICACAO_INICIAL",
+    "detalhes": "Iniciando verificação do estado do banco",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:45:42.965369",
+    "data_hora": "05/09/2025 às 08:45:42",
+    "acao": "CONEXAO_DB",
+    "detalhes": "Conexão com MongoDB estabelecida",
+    "status": "SUCCESS",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:45:43.154533",
+    "data_hora": "05/09/2025 às 08:45:43",
+    "acao": "CONTAGEM_ALUNOS",
+    "detalhes": "Total de alunos no banco: 314",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:45:43.179939",
+    "data_hora": "05/09/2025 às 08:45:43",
+    "acao": "CONTAGEM_ATIVIDADES",
+    "detalhes": "Total de atividades: 11",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:45:43.188226",
+    "data_hora": "05/09/2025 às 08:45:43",
+    "acao": "DISTRIBUICAO_ATIVIDADES",
+    "detalhes": "Distribuição: {'Cadastro Geral': 313, 'Fisioterapia': 1}",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:46:29.803810",
+    "data_hora": "05/09/2025 às 08:46:29",
+    "acao": "SIMULACAO_UPLOAD",
+    "detalhes": "Planilha de teste criada: uploads\\planilha_teste_404_alunos_20250905_084629.xlsx",
+    "status": "SUCCESS",
+    "ambiente": "TESTE",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:47:25.106597",
+    "data_hora": "05/09/2025 às 08:47:25",
+    "acao": "PLANILHA_TESTE_CRIADA",
+    "detalhes": "Planilha CSV de teste criada: uploads\\planilha_teste_404_alunos_20250905_084725.csv",
+    "status": "SUCCESS",
+    "ambiente": "TESTE",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:49:38.575015",
+    "data_hora": "05/09/2025 às 08:49:38",
+    "acao": "VERIFICACAO_POS_UPLOAD",
+    "detalhes": "Verificando estado após upload",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:49:38.576123",
+    "data_hora": "05/09/2025 às 08:49:38",
+    "acao": "VERIFICACAO_INICIAL",
+    "detalhes": "Iniciando verificação do estado do banco",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:49:39.063925",
+    "data_hora": "05/09/2025 às 08:49:39",
+    "acao": "CONEXAO_DB",
+    "detalhes": "Conexão com MongoDB estabelecida",
+    "status": "SUCCESS",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:49:39.146597",
+    "data_hora": "05/09/2025 às 08:49:39",
+    "acao": "CONTAGEM_ALUNOS",
+    "detalhes": "Total de alunos no banco: 314",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:49:39.170457",
+    "data_hora": "05/09/2025 às 08:49:39",
+    "acao": "CONTAGEM_ATIVIDADES",
+    "detalhes": "Total de atividades: 11",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:49:39.178990",
+    "data_hora": "05/09/2025 às 08:49:39",
+    "acao": "DISTRIBUICAO_ATIVIDADES",
+    "detalhes": "Distribuição: {'Cadastro Geral': 313, 'Fisioterapia': 1}",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:49:39.185653",
+    "data_hora": "05/09/2025 às 08:49:39",
+    "acao": "ESTADO_FINAL",
+    "detalhes": "Total final de alunos: 314",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T08:49:39.199546",
+    "data_hora": "05/09/2025 às 08:49:39",
+    "acao": "DIFERENCA_CALCULADA",
+    "detalhes": "Diferença: +0 alunos",
+    "status": "WARNING",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  }
+]
