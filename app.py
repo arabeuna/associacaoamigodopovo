@@ -4149,7 +4149,8 @@ def processar_planilha():
             'endereco': ['endereco', 'Endereco', 'ENDERECO', 'endereço', 'address'],
             'data_nascimento': ['data_nascimento', 'Data Nascimento', 'nascimento', 'birth_date'],
             'observacoes': ['observacoes', 'Observacoes', 'obs', 'observações'],
-            'titulo_eleitor': ['titulo_eleitor', 'Titulo Eleitor', 'titulo eleitor', 'TITULO_ELEITOR', 'titulo de eleitor']
+            'titulo_eleitor': ['titulo_eleitor', 'Titulo Eleitor', 'titulo eleitor', 'TITULO_ELEITOR', 'titulo de eleitor'],
+            'atividades': ['atividades', 'Atividades', 'ATIVIDADES', 'atividade', 'Atividade', 'ATIVIDADE', 'activities', 'activity']
         }
         
         # Encontrar colunas correspondentes
@@ -4182,21 +4183,65 @@ def processar_planilha():
         alunos_erros = 0
         erros_detalhes = []
         
+        def processar_atividades_aluno(atividades_str, db_integration):
+            """Processa string de atividades e retorna lista de IDs de atividades válidas"""
+            if not atividades_str or atividades_str == 'nan':
+                return []
+            
+            # Separar atividades por vírgula, ponto e vírgula ou pipe
+            separadores = [',', ';', '|']
+            atividades_nomes = [atividades_str]
+            
+            for sep in separadores:
+                if sep in atividades_str:
+                    atividades_nomes = [nome.strip() for nome in atividades_str.split(sep) if nome.strip()]
+                    break
+            
+            atividades_ids = []
+            for nome_atividade in atividades_nomes:
+                nome_atividade = nome_atividade.strip()
+                if not nome_atividade:
+                    continue
+                    
+                # Buscar atividade existente
+                atividade_obj = db_integration.atividade_dao.buscar_por_nome(nome_atividade)
+                
+                if not atividade_obj:
+                    # Criar nova atividade se não existir
+                    try:
+                        nova_atividade = {
+                            'nome': nome_atividade,
+                            'descricao': f'Atividade criada automaticamente via importação de planilha',
+                            'ativa': True,
+                            'data_criacao': datetime.now().date(),
+                            'criado_por': session.get('usuario_logado', 'admin')
+                        }
+                        atividade_obj = db_integration.atividade_dao.criar(nova_atividade)
+                        print(f"[PROCESSAR_PLANILHA] Nova atividade criada: {nome_atividade}")
+                    except Exception as e:
+                        print(f"[PROCESSAR_PLANILHA] Erro ao criar atividade {nome_atividade}: {e}")
+                        continue
+                
+                if atividade_obj and atividade_obj.get('_id'):
+                    atividades_ids.append(atividade_obj.get('_id'))
+            
+            return atividades_ids
+        
         db_integration = get_db_integration()
         try:
-            # Usar atividade padrão "Cadastro Geral" para planilhas de cadastro
-            atividade_nome = "Cadastro Geral"
-            atividade_obj = db_integration.atividade_dao.buscar_por_nome(atividade_nome)
-            if not atividade_obj:
+            # Preparar atividade padrão para casos sem atividade especificada
+            atividade_padrao_nome = "Cadastro Geral"
+            atividade_padrao_obj = db_integration.atividade_dao.buscar_por_nome(atividade_padrao_nome)
+            if not atividade_padrao_obj:
                 # Criar atividade padrão se não existir
-                nova_atividade = {
-                    'nome': atividade_nome,
+                nova_atividade_padrao = {
+                    'nome': atividade_padrao_nome,
                     'descricao': 'Atividade padrão para cadastros gerais importados via planilha',
                     'ativa': True,
                     'data_criacao': datetime.now().date(),
                     'criado_por': session.get('usuario_logado', 'admin')
                 }
-                atividade_obj = db_integration.atividade_dao.criar(nova_atividade)
+                atividade_padrao_obj = db_integration.atividade_dao.criar(nova_atividade_padrao)
             
             for index, row in df.iterrows():
                 try:
@@ -4210,6 +4255,7 @@ def processar_planilha():
                     endereco = str(row.get(mapeamento_final.get('endereco', ''), '')).strip()
                     observacoes = str(row.get(mapeamento_final.get('observacoes', ''), '')).strip()
                     titulo_eleitor = str(row.get(mapeamento_final.get('titulo_eleitor', ''), '')).strip()
+                    atividades_str = str(row.get(mapeamento_final.get('atividades', ''), '')).strip()
                     
                     # Truncar dados para respeitar limites do banco
                     dados_aluno = {
@@ -4240,6 +4286,13 @@ def processar_planilha():
                             except:
                                 pass
                     
+                    # Processar atividades do aluno
+                    atividades_ids = processar_atividades_aluno(atividades_str, db_integration)
+                    
+                    # Se não há atividades especificadas, usar atividade padrão
+                    if not atividades_ids and atividade_padrao_obj:
+                        atividades_ids = [atividade_padrao_obj.get('_id')]
+                    
                     # Verificar se aluno já existe usando MongoDB
                     aluno_existente = db_integration.aluno_dao.buscar_por_nome_telefone(nome, telefone)
                     
@@ -4250,7 +4303,7 @@ def processar_planilha():
                             'endereco': endereco if endereco != 'nan' else aluno_existente.get('endereco'),
                             'observacoes': observacoes if observacoes != 'nan' else aluno_existente.get('observacoes'),
                             'titulo_eleitor': titulo_eleitor if titulo_eleitor != 'nan' else aluno_existente.get('titulo_eleitor'),
-                            'atividade_id': atividade_obj.get('_id') if atividade_obj else None,
+                            'atividades_ids': atividades_ids,  # Múltiplas atividades
                             'ativo': True
                         }
                         if data_nascimento:
@@ -4268,7 +4321,7 @@ def processar_planilha():
                             'titulo_eleitor': titulo_eleitor if titulo_eleitor != 'nan' else None,
                             'data_nascimento': data_nascimento,
                             'data_cadastro': datetime.now().date(),
-                            'atividade_id': atividade_obj.get('_id') if atividade_obj else None,
+                            'atividades_ids': atividades_ids,  # Múltiplas atividades
                             'observacoes': observacoes if observacoes != 'nan' else None,
                             'ativo': True
                         }
@@ -4691,6 +4744,122 @@ def listar_alunos_atividade(atividade):
         return jsonify({
             'success': False,
             'message': f'Erro ao listar alunos: {str(e)}'
+        }), 500
+
+@app.route('/limpar_banco_dados', methods=['POST'])
+@apenas_admin_master
+def limpar_banco_dados():
+    """Rota administrativa para limpar completamente o banco de dados MongoDB"""
+    try:
+        data = request.get_json()
+        confirmacao = data.get('confirmacao', '')
+        
+        # Verificar confirmação de segurança
+        if confirmacao != 'LIMPAR_BANCO_CONFIRMADO':
+            return jsonify({
+                'success': False, 
+                'message': 'Confirmação de segurança necessária. Digite "LIMPAR_BANCO_CONFIRMADO" para confirmar.'
+            }), 400
+        
+        # Obter integração com banco de dados
+        db_integration = get_db_integration()
+        
+        if not db_integration or not db_integration.db:
+            return jsonify({'success': False, 'message': 'Banco de dados não conectado'}), 500
+        
+        # Contar documentos antes da limpeza
+        count_alunos_antes = db_integration.db.alunos.count_documents({})
+        count_atividades_antes = db_integration.db.atividades.count_documents({})
+        count_turmas_antes = db_integration.db.turmas.count_documents({})
+        count_presenca_antes = db_integration.db.presenca.count_documents({})
+        
+        # Limpar todas as coleções
+        resultado_alunos = db_integration.db.alunos.delete_many({})
+        resultado_atividades = db_integration.db.atividades.delete_many({})
+        resultado_turmas = db_integration.db.turmas.delete_many({})
+        resultado_presenca = db_integration.db.presenca.delete_many({})
+        
+        # Limpar dados em memória
+        academia.alunos_reais.clear()
+        academia.atividades_cadastradas.clear()
+        academia.turmas_cadastradas.clear()
+        academia.dados_presenca.clear()
+        
+        # Recriar atividades e turmas padrão
+        atividades_padrao = {
+            'Atividade Geral': {
+                'nome': 'Atividade Geral',
+                'descricao': 'Atividade padrão do sistema',
+                'ativa': True,
+                'data_criacao': datetime.now().isoformat(),
+                'total_alunos': 0,
+                'professor': '',
+                'horario': '',
+                'local': ''
+            }
+        }
+        
+        turmas_padrao = {
+            'Manhã': {
+                'nome': 'Manhã',
+                'horario': '08:00 - 12:00',
+                'ativa': True,
+                'total_alunos': 0,
+                'descricao': 'Turma do período matutino'
+            },
+            'Tarde': {
+                'nome': 'Tarde',
+                'horario': '13:00 - 17:00',
+                'ativa': True,
+                'total_alunos': 0,
+                'descricao': 'Turma do período vespertino'
+            },
+            'Noite': {
+                'nome': 'Noite',
+                'horario': '18:00 - 22:00',
+                'ativa': True,
+                'total_alunos': 0,
+                'descricao': 'Turma do período noturno'
+            }
+        }
+        
+        # Inserir atividades e turmas padrão no banco
+        for nome, atividade in atividades_padrao.items():
+            db_integration.db.atividades.insert_one(atividade)
+            academia.atividades_cadastradas[nome] = atividade
+        
+        for nome, turma in turmas_padrao.items():
+            db_integration.db.turmas.insert_one(turma)
+            academia.turmas_cadastradas[nome] = turma
+        
+        # Salvar dados em arquivos JSON (backup local)
+        academia.salvar_dados_reais()
+        academia.salvar_atividades()
+        academia.salvar_turmas()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Banco de dados limpo com sucesso! O ambiente está preparado para receber novos dados.',
+            'detalhes': {
+                'alunos_removidos': resultado_alunos.deleted_count,
+                'atividades_removidas': resultado_atividades.deleted_count,
+                'turmas_removidas': resultado_turmas.deleted_count,
+                'presencas_removidas': resultado_presenca.deleted_count,
+                'contagem_antes': {
+                    'alunos': count_alunos_antes,
+                    'atividades': count_atividades_antes,
+                    'turmas': count_turmas_antes,
+                    'presencas': count_presenca_antes
+                },
+                'atividades_padrao_criadas': len(atividades_padrao),
+                'turmas_padrao_criadas': len(turmas_padrao)
+            }
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'message': f'Erro ao limpar banco de dados: {str(e)}'
         }), 500
 
 @app.route('/dashboard_atividade/<nome_atividade>')

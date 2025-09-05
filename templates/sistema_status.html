@@ -32,6 +32,58 @@
                 </div>
             </div>
             
+            {% if session.tipo_usuario == 'admin_master' %}
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5>⚠️ Administração Avançada (Master)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>ATENÇÃO:</strong> As operações abaixo são irreversíveis e devem ser usadas com extremo cuidado.
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card border-warning">
+                                <div class="card-body">
+                                    <h6 class="card-title text-warning">
+                                        <i class="fas fa-database me-2"></i>
+                                        Limpar Banco de Dados
+                                    </h6>
+                                    <p class="card-text small">
+                                        Remove TODOS os dados do MongoDB (alunos, atividades, turmas, presenças) e recria estruturas padrão.
+                                    </p>
+                                    <button class="btn btn-warning btn-sm" onclick="mostrarModalLimpeza()">
+                                        <i class="fas fa-trash-alt me-2"></i>
+                                        Limpar Banco
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title text-info">
+                                        <i class="fas fa-sync-alt me-2"></i>
+                                        Sincronizar Dados
+                                    </h6>
+                                    <p class="card-text small">
+                                        Força sincronização entre dados locais e MongoDB.
+                                    </p>
+                                    <button class="btn btn-info btn-sm" onclick="sincronizarDados()">
+                                        <i class="fas fa-sync me-2"></i>
+                                        Sincronizar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
             <div class="card">
                 <div class="card-header">
                     <h5>📝 Log de Atividades</h5>
@@ -39,6 +91,52 @@
                 <div class="card-body">
                     <div id="log-atividades" style="height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px;">
                         <p>Aguardando atividades...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal de Confirmação para Limpeza -->
+            <div class="modal fade" id="modalLimpezaBanco" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                CONFIRMAÇÃO DE LIMPEZA
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger">
+                                <strong>ATENÇÃO:</strong> Esta operação irá:
+                                <ul class="mt-2 mb-0">
+                                    <li>Remover TODOS os alunos cadastrados</li>
+                                    <li>Remover TODAS as atividades personalizadas</li>
+                                    <li>Remover TODAS as turmas personalizadas</li>
+                                    <li>Remover TODOS os dados de presença</li>
+                                    <li>Recriar apenas estruturas padrão do sistema</li>
+                                </ul>
+                            </div>
+                            
+                            <p><strong>Esta ação é IRREVERSÍVEL!</strong></p>
+                            
+                            <div class="mb-3">
+                                <label for="confirmacaoTexto" class="form-label">
+                                    Para confirmar, digite: <code>LIMPAR_BANCO_CONFIRMADO</code>
+                                </label>
+                                <input type="text" class="form-control" id="confirmacaoTexto" placeholder="Digite a confirmação...">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>
+                                Cancelar
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="executarLimpezaBanco()" id="btnConfirmarLimpeza" disabled>
+                                <i class="fas fa-trash-alt me-2"></i>
+                                CONFIRMAR LIMPEZA
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -149,6 +247,100 @@ function processarFallback() {
     .finally(() => {
         btn.disabled = false;
         btn.innerHTML = '⚡ Processar Pendentes';
+    });
+}
+
+// Funções para limpeza do banco de dados
+function mostrarModalLimpeza() {
+    const modal = new bootstrap.Modal(document.getElementById('modalLimpezaBanco'));
+    modal.show();
+    
+    // Resetar campos
+    document.getElementById('confirmacaoTexto').value = '';
+    document.getElementById('btnConfirmarLimpeza').disabled = true;
+}
+
+// Habilitar botão de confirmação apenas quando texto correto for digitado
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmacaoInput = document.getElementById('confirmacaoTexto');
+    const btnConfirmar = document.getElementById('btnConfirmarLimpeza');
+    
+    if (confirmacaoInput && btnConfirmar) {
+        confirmacaoInput.addEventListener('input', function() {
+            btnConfirmar.disabled = this.value !== 'LIMPAR_BANCO_CONFIRMADO';
+        });
+    }
+});
+
+function executarLimpezaBanco() {
+    const confirmacao = document.getElementById('confirmacaoTexto').value;
+    
+    if (confirmacao !== 'LIMPAR_BANCO_CONFIRMADO') {
+        alert('Confirmação incorreta!');
+        return;
+    }
+    
+    const btn = document.getElementById('btnConfirmarLimpeza');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Limpando...';
+    
+    adicionarLog('🗑️ Iniciando limpeza do banco de dados...', 'info');
+    
+    fetch('/limpar_banco_dados', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            confirmacao: confirmacao
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            adicionarLog('✅ Banco de dados limpo com sucesso!', 'success');
+            adicionarLog(`📊 Estatísticas: ${data.message}`, 'info');
+            
+            // Fechar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalLimpezaBanco'));
+            modal.hide();
+            
+            // Atualizar status
+            setTimeout(atualizarStatus, 1000);
+            
+            alert('Banco de dados limpo com sucesso! O sistema está pronto para receber novos dados.');
+        } else {
+            adicionarLog(`❌ Erro na limpeza: ${data.error}`, 'error');
+            alert(`Erro na limpeza: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        adicionarLog(`❌ Erro na requisição: ${error.message}`, 'error');
+        alert(`Erro na requisição: ${error.message}`);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-trash-alt me-2"></i>CONFIRMAR LIMPEZA';
+    });
+}
+
+function sincronizarDados() {
+    adicionarLog('🔄 Iniciando sincronização de dados...', 'info');
+    
+    // Implementar sincronização se necessário
+    fetch('/sistema/sincronizar', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            adicionarLog('✅ Sincronização concluída!', 'success');
+        } else {
+            adicionarLog(`❌ Erro na sincronização: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        adicionarLog(`❌ Erro na sincronização: ${error.message}`, 'error');
     });
 }
 
