@@ -4734,6 +4734,13 @@ def api_dashboard_atualizar():
         if nivel_usuario == 'usuario':
             return jsonify({'redirect': '/dashboard_adaptado'})
         
+        # IMPORTANTE: Recarregar dados do banco antes de calcular estatísticas
+        try:
+            academia.alunos_reais = academia.carregar_dados_reais()
+            print(f"🔄 Dados recarregados: {len(academia.alunos_reais)} alunos")
+        except Exception as e:
+            print(f"❌ Erro ao recarregar dados: {e}")
+        
         # Coletar dados atualizados do dashboard
         dados_atualizados = {}
         
