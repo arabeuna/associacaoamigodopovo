@@ -142,5 +142,97 @@
     "status": "WARNING",
     "ambiente": "PRODUCAO",
     "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T09:00:01.514227",
+    "data_hora": "05/09/2025 às 09:00:01",
+    "acao": "VERIFICACAO_POS_UPLOAD",
+    "detalhes": "Verificando estado após upload",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T09:00:01.515415",
+    "data_hora": "05/09/2025 às 09:00:01",
+    "acao": "VERIFICACAO_INICIAL",
+    "detalhes": "Iniciando verificação do estado do banco",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T09:00:02.240175",
+    "data_hora": "05/09/2025 às 09:00:02",
+    "acao": "CONEXAO_DB",
+    "detalhes": "Conexão com MongoDB estabelecida",
+    "status": "SUCCESS",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T09:00:02.322638",
+    "data_hora": "05/09/2025 às 09:00:02",
+    "acao": "CONTAGEM_ALUNOS",
+    "detalhes": "Total de alunos no banco: 314",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T09:00:02.347597",
+    "data_hora": "05/09/2025 às 09:00:02",
+    "acao": "CONTAGEM_ATIVIDADES",
+    "detalhes": "Total de atividades: 11",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T09:00:02.356493",
+    "data_hora": "05/09/2025 às 09:00:02",
+    "acao": "DISTRIBUICAO_ATIVIDADES",
+    "detalhes": "Distribuição: {'Cadastro Geral': 313, 'Fisioterapia': 1}",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T09:00:02.364610",
+    "data_hora": "05/09/2025 às 09:00:02",
+    "acao": "ESTADO_FINAL",
+    "detalhes": "Total final de alunos: 314",
+    "status": "INFO",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T09:00:02.379827",
+    "data_hora": "05/09/2025 às 09:00:02",
+    "acao": "DIFERENCA_CALCULADA",
+    "detalhes": "Diferença: +0 alunos",
+    "status": "WARNING",
+    "ambiente": "PRODUCAO",
+    "tipo": "UPLOAD_PLANILHA"
+  },
+  {
+    "timestamp": "2025-09-05T09:09:40.061732",
+    "data_hora": "05/09/2025 às 09:09:40",
+    "acao": "TESTE_CAMPOS_OPCIONAIS",
+    "detalhes": "Planilha de teste criada para validar campos opcionais: uploads\\teste_campos_basicos_10_alunos_20250905_090940.csv",
+    "status": "SUCCESS",
+    "ambiente": "TESTE",
+    "tipo": "CAMPOS_BASICOS",
+    "observacao": "Sistema modificado para aceitar campos opcionais"
+  },
+  {
+    "timestamp": "2025-09-05T09:09:40.067182",
+    "data_hora": "05/09/2025 às 09:09:40",
+    "acao": "TESTE_CAMPOS_OPCIONAIS",
+    "detalhes": "Planilha de teste criada para validar campos opcionais: uploads\\planilha_original_404_alunos_20250905_090940.csv",
+    "status": "SUCCESS",
+    "ambiente": "TESTE",
+    "tipo": "PLANILHA_ORIGINAL_404",
+    "observacao": "Sistema modificado para aceitar campos opcionais"
   }
 ]

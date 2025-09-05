@@ -3829,7 +3829,7 @@ def upload_planilha():
         return jsonify({'error': f'Erro no upload: {str(e)}'}), 500
 
 def truncar_dados_aluno(dados):
-    """Trunca dados do aluno para respeitar limites do banco de dados"""
+    """Trunca dados do aluno para respeitar limites do banco de dados - TRATAMENTO SEGURO DE NONE"""
     # Limites baseados no modelo Aluno
     limites = {
         'id_unico': 50,
@@ -3844,11 +3844,14 @@ def truncar_dados_aluno(dados):
     dados_truncados = dados.copy()
     
     for campo, limite in limites.items():
-        if campo in dados_truncados and dados_truncados[campo]:
+        if campo in dados_truncados and dados_truncados[campo] is not None:
             valor = str(dados_truncados[campo])
             if len(valor) > limite:
                 dados_truncados[campo] = valor[:limite]
                 print(f"⚠️  Campo '{campo}' truncado de {len(valor)} para {limite} caracteres")
+        elif campo in dados_truncados and dados_truncados[campo] is None:
+            # Manter None para campos opcionais
+            dados_truncados[campo] = None
     
     return dados_truncados
 
@@ -4141,16 +4144,17 @@ def processar_planilha():
         except Exception as e:
             return jsonify({'error': f'Erro ao ler arquivo: {str(e)}'}), 400
         
-        # Mapear colunas comuns
+        # Mapear colunas comuns - TODOS OS CAMPOS SÃO OPCIONAIS EXCETO NOME
         colunas_mapeadas = {
-            'nome': ['nome', 'Nome', 'NOME', 'name'],
-            'telefone': ['telefone', 'Telefone', 'TELEFONE', 'phone', 'celular'],
-            'email': ['email', 'Email', 'EMAIL', 'e-mail'],
-            'endereco': ['endereco', 'Endereco', 'ENDERECO', 'endereço', 'address'],
-            'data_nascimento': ['data_nascimento', 'Data Nascimento', 'nascimento', 'birth_date'],
-            'observacoes': ['observacoes', 'Observacoes', 'obs', 'observações'],
-            'titulo_eleitor': ['titulo_eleitor', 'Titulo Eleitor', 'titulo eleitor', 'TITULO_ELEITOR', 'titulo de eleitor'],
-            'atividades': ['atividades', 'Atividades', 'ATIVIDADES', 'atividade', 'Atividade', 'ATIVIDADE', 'activities', 'activity']
+            'nome': ['nome', 'Nome', 'NOME', 'name', 'Name', 'NAME'],
+            'telefone': ['telefone', 'Telefone', 'TELEFONE', 'phone', 'celular', 'Celular', 'CELULAR'],
+            'email': ['email', 'Email', 'EMAIL', 'e-mail', 'E-mail', 'E-MAIL'],
+            'endereco': ['endereco', 'Endereco', 'ENDERECO', 'endereço', 'Endereço', 'ENDEREÇO', 'address', 'Address'],
+            'data_nascimento': ['data_nascimento', 'Data_Nascimento', 'Data Nascimento', 'nascimento', 'Nascimento', 'birth_date', 'Data_Nasc'],
+            'observacoes': ['observacoes', 'Observacoes', 'OBSERVACOES', 'obs', 'Obs', 'observações', 'Observações'],
+            'titulo_eleitor': ['titulo_eleitor', 'Titulo_Eleitor', 'Titulo Eleitor', 'titulo eleitor', 'TITULO_ELEITOR', 'titulo de eleitor', 'CPF', 'cpf'],
+            'atividades': ['atividades', 'Atividades', 'ATIVIDADES', 'atividade', 'Atividade', 'ATIVIDADE', 'activities', 'activity', 'Activity'],
+            'status': ['status', 'Status', 'STATUS', 'situacao', 'Situacao', 'SITUACAO']
         }
         
         # Encontrar colunas correspondentes
@@ -4245,19 +4249,37 @@ def processar_planilha():
             
             for index, row in df.iterrows():
                 try:
-                    # Extrair dados da linha
+                    # Extrair dados da linha - CAMPOS OPCIONAIS COM VALORES PADRÃO
                     nome = str(row.get(mapeamento_final.get('nome', ''), '')).strip()
                     if not nome or nome == 'nan':
                         continue
                     
+                    # Campos opcionais com valores padrão seguros
                     telefone = str(row.get(mapeamento_final.get('telefone', ''), '')).strip()
-                    email = str(row.get(mapeamento_final.get('email', ''), '')).strip()
-                    endereco = str(row.get(mapeamento_final.get('endereco', ''), '')).strip()
-                    observacoes = str(row.get(mapeamento_final.get('observacoes', ''), '')).strip()
-                    titulo_eleitor = str(row.get(mapeamento_final.get('titulo_eleitor', ''), '')).strip()
-                    atividades_str = str(row.get(mapeamento_final.get('atividades', ''), '')).strip()
+                    if telefone == 'nan' or not telefone:
+                        telefone = None
                     
-                    # Truncar dados para respeitar limites do banco
+                    email = str(row.get(mapeamento_final.get('email', ''), '')).strip()
+                    if email == 'nan' or not email:
+                        email = None
+                    
+                    endereco = str(row.get(mapeamento_final.get('endereco', ''), '')).strip()
+                    if endereco == 'nan' or not endereco:
+                        endereco = None
+                    
+                    observacoes = str(row.get(mapeamento_final.get('observacoes', ''), '')).strip()
+                    if observacoes == 'nan' or not observacoes:
+                        observacoes = f'Importado via planilha em {datetime.now().strftime("%d/%m/%Y")}'
+                    
+                    titulo_eleitor = str(row.get(mapeamento_final.get('titulo_eleitor', ''), '')).strip()
+                    if titulo_eleitor == 'nan' or not titulo_eleitor:
+                        titulo_eleitor = None
+                    
+                    atividades_str = str(row.get(mapeamento_final.get('atividades', ''), '')).strip()
+                    if atividades_str == 'nan' or not atividades_str:
+                        atividades_str = 'Cadastro Geral'
+                    
+                    # Truncar dados para respeitar limites do banco - TRATAMENTO SEGURO DE VALORES NONE
                     dados_aluno = {
                         'nome': nome,
                         'telefone': telefone,
@@ -4268,9 +4290,9 @@ def processar_planilha():
                     dados_aluno = truncar_dados_aluno(dados_aluno)
                     
                     nome = dados_aluno['nome']
-                    telefone = dados_aluno['telefone']
-                    email = dados_aluno['email']
-                    titulo_eleitor = dados_aluno['titulo_eleitor']
+                    telefone = dados_aluno.get('telefone')
+                    email = dados_aluno.get('email')
+                    titulo_eleitor = dados_aluno.get('titulo_eleitor')
                     id_unico = dados_aluno['id_unico']
                     
                     # Processar data de nascimento
@@ -4297,12 +4319,13 @@ def processar_planilha():
                     aluno_existente = db_integration.aluno_dao.buscar_por_nome_telefone(nome, telefone)
                     
                     if aluno_existente:
-                        # Atualizar aluno existente
+                        # Atualizar aluno existente - PRESERVAR DADOS EXISTENTES SE NOVOS FOREM NONE
                         dados_atualizacao = {
-                            'email': email if email != 'nan' else aluno_existente.get('email'),
-                            'endereco': endereco if endereco != 'nan' else aluno_existente.get('endereco'),
-                            'observacoes': observacoes if observacoes != 'nan' else aluno_existente.get('observacoes'),
-                            'titulo_eleitor': titulo_eleitor if titulo_eleitor != 'nan' else aluno_existente.get('titulo_eleitor'),
+                            'email': email if email is not None else aluno_existente.get('email'),
+                            'endereco': endereco if endereco is not None else aluno_existente.get('endereco'),
+                            'observacoes': observacoes if observacoes is not None else aluno_existente.get('observacoes'),
+                            'titulo_eleitor': titulo_eleitor if titulo_eleitor is not None else aluno_existente.get('titulo_eleitor'),
+                            'telefone': telefone if telefone is not None else aluno_existente.get('telefone'),
                             'atividades_ids': atividades_ids,  # Múltiplas atividades
                             'ativo': True
                         }
@@ -4311,18 +4334,18 @@ def processar_planilha():
                         db_integration.aluno_dao.atualizar(aluno_existente.get('_id'), dados_atualizacao)
                         atualizados += 1
                     else:
-                        # Criar novo aluno usando MongoDB
+                        # Criar novo aluno usando MongoDB - CAMPOS OPCIONAIS SEGUROS
                         novo_aluno = {
                             'id_unico': id_unico,
                             'nome': nome,
-                            'telefone': telefone if telefone != 'nan' else None,
-                            'email': email if email != 'nan' else None,
-                            'endereco': endereco if endereco != 'nan' else None,
-                            'titulo_eleitor': titulo_eleitor if titulo_eleitor != 'nan' else None,
+                            'telefone': telefone,
+                            'email': email,
+                            'endereco': endereco,
+                            'titulo_eleitor': titulo_eleitor,
                             'data_nascimento': data_nascimento,
                             'data_cadastro': datetime.now().date(),
                             'atividades_ids': atividades_ids,  # Múltiplas atividades
-                            'observacoes': observacoes if observacoes != 'nan' else None,
+                            'observacoes': observacoes,
                             'ativo': True
                         }
                         db_integration.aluno_dao.criar(novo_aluno)
