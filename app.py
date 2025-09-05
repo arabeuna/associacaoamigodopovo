@@ -4722,6 +4722,88 @@ def debug_stats():
     
     return jsonify(debug_info)
 
+@app.route('/api/dashboard/atualizar')
+@login_obrigatorio
+def api_dashboard_atualizar():
+    """API endpoint para atualizar dados do dashboard sem recarregar a página"""
+    try:
+        nivel_usuario = session.get('usuario_nivel')
+        usuario_logado = session.get('usuario_logado')
+        
+        # Redirecionar usuários de nível 'usuario' para dashboard adaptado
+        if nivel_usuario == 'usuario':
+            return jsonify({'redirect': '/dashboard_adaptado'})
+        
+        # Coletar dados atualizados do dashboard
+        dados_atualizados = {}
+        
+        # Estatísticas gerais
+        try:
+            stats = academia.get_estatisticas()
+            dados_atualizados['estatisticas'] = {
+                'total_alunos': stats.get('total_alunos', 0),
+                'presencas_hoje': stats.get('presencas_hoje', 0),
+                'presencas_semana': stats.get('presencas_semana', 0),
+                'alunos_ativos': stats.get('alunos_ativos', 0),
+                'uploads_mes': stats.get('uploads_mes', 0),
+                'novos_alunos_planilha': stats.get('novos_alunos_planilha', 0),
+                'atualizacoes_planilha': stats.get('atualizacoes_planilha', 0)
+            }
+        except Exception as e:
+            print(f"Erro ao obter estatísticas: {e}")
+            dados_atualizados['estatisticas'] = {}
+        
+        # Presenças de hoje
+        try:
+            presencas_hoje = []
+            for aluno in academia.alunos_reais:
+                presencas = aluno.get('presencas', [])
+                hoje = datetime.now().strftime('%d/%m/%Y')
+                presenca_hoje = next((p for p in presencas if p.get('data') == hoje), None)
+                if presenca_hoje:
+                    presencas_hoje.append({
+                        'nome': aluno.get('nome', 'N/A'),
+                        'atividade': aluno.get('atividade', 'N/A'),
+                        'horario': presenca_hoje.get('horario', 'N/A')
+                    })
+            dados_atualizados['presencas_hoje'] = presencas_hoje[:10]  # Limitar a 10
+        except Exception as e:
+            print(f"Erro ao obter presenças de hoje: {e}")
+            dados_atualizados['presencas_hoje'] = []
+        
+        # Últimos uploads
+        try:
+            uploads_recentes = []
+            log_file = 'logs/upload_log.json'
+            if os.path.exists(log_file):
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    logs = json.load(f)
+                    # Pegar os 5 uploads mais recentes
+                    uploads_recentes = sorted(logs, key=lambda x: x.get('timestamp', ''), reverse=True)[:5]
+            dados_atualizados['uploads_recentes'] = uploads_recentes
+        except Exception as e:
+            print(f"Erro ao obter uploads recentes: {e}")
+            dados_atualizados['uploads_recentes'] = []
+        
+        # Informações do sistema
+        dados_atualizados['sistema'] = {
+            'usuario_nome': USUARIOS.get(usuario_logado, {}).get('nome', 'Usuário'),
+            'data_hora_atual': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+        }
+        
+        return jsonify({
+            'success': True,
+            'dados': dados_atualizados,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Erro na API de atualização do dashboard: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # === ROTAS PARA GERENCIAMENTO DE ATIVIDADES ===
 
 @app.route('/gerenciar_atividades')

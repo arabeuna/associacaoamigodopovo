@@ -5,12 +5,17 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row">
-        <div class="col-12">
-            <h1 class="mb-4">
-                <i class="fas fa-chart-line me-2"></i>
-                Dashboard
-            </h1>
-            <p class="text-muted">Bem-vindo, {{ usuario_nome }}!</p>
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-4">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Dashboard
+                </h1>
+                <p class="text-muted">Bem-vindo, {{ usuario_nome }}!</p>
+            </div>
+            <button class="btn btn-primary" onclick="refreshManual()" title="Atualizar dados">
+                <i class="fas fa-sync-alt"></i> Atualizar
+            </button>
         </div>
     </div>
 
@@ -154,7 +159,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table class="table table-striped" id="presencas-hoje-tabela">
                             <thead>
                                 <tr>
                                     <th>Nome</th>
@@ -194,7 +199,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table class="table table-striped" id="uploads-recentes-tabela">
                             <thead>
                                 <tr>
                                     <th>Data/Hora</th>
@@ -250,7 +255,7 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Usuário:</strong> {{ usuario_nome }}</p>
+                            <p><strong>Usuário:</strong> <span id="nome-usuario">{{ usuario_nome }}</span></p>
                             <p><strong>Nível de Acesso:</strong> 
                                 {% if nivel_usuario == 'admin_master' %}
                                     <span class="badge bg-danger">Admin Master</span>
@@ -275,23 +280,166 @@
 
 {% block scripts %}
 <script>
-    // Função para atualizar data e hora
+    // Atualizar data/hora a cada segundo
     function atualizarDataHora() {
         const agora = new Date();
-        const dataFormatada = agora.toLocaleDateString('pt-BR');
-        const horaFormatada = agora.toLocaleTimeString('pt-BR');
-        
-        document.getElementById('data-atual').textContent = dataFormatada;
-        document.getElementById('hora-atual').textContent = horaFormatada;
+        const dataHora = agora.toLocaleString('pt-BR');
+        const elemento = document.getElementById('data-hora-atual');
+        if (elemento) {
+            elemento.textContent = dataHora;
+        }
     }
     
-    // Atualizar data e hora a cada segundo
-    atualizarDataHora();
-    setInterval(atualizarDataHora, 1000);
+    // Função para atualizar dados do dashboard via API
+    function atualizarDadosDashboard() {
+        fetch('/api/dashboard/atualizar')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    atualizarEstatisticas(data.dados.estatisticas);
+                    atualizarPresencasHoje(data.dados.presencas_hoje);
+                    atualizarUploadsRecentes(data.dados.uploads_recentes);
+                    atualizarInformacoesSistema(data.dados.sistema);
+                    
+                    // Mostrar indicador de atualização
+                    mostrarIndicadorAtualizacao('Dados atualizados com sucesso!');
+                } else if (data.redirect) {
+                    // Redirecionar se necessário
+                    window.location.href = data.redirect;
+                } else {
+                    console.error('Erro ao atualizar dados:', data.error);
+                    mostrarIndicadorAtualizacao('Erro ao atualizar dados', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição:', error);
+                mostrarIndicadorAtualizacao('Erro de conexão', 'error');
+            });
+    }
     
-    // Atualizar dashboard a cada 5 minutos
-    setInterval(function() {
-        location.reload();
-    }, 300000);
+    // Atualizar estatísticas nos cards
+    function atualizarEstatisticas(stats) {
+        if (!stats) return;
+        
+        const elementos = {
+            'total_alunos': document.querySelector('.card:nth-child(1) .card-title'),
+            'presencas_hoje': document.querySelector('.card:nth-child(2) .card-title'),
+            'presencas_semana': document.querySelector('.card:nth-child(3) .card-title'),
+            'alunos_ativos': document.querySelector('.card:nth-child(4) .card-title'),
+            'uploads_mes': document.querySelector('.card:nth-child(5) .card-title'),
+            'novos_alunos_planilha': document.querySelector('.card:nth-child(6) .card-title'),
+            'atualizacoes_planilha': document.querySelector('.card:nth-child(7) .card-title')
+        };
+        
+        Object.keys(elementos).forEach(key => {
+            if (elementos[key] && stats[key] !== undefined) {
+                elementos[key].textContent = stats[key];
+            }
+        });
+    }
+    
+    // Atualizar tabela de presenças de hoje
+    function atualizarPresencasHoje(presencas) {
+        const tbody = document.querySelector('#presencas-hoje-tabela tbody');
+        if (!tbody || !presencas) return;
+        
+        tbody.innerHTML = '';
+        
+        if (presencas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhuma presença registrada hoje</td></tr>';
+            return;
+        }
+        
+        presencas.forEach(presenca => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${presenca.nome}</td>
+                <td>${presenca.atividade}</td>
+                <td>${presenca.horario}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Atualizar tabela de uploads recentes
+    function atualizarUploadsRecentes(uploads) {
+        const tbody = document.querySelector('#uploads-recentes-tabela tbody');
+        if (!tbody || !uploads) return;
+        
+        tbody.innerHTML = '';
+        
+        if (uploads.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center">Nenhum upload recente</td></tr>';
+            return;
+        }
+        
+        uploads.forEach(upload => {
+            const row = document.createElement('tr');
+            const statusClass = upload.status === 'sucesso' ? 'success' : 'danger';
+            row.innerHTML = `
+                <td>${upload.arquivo || 'N/A'}</td>
+                <td>${upload.usuario || 'N/A'}</td>
+                <td>${upload.timestamp || 'N/A'}</td>
+                <td><span class="badge bg-${statusClass}">${upload.status || 'N/A'}</span></td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Atualizar informações do sistema
+    function atualizarInformacoesSistema(sistema) {
+        if (!sistema) return;
+        
+        const nomeUsuario = document.querySelector('#nome-usuario');
+        if (nomeUsuario && sistema.usuario_nome) {
+            nomeUsuario.textContent = sistema.usuario_nome;
+        }
+    }
+    
+    // Mostrar indicador de atualização
+    function mostrarIndicadorAtualizacao(mensagem, tipo = 'success') {
+        // Remover indicador anterior se existir
+        const indicadorAnterior = document.querySelector('.indicador-atualizacao');
+        if (indicadorAnterior) {
+            indicadorAnterior.remove();
+        }
+        
+        // Criar novo indicador
+        const indicador = document.createElement('div');
+        indicador.className = `alert alert-${tipo === 'error' ? 'danger' : 'success'} indicador-atualizacao`;
+        indicador.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        indicador.innerHTML = `
+            <i class="fas fa-${tipo === 'error' ? 'exclamation-triangle' : 'check-circle'}"></i>
+            ${mensagem}
+            <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+        `;
+        
+        document.body.appendChild(indicador);
+        
+        // Remover automaticamente após 3 segundos
+        setTimeout(() => {
+            if (indicador.parentElement) {
+                indicador.remove();
+            }
+        }, 3000);
+    }
+    
+    // Função para refresh manual
+    function refreshManual() {
+        mostrarIndicadorAtualizacao('Atualizando dados...', 'info');
+        atualizarDadosDashboard();
+    }
+    
+    // Inicializar quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+        // Atualizar data/hora a cada segundo
+        setInterval(atualizarDataHora, 1000);
+        
+        // Atualizar dados do dashboard a cada 30 segundos
+        setInterval(atualizarDadosDashboard, 30000);
+        
+        // Primeira atualização após 5 segundos
+        setTimeout(atualizarDadosDashboard, 5000);
+    });
 </script>
 {% endblock %}
