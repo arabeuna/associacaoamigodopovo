@@ -2024,6 +2024,48 @@ def dashboard():
                          usuario_nome=usuario_nome,
                          nivel_usuario=nivel_usuario)
 
+@app.route('/dashboard_adaptado')
+@login_obrigatorio
+def dashboard_adaptado():
+    """Rota para o novo dashboard adaptado aos dados reais do MongoDB"""
+    nivel_usuario = session.get('usuario_nivel')
+    usuario_logado = session.get('usuario_logado')
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    
+    # Obter alunos baseado no nível de acesso do usuário
+    lista_alunos = obter_alunos_usuario()
+    
+    # Calcular estatísticas adaptadas
+    total_alunos = len(lista_alunos)
+    cadastros_gerais = len([a for a in lista_alunos if a.get('atividade') == 'Cadastro Geral'])
+    turmas_indefinidas = len([a for a in lista_alunos if a.get('turma') in ['A definir', '', None]])
+    organizados = total_alunos - cadastros_gerais - turmas_indefinidas
+    
+    # Distribuição por atividades
+    atividades_count = {}
+    for aluno in lista_alunos:
+        atividade = aluno.get('atividade', 'Não definida')
+        atividades_count[atividade] = atividades_count.get(atividade, 0) + 1
+    
+    # Alunos recentes (últimos 10)
+    alunos_recentes = sorted(lista_alunos, 
+                           key=lambda x: x.get('data_cadastro', ''), 
+                           reverse=True)[:10]
+    
+    stats_adaptadas = {
+        'total_alunos': total_alunos,
+        'cadastros_gerais': cadastros_gerais,
+        'turmas_indefinidas': turmas_indefinidas,
+        'organizados': organizados,
+        'atividades_count': atividades_count
+    }
+    
+    return render_template('dashboard_adaptado.html',
+                         stats=stats_adaptadas,
+                         alunos_recentes=alunos_recentes,
+                         usuario_nome=usuario_nome,
+                         nivel_usuario=nivel_usuario)
+
 @app.route('/alunos')
 @login_obrigatorio
 def alunos():
@@ -2033,6 +2075,20 @@ def alunos():
     nivel_usuario = session.get('usuario_nivel', 'usuario')
     
     return render_template('alunos.html', 
+                         alunos=lista_alunos, 
+                         usuario_nome=usuario_nome,
+                         nivel_usuario=nivel_usuario)
+
+@app.route('/alunos_adaptado')
+@login_obrigatorio
+def alunos_adaptado():
+    """Rota para a nova interface de alunos adaptada aos dados reais"""
+    # Obter alunos baseado no nível de acesso do usuário
+    lista_alunos = obter_alunos_usuario()
+    usuario_nome = session.get('usuario_nome', 'Usuário')
+    nivel_usuario = session.get('usuario_nivel', 'usuario')
+    
+    return render_template('alunos_adaptado.html', 
                          alunos=lista_alunos, 
                          usuario_nome=usuario_nome,
                          nivel_usuario=nivel_usuario)
@@ -5957,6 +6013,151 @@ def processar_fallback():
             'success': False,
             'error': str(e),
             'timestamp': datetime.now().isoformat()
+        }), 500
+
+@app.route('/gerenciar_dados_lote')
+@login_obrigatorio
+def gerenciar_dados_lote():
+    """Interface para gerenciar dados em lote"""
+    try:
+        # Verificar permissões
+        if session.get('nivel') not in ['admin', 'admin_master']:
+            flash('Acesso negado. Apenas administradores podem acessar esta funcionalidade.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Obter dados dos alunos
+        alunos = []
+        try:
+            db = get_db()
+            alunos_cursor = db.alunos.find({})
+            
+            for aluno in alunos_cursor:
+                # Calcular estatísticas básicas
+                presencas = 0
+                total_registros = 0
+                
+                if 'presencas' in aluno:
+                    for data, status in aluno['presencas'].items():
+                        total_registros += 1
+                        if status == 'P':
+                            presencas += 1
+                
+                taxa = round((presencas / total_registros) * 100, 1) if total_registros > 0 else 0
+                
+                alunos.append({
+                    '_id': str(aluno['_id']),
+                    'nome': aluno.get('nome', 'Nome não informado'),
+                    'atividade': aluno.get('atividade', 'Cadastro Geral'),
+                    'turma': aluno.get('turma', 'A definir'),
+                    'status': aluno.get('status', 'Ativo'),
+                    'presencas': presencas,
+                    'taxa': f'{taxa}%'
+                })
+        
+        except Exception as e:
+            print(f"Erro ao carregar alunos: {e}")
+            # Fallback para dados do sistema de busca
+            for nome, dados in academia.alunos_reais.items():
+                alunos.append({
+                    '_id': nome.replace(' ', '_').lower(),
+                    'nome': nome,
+                    'atividade': dados.get('atividade', 'Cadastro Geral'),
+                    'turma': dados.get('turma', 'A definir'),
+                    'status': dados.get('status', 'Ativo'),
+                    'presencas': len([p for p in dados.get('presencas', []) if p.get('status') == 'P']),
+                    'taxa': f"{dados.get('percentual', 0)}%"
+                })
+        
+        # Calcular estatísticas
+        stats = {
+            'total_alunos': len(alunos),
+            'cadastros_gerais': len([a for a in alunos if a['atividade'] == 'Cadastro Geral']),
+            'turmas_indefinidas': len([a for a in alunos if a['turma'] == 'A definir']),
+            'ativos': len([a for a in alunos if a['status'] == 'Ativo'])
+        }
+        
+        return render_template('gerenciar_dados_lote.html', 
+                             alunos=alunos, 
+                             stats=stats,
+                             nivel_usuario=session.get('nivel'))
+    
+    except Exception as e:
+        flash(f'Erro ao carregar interface de gerenciamento: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/processar_lote', methods=['POST'])
+@login_obrigatorio
+def processar_lote():
+    """Processar ações em lote"""
+    try:
+        # Verificar permissões
+        if session.get('nivel') not in ['admin', 'admin_master']:
+            return jsonify({'success': False, 'message': 'Acesso negado'}), 403
+        
+        data = request.get_json()
+        acao = data.get('acao')
+        alunos_ids = data.get('alunos', [])
+        valor = data.get('valor')
+        
+        if not acao or not alunos_ids:
+            return jsonify({'success': False, 'message': 'Dados incompletos'}), 400
+        
+        db = get_db()
+        resultados = []
+        
+        for aluno_id in alunos_ids:
+            try:
+                if acao == 'atualizar_atividade':
+                    resultado = db.alunos.update_one(
+                        {'_id': ObjectId(aluno_id)},
+                        {'$set': {'atividade': valor}}
+                    )
+                elif acao == 'atualizar_turma':
+                    resultado = db.alunos.update_one(
+                        {'_id': ObjectId(aluno_id)},
+                        {'$set': {'turma': valor}}
+                    )
+                elif acao == 'atualizar_status':
+                    resultado = db.alunos.update_one(
+                        {'_id': ObjectId(aluno_id)},
+                        {'$set': {'status': valor}}
+                    )
+                
+                if resultado.modified_count > 0:
+                    resultados.append({'id': aluno_id, 'success': True})
+                else:
+                    resultados.append({'id': aluno_id, 'success': False, 'error': 'Não modificado'})
+            
+            except Exception as e:
+                resultados.append({'id': aluno_id, 'success': False, 'error': str(e)})
+        
+        # Registrar atividade no log
+        usuario_nome = session.get('usuario_nome', 'Sistema')
+        detalhes = f"Ação em lote: {acao} - Valor: {valor} - {len(alunos_ids)} alunos"
+        
+        try:
+            LogAtividadeDAO.registrar_log(
+                db=db,
+                usuario=usuario_nome,
+                acao='Ação em Lote',
+                detalhes=detalhes,
+                tipo_usuario=session.get('nivel', 'usuario')
+            )
+        except Exception as e:
+            print(f"Erro ao registrar log: {e}")
+        
+        sucessos = len([r for r in resultados if r['success']])
+        
+        return jsonify({
+            'success': True,
+            'message': f'{sucessos} de {len(alunos_ids)} alunos atualizados com sucesso',
+            'resultados': resultados
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro interno: {str(e)}'
         }), 500
 
 if __name__ == '__main__':

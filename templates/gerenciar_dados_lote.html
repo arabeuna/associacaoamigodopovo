@@ -1,0 +1,574 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Dados em Lote - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 text-center mb-4">
+                <i class="fas fa-tasks text-primary"></i>
+                Gerenciar Dados em Lote
+            </h1>
+            <p class="text-muted text-center">Gerencie múltiplos registros simultaneamente com eficiência</p>
+        </div>
+    </div>
+
+    <!-- Estatísticas Rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <i class="fas fa-clipboard-list fa-2x text-warning mb-2"></i>
+                    <h4 id="cadastrosGerais">{{ stats.cadastros_gerais or 0 }}</h4>
+                    <p class="text-muted mb-0">Cadastros Gerais</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <i class="fas fa-school fa-2x text-info mb-2"></i>
+                    <h4 id="turmasIndefinidas">{{ stats.turmas_indefinidas or 0 }}</h4>
+                    <p class="text-muted mb-0">Turmas Indefinidas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <i class="fas fa-users fa-2x text-success mb-2"></i>
+                    <h4 id="totalAlunos">{{ stats.total_alunos or 0 }}</h4>
+                    <p class="text-muted mb-0">Total de Alunos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <i class="fas fa-check-circle fa-2x text-primary mb-2"></i>
+                    <h4 id="selecionados">0</h4>
+                    <p class="text-muted mb-0">Selecionados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações Rápidas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Ações Rápidas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <button class="btn btn-warning w-100" onclick="organizarCadastrosGerais()">
+                                <i class="fas fa-clipboard-list me-2"></i>
+                                Organizar Cadastros Gerais
+                                <small class="d-block">Definir atividades específicas</small>
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <button class="btn btn-info w-100" onclick="definirTurmasLote()">
+                                <i class="fas fa-school me-2"></i>
+                                Definir Turmas em Lote
+                                <small class="d-block">Atribuir turmas múltiplas</small>
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <button class="btn btn-success w-100" onclick="atualizarStatusLote()">
+                                <i class="fas fa-toggle-on me-2"></i>
+                                Atualizar Status
+                                <small class="d-block">Ativo/Inativo em massa</small>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros e Seleção -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>
+                        Filtros e Seleção
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">Atividade:</label>
+                            <select id="filtroAtividade" class="form-select" onchange="aplicarFiltros()">
+                                <option value="">Todas</option>
+                                <option value="Cadastro Geral">Cadastro Geral</option>
+                                <option value="Natação">Natação</option>
+                                <option value="Fisioterapia">Fisioterapia</option>
+                                <option value="Dança">Dança</option>
+                                <option value="Hidroginástica">Hidroginástica</option>
+                                <option value="Funcional">Funcional</option>
+                                <option value="Karatê">Karatê</option>
+                                <option value="Informática">Informática</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Turma:</label>
+                            <select id="filtroTurma" class="form-select" onchange="aplicarFiltros()">
+                                <option value="">Todas</option>
+                                <option value="A definir">A definir</option>
+                                <option value="Turma A">Turma A</option>
+                                <option value="Turma B">Turma B</option>
+                                <option value="Turma C">Turma C</option>
+                                <option value="Iniciante">Iniciante</option>
+                                <option value="Intermediário">Intermediário</option>
+                                <option value="Avançado">Avançado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Status:</label>
+                            <select id="filtroStatus" class="form-select" onchange="aplicarFiltros()">
+                                <option value="">Todos</option>
+                                <option value="Ativo">Ativo</option>
+                                <option value="Inativo">Inativo</option>
+                                <option value="Irregular">Irregular</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Buscar:</label>
+                            <input type="text" id="campoBusca" class="form-control" placeholder="Nome do aluno..." oninput="aplicarFiltros()">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-primary" onclick="selecionarTodos()">Selecionar Todos</button>
+                                <button class="btn btn-outline-secondary" onclick="limparSelecao()">Limpar Seleção</button>
+                                <button class="btn btn-outline-info" onclick="inverterSelecao()">Inverter Seleção</button>
+                            </div>
+                            <span class="ms-3 text-muted" id="infoSelecao">0 alunos selecionados</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Alunos -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Lista de Alunos
+                    </h5>
+                    <span class="badge bg-primary" id="contadorAlunos">{{ alunos|length }} alunos</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="50">
+                                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                    </th>
+                                    <th>Nome</th>
+                                    <th>Atividade</th>
+                                    <th>Turma</th>
+                                    <th>Status</th>
+                                    <th>Presenças</th>
+                                    <th>Taxa</th>
+                                    <th width="100">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaAlunos">
+                                {% for aluno in alunos %}
+                                <tr class="aluno-row" 
+                                    data-nome="{{ aluno.nome.lower() }}" 
+                                    data-atividade="{{ aluno.atividade }}" 
+                                    data-turma="{{ aluno.turma }}" 
+                                    data-status="{{ aluno.status }}">
+                                    <td>
+                                        <input type="checkbox" class="aluno-checkbox" value="{{ aluno._id }}" onchange="atualizarContadorSelecao()">
+                                    </td>
+                                    <td>
+                                        <strong>{{ aluno.nome }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if aluno.atividade == 'Cadastro Geral' %}bg-warning{% else %}bg-info{% endif %}">
+                                            {{ aluno.atividade }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if aluno.turma == 'A definir' %}bg-secondary{% else %}bg-primary{% endif %}">
+                                            {{ aluno.turma }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if aluno.status == 'Ativo' %}bg-success{% elif aluno.status == 'Inativo' %}bg-danger{% else %}bg-warning{% endif %}">
+                                            {{ aluno.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ aluno.presencas or 0 }}</td>
+                                    <td>{{ aluno.taxa or '0%' }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editarAluno('{{ aluno._id }}')" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações em Lote (Rodapé) -->
+    <div class="row mt-4" id="acoesLoteRodape" style="display: none;">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h6 class="mb-0">
+                                <i class="fas fa-check-square me-2"></i>
+                                <span id="textoSelecionados">0 alunos selecionados</span>
+                            </h6>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <div class="btn-group">
+                                <button class="btn btn-warning" onclick="organizarCadastrosGeraisSelecionados()">
+                                    <i class="fas fa-clipboard-list me-1"></i>
+                                    Organizar Cadastros
+                                </button>
+                                <button class="btn btn-info" onclick="definirTurmasLoteSelecionados()">
+                                    <i class="fas fa-school me-1"></i>
+                                    Definir Turmas
+                                </button>
+                                <button class="btn btn-success" onclick="atualizarStatusLoteSelecionados()">
+                                    <i class="fas fa-toggle-on me-1"></i>
+                                    Atualizar Status
+                                </button>
+                                <button class="btn btn-secondary" onclick="exportarSelecionados()">
+                                    <i class="fas fa-download me-1"></i>
+                                    Exportar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Ações em Lote -->
+<div class="modal fade" id="modalAcoesLote" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ações em Lote</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="conteudoModalLote">
+                <!-- Conteúdo será inserido dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmarLote">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Progresso -->
+<div class="modal fade" id="modalProgresso" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Processando...</h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p id="textoProgresso">Processando dados em lote...</p>
+                <div class="progress">
+                    <div class="progress-bar" id="barraProgresso" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variáveis globais
+let alunosSelecionados = [];
+let todosAlunos = [];
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    carregarAlunos();
+    atualizarContadorSelecao();
+});
+
+// Carregar dados dos alunos
+function carregarAlunos() {
+    const rows = document.querySelectorAll('.aluno-row');
+    todosAlunos = Array.from(rows).map(row => ({
+        element: row,
+        nome: row.getAttribute('data-nome'),
+        atividade: row.getAttribute('data-atividade'),
+        turma: row.getAttribute('data-turma'),
+        status: row.getAttribute('data-status'),
+        id: row.querySelector('.aluno-checkbox').value
+    }));
+}
+
+// Aplicar filtros
+function aplicarFiltros() {
+    const filtroAtividade = document.getElementById('filtroAtividade').value;
+    const filtroTurma = document.getElementById('filtroTurma').value;
+    const filtroStatus = document.getElementById('filtroStatus').value;
+    const campoBusca = document.getElementById('campoBusca').value.toLowerCase();
+    
+    let alunosVisiveis = 0;
+    
+    todosAlunos.forEach(aluno => {
+        let mostrar = true;
+        
+        // Filtro por atividade
+        if (filtroAtividade && aluno.atividade !== filtroAtividade) {
+            mostrar = false;
+        }
+        
+        // Filtro por turma
+        if (filtroTurma && aluno.turma !== filtroTurma) {
+            mostrar = false;
+        }
+        
+        // Filtro por status
+        if (filtroStatus && aluno.status !== filtroStatus) {
+            mostrar = false;
+        }
+        
+        // Filtro por busca
+        if (campoBusca && !aluno.nome.includes(campoBusca)) {
+            mostrar = false;
+        }
+        
+        aluno.element.style.display = mostrar ? '' : 'none';
+        if (mostrar) alunosVisiveis++;
+    });
+    
+    document.getElementById('contadorAlunos').textContent = alunosVisiveis + ' alunos';
+}
+
+// Seleção de alunos
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.aluno-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        const row = checkbox.closest('.aluno-row');
+        if (row.style.display !== 'none') {
+            checkbox.checked = selectAll.checked;
+        }
+    });
+    
+    atualizarContadorSelecao();
+}
+
+function selecionarTodos() {
+    document.getElementById('selectAll').checked = true;
+    toggleSelectAll();
+}
+
+function limparSelecao() {
+    document.getElementById('selectAll').checked = false;
+    toggleSelectAll();
+}
+
+function inverterSelecao() {
+    const checkboxes = document.querySelectorAll('.aluno-checkbox');
+    checkboxes.forEach(checkbox => {
+        const row = checkbox.closest('.aluno-row');
+        if (row.style.display !== 'none') {
+            checkbox.checked = !checkbox.checked;
+        }
+    });
+    atualizarContadorSelecao();
+}
+
+function atualizarContadorSelecao() {
+    const checkboxes = document.querySelectorAll('.aluno-checkbox:checked');
+    const visibleChecked = Array.from(checkboxes).filter(cb => 
+        cb.closest('.aluno-row').style.display !== 'none'
+    );
+    
+    const count = visibleChecked.length;
+    alunosSelecionados = visibleChecked.map(cb => cb.value);
+    
+    document.getElementById('selecionados').textContent = count;
+    document.getElementById('infoSelecao').textContent = count + ' alunos selecionados';
+    document.getElementById('textoSelecionados').textContent = count + ' alunos selecionados';
+    
+    // Mostrar/ocultar ações em lote
+    const acoesRodape = document.getElementById('acoesLoteRodape');
+    acoesRodape.style.display = count > 0 ? 'block' : 'none';
+}
+
+// Ações em lote
+function organizarCadastrosGerais() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAcoesLote'));
+    document.getElementById('conteudoModalLote').innerHTML = `
+        <h6><i class="fas fa-clipboard-list me-2"></i>Organizar Cadastros Gerais</h6>
+        <p>Selecione a nova atividade para os alunos com "Cadastro Geral":</p>
+        <div class="mb-3">
+            <label class="form-label">Nova Atividade:</label>
+            <select class="form-select" id="novaAtividade">
+                <option value="">Selecione uma atividade...</option>
+                <option value="Natação">Natação</option>
+                <option value="Fisioterapia">Fisioterapia</option>
+                <option value="Dança">Dança</option>
+                <option value="Hidroginástica">Hidroginástica</option>
+                <option value="Funcional">Funcional</option>
+                <option value="Karatê">Karatê</option>
+                <option value="Informática">Informática</option>
+            </select>
+        </div>
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Esta ação afetará todos os alunos com atividade "Cadastro Geral".
+        </div>
+    `;
+    modal.show();
+}
+
+function definirTurmasLote() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAcoesLote'));
+    document.getElementById('conteudoModalLote').innerHTML = `
+        <h6><i class="fas fa-school me-2"></i>Definir Turmas em Lote</h6>
+        <p>Selecione a turma para os alunos selecionados:</p>
+        <div class="mb-3">
+            <label class="form-label">Nova Turma:</label>
+            <select class="form-select" id="novaTurma">
+                <option value="">Selecione uma turma...</option>
+                <option value="Turma A">Turma A</option>
+                <option value="Turma B">Turma B</option>
+                <option value="Turma C">Turma C</option>
+                <option value="Iniciante">Iniciante</option>
+                <option value="Intermediário">Intermediário</option>
+                <option value="Avançado">Avançado</option>
+            </select>
+        </div>
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Esta ação afetará ${alunosSelecionados.length} alunos selecionados.
+        </div>
+    `;
+    modal.show();
+}
+
+function atualizarStatusLote() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAcoesLote'));
+    document.getElementById('conteudoModalLote').innerHTML = `
+        <h6><i class="fas fa-toggle-on me-2"></i>Atualizar Status em Lote</h6>
+        <p>Selecione o novo status para os alunos selecionados:</p>
+        <div class="mb-3">
+            <label class="form-label">Novo Status:</label>
+            <select class="form-select" id="novoStatus">
+                <option value="">Selecione um status...</option>
+                <option value="Ativo">Ativo</option>
+                <option value="Inativo">Inativo</option>
+                <option value="Irregular">Irregular</option>
+            </select>
+        </div>
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Esta ação afetará ${alunosSelecionados.length} alunos selecionados.
+        </div>
+    `;
+    modal.show();
+}
+
+// Funções para ações com selecionados
+function organizarCadastrosGeraisSelecionados() {
+    if (alunosSelecionados.length === 0) {
+        alert('Selecione pelo menos um aluno.');
+        return;
+    }
+    organizarCadastrosGerais();
+}
+
+function definirTurmasLoteSelecionados() {
+    if (alunosSelecionados.length === 0) {
+        alert('Selecione pelo menos um aluno.');
+        return;
+    }
+    definirTurmasLote();
+}
+
+function atualizarStatusLoteSelecionados() {
+    if (alunosSelecionados.length === 0) {
+        alert('Selecione pelo menos um aluno.');
+        return;
+    }
+    atualizarStatusLote();
+}
+
+function exportarSelecionados() {
+    if (alunosSelecionados.length === 0) {
+        alert('Selecione pelo menos um aluno.');
+        return;
+    }
+    // Implementar exportação
+    alert('Exportando ' + alunosSelecionados.length + ' alunos selecionados...');
+}
+
+// Função para editar aluno individual
+function editarAluno(alunoId) {
+    window.location.href = '/editar_aluno/' + alunoId;
+}
+
+// Confirmar ação em lote
+document.getElementById('btnConfirmarLote').addEventListener('click', function() {
+    // Implementar confirmação baseada no tipo de ação
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalAcoesLote'));
+    modal.hide();
+    
+    // Mostrar modal de progresso
+    const modalProgresso = new bootstrap.Modal(document.getElementById('modalProgresso'));
+    modalProgresso.show();
+    
+    // Simular processamento
+    let progresso = 0;
+    const interval = setInterval(() => {
+        progresso += 10;
+        document.getElementById('barraProgresso').style.width = progresso + '%';
+        
+        if (progresso >= 100) {
+            clearInterval(interval);
+            setTimeout(() => {
+                modalProgresso.hide();
+                alert('Ação concluída com sucesso!');
+                location.reload();
+            }, 500);
+        }
+    }, 200);
+});
+</script>
+{% endblock %}

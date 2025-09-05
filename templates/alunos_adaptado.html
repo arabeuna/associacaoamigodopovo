@@ -1,0 +1,751 @@
+{% extends "base.html" %}
+
+{% block title %}Alunos Adaptado - Associação Amigo do Povo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-6 text-center mb-4">
+            <i class="fas fa-users text-primary"></i>
+            Alunos - Visualização Adaptada
+            <small class="text-muted fs-6 d-block mt-2">Interface otimizada para dados reais</small>
+        </h1>
+        {% if nivel_usuario == 'usuario' %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Visualização Restrita:</strong> Você está vendo apenas os alunos da sua atividade responsável.
+        </div>
+        {% elif nivel_usuario == 'admin' %}
+        <div class="alert alert-success text-center">
+            <i class="fas fa-shield-alt me-2"></i>
+            <strong>Acesso Administrativo:</strong> Você pode visualizar e gerenciar todos os alunos.
+        </div>
+        {% elif nivel_usuario == 'admin_master' %}
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-crown me-2"></i>
+            <strong>Acesso Master:</strong> Você tem controle total sobre o sistema.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Estatísticas Adaptadas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                <h4>{{ alunos|length }}</h4>
+                <p class="text-muted mb-0">Total de Alunos</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <i class="fas fa-clipboard-list fa-2x text-warning mb-2"></i>
+                <h4>
+                    {% set cadastros_gerais = alunos|selectattr('atividade', 'equalto', 'Cadastro Geral')|list|length %}
+                    {{ cadastros_gerais }}
+                </h4>
+                <p class="text-muted mb-0">Cadastros Gerais</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <i class="fas fa-question-circle fa-2x text-info mb-2"></i>
+                <h4>
+                    {% set turmas_indefinidas = alunos|selectattr('turma', 'in', ['A definir', '', none])|list|length %}
+                    {{ turmas_indefinidas }}
+                </h4>
+                <p class="text-muted mb-0">Turmas A Definir</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <h4>
+                    {% set organizados = alunos|length - cadastros_gerais - turmas_indefinidas %}
+                    {{ organizados if organizados > 0 else 0 }}
+                </h4>
+                <p class="text-muted mb-0">Organizados</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botão Novo Aluno -->
+{% if nivel_usuario in ['admin', 'admin_master'] %}
+<div class="row mb-4">
+    <div class="col-12 text-end">
+        <a href="{{ url_for('novo_aluno') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-user-plus me-2"></i>
+            Novo Aluno
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Filtros Inteligentes -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>
+                    Filtros Inteligentes
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">Buscar por Nome</label>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Digite o nome do aluno..." onkeyup="filtrarAlunos()">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Filtrar por Atividade</label>
+                        <select id="filtroAtividade" class="form-select" onchange="filtrarAlunos()">
+                            <option value="">Todas as atividades</option>
+                            <option value="Cadastro Geral">Cadastro Geral</option>
+                            {% set atividades_unicas = [] %}
+                            {% for aluno in alunos %}
+                                {% if aluno.atividade and aluno.atividade != 'Cadastro Geral' and aluno.atividade not in atividades_unicas %}
+                                    {% set _ = atividades_unicas.append(aluno.atividade) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% for atividade in atividades_unicas|sort %}
+                            <option value="{{ atividade }}">{{ atividade }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Filtrar por Status</label>
+                        <select id="filtroStatus" class="form-select" onchange="filtrarAlunos()">
+                            <option value="">Todos os status</option>
+                            <option value="organizado">Organizados</option>
+                            <option value="cadastro_geral">Cadastro Geral</option>
+                            <option value="turma_indefinida">Turma A Definir</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-outline-secondary w-100" onclick="limparFiltros()">
+                            <i class="fas fa-times me-2"></i>
+                            Limpar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ações em Lote -->
+{% if nivel_usuario in ['admin', 'admin_master'] %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>
+                    Ações em Lote
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <button class="btn btn-warning w-100" onclick="organizarCadastrosGerais()">
+                            <i class="fas fa-clipboard-list me-2"></i>
+                            Organizar Cadastros Gerais
+                            <small class="d-block">{{ cadastros_gerais }} alunos</small>
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-info w-100" onclick="definirTurmasLote()">
+                            <i class="fas fa-school me-2"></i>
+                            Definir Turmas em Lote
+                            <small class="d-block">{{ turmas_indefinidas }} alunos</small>
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-secondary w-100" onclick="exportarDados()">
+                            <i class="fas fa-download me-2"></i>
+                            Exportar Dados
+                            <small class="d-block">Planilha Excel</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Controles de Paginação -->
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="d-flex align-items-center">
+            <label class="form-label me-2 mb-0">Mostrar:</label>
+            <select id="itensPorPagina" class="form-select" style="width: auto;" onchange="atualizarPaginacao()">
+                <option value="10">10 por página</option>
+                <option value="25" selected>25 por página</option>
+                <option value="50">50 por página</option>
+                <option value="100">100 por página</option>
+                <option value="-1">Todos</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="d-flex justify-content-end align-items-center">
+            <span class="text-muted me-3" id="infoResultados">Mostrando 1-25 de {{ alunos|length }} alunos</span>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Alunos Adaptada -->
+<div class="row">
+    <div class="col-12">
+        {% if alunos %}
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Lista de Alunos</h5>
+                    <span class="badge bg-primary" id="contadorAlunos">{{ alunos|length }} alunos</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="alunosTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    {% if nivel_usuario in ['admin', 'admin_master'] %}
+                                    <th width="40">
+                                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                    </th>
+                                    {% endif %}
+                                    <th>Nome</th>
+                                    <th>Telefone</th>
+                                    <th>Atividade</th>
+                                    <th>Turma</th>
+                                    <th>Status</th>
+                                    <th>Data Cadastro</th>
+                                    {% if nivel_usuario in ['admin', 'admin_master'] %}
+                                    <th width="120">Ações</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for aluno in alunos %}
+                                <tr class="aluno-row" 
+                                    data-nome="{{ aluno.nome|lower }}" 
+                                    data-atividade="{{ aluno.atividade or '' }}" 
+                                    data-status="{% if aluno.atividade == 'Cadastro Geral' %}cadastro_geral{% elif aluno.turma in ['A definir', '', none] %}turma_indefinida{% else %}organizado{% endif %}">
+                                    {% if nivel_usuario in ['admin', 'admin_master'] %}
+                                    <td>
+                                        <input type="checkbox" class="aluno-checkbox" value="{{ aluno.id }}">
+                                    </td>
+                                    {% endif %}
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-2">
+                                                <div class="avatar-title bg-primary rounded-circle">
+                                                    {{ aluno.nome[0].upper() }}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">{{ aluno.nome }}</h6>
+                                                {% if aluno.id_unico %}
+                                                <small class="text-muted">ID: {{ aluno.id_unico }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if aluno.telefone %}
+                                            <a href="tel:{{ aluno.telefone }}" class="text-decoration-none">
+                                                {{ aluno.telefone }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if aluno.atividade == 'Cadastro Geral' %}
+                                            <span class="badge bg-warning text-dark">{{ aluno.atividade }}</span>
+                                        {% elif aluno.atividade %}
+                                            <span class="badge bg-info">{{ aluno.atividade }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Não definida</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if aluno.turma == 'A definir' or not aluno.turma %}
+                                            <span class="badge bg-secondary">A definir</span>
+                                        {% else %}
+                                            <span class="badge bg-success">{{ aluno.turma }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if aluno.atividade == 'Cadastro Geral' %}
+                                            <span class="badge bg-warning">Pendente</span>
+                                        {% elif aluno.turma in ['A definir', '', none] %}
+                                            <span class="badge bg-info">Parcial</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Organizado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if aluno.data_cadastro %}
+                                            {% if aluno.data_cadastro.strftime is defined %}
+                                                {{ aluno.data_cadastro.strftime('%d/%m/%Y') }}
+                                            {% else %}
+                                                {{ aluno.data_cadastro }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    {% if nivel_usuario in ['admin', 'admin_master'] %}
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    onclick="editarAluno('{{ aluno.id }}')" 
+                                                    title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    onclick="verDetalhes('{{ aluno.id }}')" 
+                                                    title="Ver Detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Navegação de Páginas -->
+                <div class="card-footer">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <span class="text-muted" id="infoResultadosRodape">Mostrando 1-25 de {{ alunos|length }} alunos</span>
+                        </div>
+                        <div class="col-md-6">
+                            <nav aria-label="Navegação de páginas">
+                                <ul class="pagination justify-content-end mb-0" id="paginacao">
+                                    <li class="page-item disabled" id="btnAnterior">
+                                        <a class="page-link" href="#" onclick="paginaAnterior()">
+                                            <i class="fas fa-chevron-left"></i> Anterior
+                                        </a>
+                                    </li>
+                                    <!-- Números das páginas serão inseridos aqui via JavaScript -->
+                                    <li class="page-item" id="btnProximo">
+                                        <a class="page-link" href="#" onclick="proximaPagina()">
+                                            Próximo <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nenhum aluno encontrado</h5>
+                    <p class="text-muted">Não há alunos cadastrados no sistema.</p>
+                    {% if nivel_usuario in ['admin', 'admin_master'] %}
+                    <a href="{{ url_for('novo_aluno') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Cadastrar Primeiro Aluno
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para Ações em Lote -->
+{% if nivel_usuario in ['admin', 'admin_master'] %}
+<div class="modal fade" id="modalAcoesLote" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ações em Lote</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="conteudoModalLote">
+                    <!-- Conteúdo será carregado dinamicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmarLote">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variáveis globais para paginação
+let paginaAtual = 1;
+let itensPorPagina = 25;
+let alunosFiltrados = [];
+let totalAlunos = {{ alunos|length }};
+
+// Função para filtrar alunos
+function filtrarAlunos() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const filtroAtividade = document.getElementById('filtroAtividade').value;
+    const filtroStatus = document.getElementById('filtroStatus').value;
+    
+    const rows = document.querySelectorAll('.aluno-row');
+    alunosFiltrados = [];
+    
+    rows.forEach((row, index) => {
+        const nome = row.getAttribute('data-nome');
+        const atividade = row.getAttribute('data-atividade');
+        const status = row.getAttribute('data-status');
+        
+        let mostrar = true;
+        
+        // Filtro por nome
+        if (searchTerm && !nome.includes(searchTerm)) {
+            mostrar = false;
+        }
+        
+        // Filtro por atividade
+        if (filtroAtividade && atividade !== filtroAtividade) {
+            mostrar = false;
+        }
+        
+        // Filtro por status
+        if (filtroStatus && status !== filtroStatus) {
+            mostrar = false;
+        }
+        
+        if (mostrar) {
+            alunosFiltrados.push({row: row, index: index});
+        }
+    });
+    
+    // Resetar para primeira página após filtrar
+    paginaAtual = 1;
+    atualizarPaginacao();
+}
+
+// Função para atualizar paginação
+function atualizarPaginacao() {
+    itensPorPagina = parseInt(document.getElementById('itensPorPagina').value);
+    
+    // Se não há filtros aplicados, usar todas as linhas
+    if (alunosFiltrados.length === 0) {
+        const rows = document.querySelectorAll('.aluno-row');
+        alunosFiltrados = Array.from(rows).map((row, index) => ({row: row, index: index}));
+    }
+    
+    const totalItens = alunosFiltrados.length;
+    const totalPaginas = itensPorPagina === -1 ? 1 : Math.ceil(totalItens / itensPorPagina);
+    
+    // Ajustar página atual se necessário
+    if (paginaAtual > totalPaginas) {
+        paginaAtual = Math.max(1, totalPaginas);
+    }
+    
+    // Mostrar/ocultar linhas baseado na página atual
+    mostrarPagina();
+    
+    // Atualizar controles de navegação
+    atualizarControlesPaginacao(totalItens, totalPaginas);
+    
+    // Atualizar contador
+    document.getElementById('contadorAlunos').textContent = totalItens + ' alunos';
+}
+
+// Função para mostrar página específica
+function mostrarPagina() {
+    const totalItens = alunosFiltrados.length;
+    
+    // Ocultar todas as linhas primeiro
+    document.querySelectorAll('.aluno-row').forEach(row => {
+        row.style.display = 'none';
+    });
+    
+    if (itensPorPagina === -1) {
+        // Mostrar todos os itens
+        alunosFiltrados.forEach(item => {
+            item.row.style.display = '';
+        });
+    } else {
+        // Mostrar apenas os itens da página atual
+        const inicio = (paginaAtual - 1) * itensPorPagina;
+        const fim = Math.min(inicio + itensPorPagina, totalItens);
+        
+        for (let i = inicio; i < fim; i++) {
+            if (alunosFiltrados[i]) {
+                alunosFiltrados[i].row.style.display = '';
+            }
+        }
+    }
+}
+
+// Função para atualizar controles de paginação
+function atualizarControlesPaginacao(totalItens, totalPaginas) {
+    const inicio = itensPorPagina === -1 ? 1 : (paginaAtual - 1) * itensPorPagina + 1;
+    const fim = itensPorPagina === -1 ? totalItens : Math.min(paginaAtual * itensPorPagina, totalItens);
+    
+    // Atualizar informações de resultados
+    const infoTexto = totalItens === 0 ? 'Nenhum aluno encontrado' : `Mostrando ${inicio}-${fim} de ${totalItens} alunos`;
+    document.getElementById('infoResultados').textContent = infoTexto;
+    document.getElementById('infoResultadosRodape').textContent = infoTexto;
+    
+    // Atualizar botões de navegação
+    const btnAnterior = document.getElementById('btnAnterior');
+    const btnProximo = document.getElementById('btnProximo');
+    
+    if (itensPorPagina === -1 || totalPaginas <= 1) {
+        // Ocultar navegação se mostrar todos ou apenas uma página
+        document.getElementById('paginacao').style.display = 'none';
+    } else {
+        document.getElementById('paginacao').style.display = 'flex';
+        
+        // Botão anterior
+        if (paginaAtual <= 1) {
+            btnAnterior.classList.add('disabled');
+        } else {
+            btnAnterior.classList.remove('disabled');
+        }
+        
+        // Botão próximo
+        if (paginaAtual >= totalPaginas) {
+            btnProximo.classList.add('disabled');
+        } else {
+            btnProximo.classList.remove('disabled');
+        }
+        
+        // Gerar números das páginas
+        gerarNumerosPaginas(totalPaginas);
+    }
+}
+
+// Função para gerar números das páginas
+function gerarNumerosPaginas(totalPaginas) {
+    const paginacao = document.getElementById('paginacao');
+    
+    // Remover números de páginas existentes
+    const numerosExistentes = paginacao.querySelectorAll('.page-number');
+    numerosExistentes.forEach(el => el.remove());
+    
+    // Inserir novos números antes do botão "Próximo"
+    const btnProximo = document.getElementById('btnProximo');
+    
+    // Calcular quais páginas mostrar
+    let inicioRange = Math.max(1, paginaAtual - 2);
+    let fimRange = Math.min(totalPaginas, paginaAtual + 2);
+    
+    // Ajustar range para sempre mostrar 5 páginas quando possível
+    if (fimRange - inicioRange < 4) {
+        if (inicioRange === 1) {
+            fimRange = Math.min(totalPaginas, inicioRange + 4);
+        } else if (fimRange === totalPaginas) {
+            inicioRange = Math.max(1, fimRange - 4);
+        }
+    }
+    
+    // Adicionar primeira página e reticências se necessário
+    if (inicioRange > 1) {
+        const li1 = document.createElement('li');
+        li1.className = 'page-item page-number';
+        li1.innerHTML = '<a class="page-link" href="#" onclick="irParaPagina(1)">1</a>';
+        paginacao.insertBefore(li1, btnProximo);
+        
+        if (inicioRange > 2) {
+            const liEllipsis = document.createElement('li');
+            liEllipsis.className = 'page-item disabled page-number';
+            liEllipsis.innerHTML = '<span class="page-link">...</span>';
+            paginacao.insertBefore(liEllipsis, btnProximo);
+        }
+    }
+    
+    // Adicionar páginas do range
+    for (let i = inicioRange; i <= fimRange; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item page-number ${i === paginaAtual ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#" onclick="irParaPagina(${i})">${i}</a>`;
+        paginacao.insertBefore(li, btnProximo);
+    }
+    
+    // Adicionar última página e reticências se necessário
+    if (fimRange < totalPaginas) {
+        if (fimRange < totalPaginas - 1) {
+            const liEllipsis = document.createElement('li');
+            liEllipsis.className = 'page-item disabled page-number';
+            liEllipsis.innerHTML = '<span class="page-link">...</span>';
+            paginacao.insertBefore(liEllipsis, btnProximo);
+        }
+        
+        const liUltima = document.createElement('li');
+        liUltima.className = 'page-item page-number';
+        liUltima.innerHTML = `<a class="page-link" href="#" onclick="irParaPagina(${totalPaginas})">${totalPaginas}</a>`;
+        paginacao.insertBefore(liUltima, btnProximo);
+    }
+}
+
+// Função para ir para página específica
+function irParaPagina(pagina) {
+    const totalItens = alunosFiltrados.length;
+    const totalPaginas = Math.ceil(totalItens / itensPorPagina);
+    
+    if (pagina >= 1 && pagina <= totalPaginas) {
+        paginaAtual = pagina;
+        atualizarPaginacao();
+    }
+}
+
+// Função para página anterior
+function paginaAnterior() {
+    if (paginaAtual > 1) {
+        paginaAtual--;
+        atualizarPaginacao();
+    }
+}
+
+// Função para próxima página
+function proximaPagina() {
+    const totalItens = alunosFiltrados.length;
+    const totalPaginas = Math.ceil(totalItens / itensPorPagina);
+    
+    if (paginaAtual < totalPaginas) {
+        paginaAtual++;
+        atualizarPaginacao();
+    }
+}
+
+// Função para alterar itens por página
+function alterarItensPorPagina() {
+    paginaAtual = 1; // Resetar para primeira página
+    atualizarPaginacao();
+}
+
+// Inicializar paginação quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar com todos os alunos
+    const rows = document.querySelectorAll('.aluno-row');
+    alunosFiltrados = Array.from(rows).map((row, index) => ({row: row, index: index}));
+    
+    // Configurar paginação inicial
+    atualizarPaginacao();
+    
+    // Adicionar event listeners
+    document.getElementById('itensPorPagina').addEventListener('change', alterarItensPorPagina);
+    document.getElementById('searchInput').addEventListener('input', filtrarAlunos);
+    document.getElementById('filtroAtividade').addEventListener('change', filtrarAlunos);
+    document.getElementById('filtroStatus').addEventListener('change', filtrarAlunos);
+});
+
+// Função para limpar filtros
+function limparFiltros() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filtroAtividade').value = '';
+    document.getElementById('filtroStatus').value = '';
+    
+    // Resetar filtros e paginação
+    const rows = document.querySelectorAll('.aluno-row');
+    alunosFiltrados = Array.from(rows).map((row, index) => ({row: row, index: index}));
+    paginaAtual = 1;
+    
+    // Atualizar paginação
+    atualizarPaginacao();
+}
+
+// Função para selecionar todos
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.aluno-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        const row = checkbox.closest('.aluno-row');
+        if (row.style.display !== 'none') {
+            checkbox.checked = selectAll.checked;
+        }
+    });
+}
+
+// Função para organizar cadastros gerais
+function organizarCadastrosGerais() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAcoesLote'));
+    document.getElementById('conteudoModalLote').innerHTML = `
+        <h6>Organizar Cadastros Gerais</h6>
+        <p>Selecione a nova atividade para os alunos com "Cadastro Geral":</p>
+        <select class="form-select" id="novaAtividade">
+            <option value="">Selecione uma atividade...</option>
+            <option value="Natação">Natação</option>
+            <option value="Fisioterapia">Fisioterapia</option>
+            <option value="Dança">Dança</option>
+            <option value="Hidroginástica">Hidroginástica</option>
+            <option value="Funcional">Funcional</option>
+            <option value="Karatê">Karatê</option>
+            <option value="Informática">Informática</option>
+        </select>
+    `;
+    modal.show();
+}
+
+// Função para definir turmas em lote
+function definirTurmasLote() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAcoesLote'));
+    document.getElementById('conteudoModalLote').innerHTML = `
+        <h6>Definir Turmas em Lote</h6>
+        <p>Selecione a turma para os alunos selecionados:</p>
+        <select class="form-select" id="novaTurma">
+            <option value="">Selecione uma turma...</option>
+            <option value="Turma A">Turma A</option>
+            <option value="Turma B">Turma B</option>
+            <option value="Turma C">Turma C</option>
+            <option value="Iniciante">Iniciante</option>
+            <option value="Intermediário">Intermediário</option>
+            <option value="Avançado">Avançado</option>
+        </select>
+    `;
+    modal.show();
+}
+
+// Função para exportar dados
+function exportarDados() {
+    // Implementar exportação
+    alert('Funcionalidade de exportação em desenvolvimento');
+}
+
+// Função para editar aluno
+function editarAluno(alunoId) {
+    window.location.href = '/editar_aluno/' + alunoId;
+}
+
+// Função para ver detalhes
+function verDetalhes(alunoId) {
+    // Implementar visualização de detalhes
+    alert('Ver detalhes do aluno ID: ' + alunoId);
+}
+
+// Inicializar tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}
