@@ -1,188 +1,192 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Script para validar variáveis de ambiente no Render
-Este script verifica se todas as variáveis necessárias estão configuradas corretamente
+Script para validar variáveis de ambiente do Render
+e identificar possíveis problemas de configuração
 """
 
 import os
-from dotenv import load_dotenv
-from pymongo import MongoClient
 import sys
+from dotenv import load_dotenv
+import pymongo
+from urllib.parse import quote_plus
 
-def carregar_variaveis_ambiente():
-    """Carrega variáveis de ambiente seguindo a mesma lógica do app.py"""
-    if os.path.exists('.env.production'):
-        load_dotenv('.env.production')
-        print("✅ Carregando variáveis de ambiente de produção (.env.production)")
-        return 'production'
-    else:
-        load_dotenv()
-        print("✅ Carregando variáveis de ambiente de desenvolvimento (.env)")
-        return 'development'
+print("🔍 VALIDAÇÃO DAS VARIÁVEIS DE AMBIENTE RENDER")
+print("="*60)
 
-def validar_variaveis_obrigatorias():
-    """Valida se todas as variáveis obrigatórias estão definidas"""
-    variaveis_obrigatorias = {
-        'MONGO_USERNAME': 'Nome de usuário do MongoDB',
-        'MONGO_PASSWORD': 'Senha do MongoDB',
-        'MONGO_CLUSTER': 'Cluster do MongoDB',
-        'MONGO_DATABASE': 'Nome do banco de dados',
-        'MONGO_URI': 'URI completa de conexão',
-        'SECRET_KEY': 'Chave secreta do Flask',
-        'FLASK_ENV': 'Ambiente do Flask',
-        'FLASK_DEBUG': 'Debug do Flask'
-    }
-    
-    print("\n🔍 Validando variáveis de ambiente obrigatórias:")
-    print("=" * 60)
-    
-    todas_definidas = True
-    for var, descricao in variaveis_obrigatorias.items():
-        valor = os.environ.get(var)
-        if valor:
-            # Mascarar senhas e chaves sensíveis
-            if 'PASSWORD' in var or 'SECRET' in var:
-                valor_exibido = f"{valor[:4]}...{valor[-4:]}" if len(valor) > 8 else "***"
-            else:
-                valor_exibido = valor
-            print(f"✅ {var:<15}: {valor_exibido}")
+# Carregar variáveis de ambiente de produção
+if os.path.exists('.env.production'):
+    load_dotenv('.env.production')
+    print("✅ Arquivo .env.production carregado")
+else:
+    print("❌ Arquivo .env.production não encontrado")
+    sys.exit(1)
+
+print("\n📋 VERIFICAÇÃO DAS VARIÁVEIS CRÍTICAS:")
+print("-" * 40)
+
+# Variáveis críticas para verificar
+variables_to_check = [
+    'MONGO_URI',
+    'MONGO_DATABASE', 
+    'SECRET_KEY',
+    'FLASK_ENV',
+    'PORT'
+]
+
+for var in variables_to_check:
+    value = os.getenv(var)
+    if value:
+        if var == 'MONGO_URI':
+            # Mascarar senha na URI
+            masked_uri = value
+            if '@' in masked_uri:
+                parts = masked_uri.split('@')
+                if ':' in parts[0]:
+                    user_pass = parts[0].split('//')[-1]
+                    if ':' in user_pass:
+                        user, password = user_pass.split(':', 1)
+                        masked_password = '*' * len(password)
+                        masked_uri = masked_uri.replace(password, masked_password)
+            print(f"✅ {var}: {masked_uri}")
+        elif var == 'SECRET_KEY':
+            print(f"✅ {var}: {'*' * len(value)} (mascarado)")
         else:
-            print(f"❌ {var:<15}: NÃO DEFINIDA ({descricao})")
-            todas_definidas = False
-    
-    return todas_definidas
-
-def testar_conexao_mongodb():
-    """Testa a conexão com MongoDB usando as variáveis de ambiente"""
-    print("\n🔗 Testando conexão com MongoDB Atlas:")
-    print("=" * 60)
-    
-    # Obter variáveis
-    mongo_uri = os.environ.get('MONGO_URI')
-    mongo_username = os.environ.get('MONGO_USERNAME')
-    mongo_password = os.environ.get('MONGO_PASSWORD')
-    mongo_cluster = os.environ.get('MONGO_CLUSTER')
-    mongo_database = os.environ.get('MONGO_DATABASE')
-    
-    if not mongo_uri:
-        print("❌ MONGO_URI não definida")
-        return False
-    
-    # URIs para testar (mesma lógica do models.py)
-    uris_para_testar = [
-        mongo_uri,
-        f'mongodb+srv://{mongo_username}:{mongo_password}@cluster0.mongodb.net/{mongo_database}?retryWrites=true&w=majority',
-        f'mongodb+srv://{mongo_username}:{mongo_password}@cluster0.mongodb.net/?retryWrites=true&w=majority'
-    ]
-    
-    for i, uri in enumerate(uris_para_testar):
-        try:
-            print(f"🔄 Tentativa {i+1}: Testando conexão...")
-            
-            # Mascarar URI para exibição
-            uri_masked = uri.replace(mongo_password, "***") if mongo_password else uri
-            print(f"   URI: {uri_masked}")
-            
-            client = MongoClient(uri, serverSelectionTimeoutMS=10000)
-            db = client[mongo_database]
-            
-            # Testar conexão
-            result = client.admin.command('ping')
-            print(f"✅ Conexão bem-sucedida! Ping result: {result}")
-            
-            # Testar acesso ao banco
-            collections = db.list_collection_names()
-            print(f"📊 Collections encontradas: {len(collections)}")
-            if collections:
-                print(f"   Exemplos: {collections[:3]}")
-            
-            client.close()
-            return True
-            
-        except Exception as e:
-            print(f"❌ Tentativa {i+1} falhou: {str(e)}")
-            if i < len(uris_para_testar) - 1:
-                print("🔄 Tentando próxima URI...")
-            continue
-    
-    return False
-
-def verificar_configuracao_render():
-    """Verifica configurações específicas do Render"""
-    print("\n🚀 Verificando configuração do Render:")
-    print("=" * 60)
-    
-    # Verificar se estamos em ambiente de produção
-    flask_env = os.environ.get('FLASK_ENV', 'development')
-    flask_debug = os.environ.get('FLASK_DEBUG', 'True')
-    
-    print(f"🌍 Ambiente Flask: {flask_env}")
-    print(f"🐛 Debug Flask: {flask_debug}")
-    
-    if flask_env == 'production':
-        print("✅ Configurado para produção")
-        if flask_debug.lower() in ['false', '0', 'no']:
-            print("✅ Debug desabilitado (recomendado para produção)")
-        else:
-            print("⚠️ Debug habilitado em produção (não recomendado)")
+            print(f"✅ {var}: {value}")
     else:
-        print("⚠️ Ambiente não é produção")
-    
-    # Verificar variáveis específicas do Render
-    render_vars = {
-        'PORT': 'Porta do servidor',
-        'PYTHON_VERSION': 'Versão do Python',
-        'RENDER': 'Indicador do ambiente Render'
-    }
-    
-    print("\n🔧 Variáveis específicas do Render:")
-    for var, desc in render_vars.items():
-        valor = os.environ.get(var)
-        if valor:
-            print(f"✅ {var}: {valor}")
-        else:
-            print(f"ℹ️ {var}: Não definida ({desc})")
+        print(f"❌ {var}: NÃO DEFINIDA")
 
-def main():
-    """Função principal"""
-    print("🔍 VALIDADOR DE VARIÁVEIS DE AMBIENTE - RENDER")
-    print("=" * 60)
+print("\n🔗 TESTE DE CONEXÃO MONGODB:")
+print("-" * 40)
+
+try:
+    # Testar conexão com MongoDB
+    mongodb_uri = os.getenv('MONGO_URI')
+    db_name = os.getenv('MONGO_DATABASE')
     
-    # Carregar variáveis
-    ambiente = carregar_variaveis_ambiente()
-    
-    # Validar variáveis obrigatórias
-    variaveis_ok = validar_variaveis_obrigatorias()
-    
-    # Verificar configuração do Render
-    verificar_configuracao_render()
-    
-    # Testar conexão MongoDB
-    conexao_ok = testar_conexao_mongodb()
-    
-    # Resumo final
-    print("\n📋 RESUMO DA VALIDAÇÃO:")
-    print("=" * 60)
-    print(f"🌍 Ambiente detectado: {ambiente}")
-    print(f"📝 Variáveis de ambiente: {'✅ OK' if variaveis_ok else '❌ PROBLEMAS'}")
-    print(f"🔗 Conexão MongoDB: {'✅ OK' if conexao_ok else '❌ FALHOU'}")
-    
-    if variaveis_ok and conexao_ok:
-        print("\n🎉 TODAS AS VALIDAÇÕES PASSARAM!")
-        print("✅ O ambiente está configurado corretamente para o Render")
-        sys.exit(0)
-    else:
-        print("\n⚠️ PROBLEMAS ENCONTRADOS!")
-        if not variaveis_ok:
-            print("❌ Algumas variáveis de ambiente estão faltando")
-        if not conexao_ok:
-            print("❌ Não foi possível conectar ao MongoDB Atlas")
-            print("\n💡 Possíveis soluções:")
-            print("   - Verificar se o cluster MongoDB Atlas está ativo")
-            print("   - Confirmar credenciais (username/password)")
-            print("   - Verificar whitelist de IPs (0.0.0.0/0 para Render)")
-            print("   - Cluster M0 pode estar pausado após 60 dias")
+    if not mongodb_uri:
+        print("❌ MONGO_URI não está definida")
         sys.exit(1)
+    
+    if not db_name:
+        print("❌ MONGO_DATABASE não está definida")
+        sys.exit(1)
+    
+    print(f"🔌 Tentando conectar ao MongoDB...")
+    print(f"📊 Database: {db_name}")
+    
+    # Criar cliente MongoDB
+    client = pymongo.MongoClient(mongodb_uri, serverSelectionTimeoutMS=10000)
+    
+    # Testar conexão
+    client.admin.command('ping')
+    print("✅ Conexão com MongoDB estabelecida com sucesso")
+    
+    # Acessar database
+    db = client[db_name]
+    print(f"✅ Database '{db_name}' acessada")
+    
+    # Verificar coleções
+    collections = db.list_collection_names()
+    print(f"📚 Coleções encontradas: {len(collections)}")
+    for collection in collections:
+        print(f"   - {collection}")
+    
+    # Verificar dados de alunos
+    if 'alunos' in collections:
+        alunos_count = db.alunos.count_documents({})
+        print(f"👥 Total de alunos na coleção: {alunos_count}")
+        
+        if alunos_count > 0:
+            # Pegar um exemplo de aluno
+            sample_aluno = db.alunos.find_one()
+            print(f"📝 Exemplo de aluno (campos): {list(sample_aluno.keys()) if sample_aluno else 'Nenhum'}")
+            
+            # Verificar se há alunos com dados básicos
+            alunos_com_nome = db.alunos.count_documents({'nome': {'$exists': True, '$ne': ''}})
+            print(f"✅ Alunos com nome: {alunos_com_nome}")
+            
+            alunos_ativos = db.alunos.count_documents({'status': 'ativo'})
+            print(f"✅ Alunos ativos: {alunos_ativos}")
+        else:
+            print("❌ PROBLEMA: Coleção de alunos está vazia")
+    else:
+        print("❌ PROBLEMA: Coleção 'alunos' não encontrada")
+    
+    # Verificar outras coleções importantes
+    for col_name in ['turmas', 'atividades', 'presencas']:
+        if col_name in collections:
+            count = db[col_name].count_documents({})
+            print(f"📊 {col_name.capitalize()}: {count} documentos")
+        else:
+            print(f"⚠️  Coleção '{col_name}' não encontrada")
+    
+    client.close()
+    print("✅ Conexão fechada")
+    
+except pymongo.errors.ServerSelectionTimeoutError as e:
+    print(f"❌ ERRO: Timeout na conexão com MongoDB")
+    print(f"🔍 Detalhes: {e}")
+    print("💡 Possíveis causas:")
+    print("   - URI de conexão incorreta")
+    print("   - Problemas de rede no Render")
+    print("   - MongoDB Atlas com restrições de IP")
+    print("   - Credenciais inválidas")
+except pymongo.errors.ConfigurationError as e:
+    print(f"❌ ERRO: Configuração inválida do MongoDB")
+    print(f"🔍 Detalhes: {e}")
+except pymongo.errors.OperationFailure as e:
+    print(f"❌ ERRO: Falha na autenticação")
+    print(f"🔍 Detalhes: {e}")
+    print("💡 Verifique as credenciais no MongoDB Atlas")
+except Exception as e:
+    print(f"❌ ERRO INESPERADO: {e}")
+    import traceback
+    traceback.print_exc()
 
-if __name__ == '__main__':
-    main()
+print("\n🌐 VERIFICAÇÃO DE AMBIENTE:")
+print("-" * 40)
+
+# Verificar ambiente Flask
+flask_env = os.getenv('FLASK_ENV', 'production')
+print(f"🏗️  FLASK_ENV: {flask_env}")
+
+# Verificar porta
+port = os.getenv('PORT', '5000')
+print(f"🔌 PORT: {port}")
+
+# Verificar se estamos no Render
+if os.getenv('RENDER'):
+    print("✅ Executando no ambiente Render")
+    print(f"🏷️  RENDER_SERVICE_NAME: {os.getenv('RENDER_SERVICE_NAME', 'N/A')}")
+    print(f"🔗 RENDER_EXTERNAL_URL: {os.getenv('RENDER_EXTERNAL_URL', 'N/A')}")
+else:
+    print("⚠️  Não detectado ambiente Render (executando localmente)")
+
+print("\n💡 RECOMENDAÇÕES PARA O RENDER:")
+print("-" * 40)
+print("1. Verificar se todas as variáveis de ambiente estão configuradas no painel do Render")
+print("2. Confirmar se o MongoDB Atlas permite conexões do IP do Render (0.0.0.0/0)")
+print("3. Verificar se não há timeout nas conexões de rede")
+print("4. Confirmar se o build e deploy foram executados corretamente")
+print("5. Verificar logs do Render para erros específicos")
+
+print("\n🎯 PRÓXIMOS PASSOS:")
+print("-" * 40)
+if 'alunos_count' in locals() and alunos_count > 0:
+    print("✅ Dados estão presentes no MongoDB")
+    print("🔍 O problema pode estar na aplicação Flask ou no ambiente Render")
+    print("💡 Sugestões:")
+    print("   - Verificar logs da aplicação no Render")
+    print("   - Testar endpoints específicos")
+    print("   - Verificar se há problemas de cache ou sessão")
+else:
+    print("❌ Dados não encontrados no MongoDB")
+    print("🔍 O problema está na conexão ou nos dados")
+    print("💡 Sugestões:")
+    print("   - Recarregar dados no MongoDB Atlas")
+    print("   - Verificar configurações de rede")
+    print("   - Confirmar credenciais de acesso")
+
+print("\n" + "="*60)
+print("🏁 VALIDAÇÃO CONCLUÍDA")

@@ -2113,11 +2113,31 @@ def buscar_alunos():
         # Em modo de teste, usar admin como padrão
         if modo_teste:
             nivel_usuario = 'admin'
+            # No modo teste, acessar diretamente o banco de dados
+            try:
+                db_integration = get_db_integration()
+                alunos_raw = db_integration.aluno_dao.listar_todos()
+                todos_alunos = [{
+                    'id': str(aluno.get('_id', '')),
+                    'id_unico': aluno.get('id_unico', ''),
+                    'nome': aluno.get('nome', ''),
+                    'telefone': aluno.get('telefone', ''),
+                    'endereco': aluno.get('endereco', ''),
+                    'email': aluno.get('email', ''),
+                    'data_nascimento': aluno.get('data_nascimento', ''),
+                    'data_cadastro': aluno.get('data_cadastro', ''),
+                    'atividade': aluno.get('atividade', ''),
+                    'turma': aluno.get('turma', ''),
+                    'status_frequencia': aluno.get('status_frequencia', ''),
+                    'observacoes': aluno.get('observacoes', '')
+                } for aluno in alunos_raw if aluno.get('ativo', True)]
+            except Exception as e:
+                print(f"❌ Erro ao acessar banco no modo teste: {e}")
+                todos_alunos = []
         else:
             nivel_usuario = session.get('usuario_nivel', 'usuario')
-        
-        # Obter todos os alunos baseado no nível de acesso
-        todos_alunos = obter_alunos_usuario()
+            # Obter todos os alunos baseado no nível de acesso
+            todos_alunos = obter_alunos_usuario()
         
         # Debug: imprimir informações
         print(f"🔍 DEBUG: Modo teste: {modo_teste}")
