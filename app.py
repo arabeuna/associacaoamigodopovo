@@ -142,8 +142,7 @@ def allowed_file(filename):
 class SistemaAcademia:
     def __init__(self):
         # Inicializar integração com banco de dados
-        from database_integration_robusto import DatabaseIntegrationRobusto as DatabaseIntegration
-        self.db_integration = DatabaseIntegration()
+        self.db_integration = get_db_integration()
         
         self.arquivo_dados = 'dados_alunos.json'
         self.arquivo_atividades = 'atividades_sistema.json'
@@ -159,8 +158,7 @@ class SistemaAcademia:
     def carregar_dados_reais(self):
         """Carrega dados dos alunos do banco MongoDB"""
         try:
-            db_integration = get_db_integration()
-            alunos = db_integration.aluno_dao.listar_todos()
+            alunos = self.db_integration.aluno_dao.listar_todos()
             
             dados_alunos = []
             for aluno in alunos:
