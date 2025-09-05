@@ -1972,7 +1972,7 @@ def dashboard():
         
         # Buscar logs de atividade relacionados a upload de planilhas
         db_integration = get_db_integration()
-        logs_upload = db_integration.log_atividade_dao.buscar_por_acao('Upload de Planilha')
+        logs_upload = db_integration.log_atividade_dao.buscar_por_acao('Upload de Planilha', limite=10)
         
         uploads_recentes = []
         for log in logs_upload[-5:]:  # Últimos 5 uploads
@@ -2183,6 +2183,46 @@ def buscar_alunos():
             'alunos': [],
             'total_encontrado': 0
         })
+
+@app.route('/dados_banco_direto')
+@login_obrigatorio
+def dados_banco_direto():
+    """Rota para visualizar dados diretos do banco MongoDB"""
+    try:
+        # Verificar se o usuário tem permissão (apenas admin ou admin_master)
+        nivel_usuario = session.get('usuario_nivel', 'usuario')
+        if nivel_usuario not in ['admin', 'admin_master']:
+            flash('Acesso negado. Apenas administradores podem visualizar dados diretos do banco.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Obter dados diretos do banco
+        db_integration = get_db_integration()
+        alunos_raw = db_integration.aluno_dao.listar_todos()
+        
+        # Converter ObjectId para string para serialização
+        alunos_processados = []
+        for aluno in alunos_raw:
+            aluno_dict = dict(aluno)
+            if '_id' in aluno_dict:
+                aluno_dict['_id'] = str(aluno_dict['_id'])
+            alunos_processados.append(aluno_dict)
+        
+        # Calcular estatísticas
+        total_alunos = len(alunos_processados)
+        campos_por_aluno = len(alunos_processados[0].keys()) if alunos_processados else 0
+        
+        usuario_nome = session.get('usuario_nome', 'Usuário')
+        
+        return render_template('dados_banco_direto.html',
+                             alunos=alunos_processados,
+                             total_alunos=total_alunos,
+                             campos_por_aluno=campos_por_aluno,
+                             usuario_nome=usuario_nome,
+                             nivel_usuario=nivel_usuario)
+                             
+    except Exception as e:
+        flash(f'Erro ao carregar dados do banco: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
 
 @app.route('/presenca')
 @login_obrigatorio

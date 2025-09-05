@@ -74,7 +74,7 @@ class DatabaseIntegrationRobusto:
             self.atividade_dao = AtividadeDAO
             self.turma_dao = TurmaDAO
             self.presenca_dao = PresencaDAO
-            self.log_atividade_dao = LogAtividadeDAO
+            self.log_atividade_dao = LogAtividadeDAO()
             self.usuario_dao = UsuarioDAO
             
             if self.db is None:
@@ -90,7 +90,7 @@ class DatabaseIntegrationRobusto:
             self.atividade_dao = AtividadeDAO
             self.turma_dao = TurmaDAO
             self.presenca_dao = PresencaDAO
-            self.log_atividade_dao = LogAtividadeDAO
+            self.log_atividade_dao = LogAtividadeDAO()
             self.usuario_dao = UsuarioDAO
             logger.info("✅ DAOs inicializados em modo fallback após erro")
     
