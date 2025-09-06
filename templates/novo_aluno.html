@@ -36,7 +36,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form id="formNovoAluno" method="POST" enctype="multipart/form-data" action="{% if editando %}{{ url_for('editar_aluno', aluno_id=aluno.id) }}{% else %}{{ url_for('cadastrar_aluno') }}{% endif %}">
+                    <form id="formNovoAluno" method="POST" action="{% if editando %}{{ url_for('editar_aluno', aluno_id=aluno.id) }}{% else %}{{ url_for('cadastrar_aluno') }}{% endif %}" enctype="multipart/form-data">
                         <!-- Informações Pessoais -->
                         <div class="row mb-3">
                             <div class="col-12">
@@ -70,31 +70,9 @@
                         </div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label for="titulo_eleitor" class="form-label">Título de Eleitor</label>
                                 <input type="text" class="form-control" id="titulo_eleitor" name="titulo_eleitor" placeholder="0000.0000.0000" value="{% if editando %}{{ aluno.titulo_eleitor or '' }}{% endif %}">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="zona_eleitoral" class="form-label">Zona Eleitoral</label>
-                                <input type="text" class="form-control" id="zona_eleitoral" name="zona_eleitoral" placeholder="000" value="{% if editando %}{{ aluno.zona_eleitoral or '' }}{% endif %}">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="municipio_eleitor" class="form-label">Município</label>
-                                <input type="text" class="form-control" id="municipio_eleitor" name="municipio_eleitor" placeholder="Nome do município" value="{% if editando %}{{ aluno.municipio_eleitor or '' }}{% endif %}">
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label for="foto" class="form-label">Foto 3x4</label>
-                                <input type="file" class="form-control" id="foto" name="foto" accept="image/*">
-                                <small class="form-text text-muted">Formatos aceitos: JPG, PNG, GIF (máx. 5MB)</small>
-                                {% if editando and aluno.foto %}
-                                <div class="mt-2">
-                                    <img src="{{ url_for('static', filename='fotos/' + aluno.foto) }}" alt="Foto atual" class="img-thumbnail" style="max-width: 100px; max-height: 120px;">
-                                    <small class="d-block text-muted">Foto atual</small>
-                                </div>
-                                {% endif %}
                             </div>
                         </div>
 
@@ -117,6 +95,24 @@
                                     <option value="Divorciado" {% if editando and aluno.estado_civil == 'Divorciado' %}selected{% endif %}>Divorciado</option>
                                     <option value="Viúvo" {% if editando and aluno.estado_civil == 'Viúvo' %}selected{% endif %}>Viúvo</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- Upload de Foto 3x4 -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="foto" class="form-label">Foto 3x4</label>
+                                <input type="file" class="form-control" id="foto" name="foto" accept="image/*" onchange="previewFoto(this)">
+                                <div class="form-text">Selecione uma foto 3x4 do aluno (JPG, PNG ou GIF)</div>
+                                <div class="foto-preview-container" style="margin-top: 10px;">
+                                    <img id="foto-preview" style="display: none; max-width: 120px; max-height: 160px; border: 1px solid #ddd; border-radius: 4px;" alt="Preview da foto">
+                                </div>
+                                {% if editando and aluno.foto %}
+                                    <div class="mt-2">
+                                        <img src="{{ url_for('static', filename='fotos/' + aluno.foto) }}" alt="Foto atual" class="img-thumbnail" style="max-width: 100px; max-height: 120px;">
+                                        <small class="text-muted d-block">Foto atual</small>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -421,6 +417,7 @@ if (formNovoAluno) {
         const atividade = document.getElementById('atividade').value;
         const turma = document.getElementById('turma').value;
         const status = document.getElementById('status').value;
+        const foto = document.getElementById('foto').files[0];
         
         if (!nome || !dataNascimento || !telefone || !atividade || !turma || !status) {
             e.preventDefault();
@@ -437,6 +434,24 @@ if (formNovoAluno) {
             e.preventDefault();
             alert('A data de nascimento parece incorreta. Verifique.');
             return;
+        }
+        
+        // Validar foto se fornecida
+        if (foto) {
+            const tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            const tamanhoMaximo = 5 * 1024 * 1024; // 5MB
+            
+            if (!tiposPermitidos.includes(foto.type)) {
+                e.preventDefault();
+                alert('Tipo de arquivo não permitido. Use apenas JPG, PNG ou GIF.');
+                return;
+            }
+            
+            if (foto.size > tamanhoMaximo) {
+                e.preventDefault();
+                alert('Arquivo muito grande. O tamanho máximo é 5MB.');
+                return;
+            }
         }
         
         // Se chegou até aqui, o formulário é válido e será enviado normalmente
@@ -458,7 +473,32 @@ function limparFormulario() {
         dataInicioInput.value = hoje;
     }
     
+    // Limpar preview da foto
+    const preview = document.getElementById('foto-preview');
+    if (preview) {
+        preview.style.display = 'none';
+        preview.src = '';
+    }
+    
     alert('Formulário limpo com sucesso!');
+}
+
+// Função para pré-visualizar a foto
+function previewFoto(input) {
+    const preview = document.getElementById('foto-preview');
+    const file = input.files[0];
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+        preview.src = '';
+    }
 }
 </script>
 {% endblock %}

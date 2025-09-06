@@ -5,329 +5,302 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ficha de Cadastro - {{ aluno.nome }} - Associação Amigo do Povo</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.2;
+            color: #000;
+            background: white;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #000;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 15px;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .logo-icon {
+            width: 30px;
+            height: 30px;
+            background: #007bff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+
+        .logo-icon::before {
+            content: '★';
+            color: white;
+            font-size: 16px;
+        }
+
+        .organization-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .form-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #000;
+            margin-top: 3px;
+        }
+
+        .photo-section {
+            width: 120px;
+            height: 160px;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f9f9f9;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        
+        .photo-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .photo-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 15px 0 8px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title .icon {
+            margin-right: 5px;
+        }
+
+        .form-row {
+            display: flex;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .form-label {
+            font-size: 11px;
+            font-weight: normal;
+            color: #000;
+            width: 120px;
+            flex-shrink: 0;
+        }
+
+        .form-input {
+            flex: 1;
+            border: none;
+            border-bottom: 1px solid #ccc;
+            padding: 2px 5px;
+            font-size: 11px;
+            background: transparent;
+            margin-right: 20px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-bottom: 1px solid #007bff;
+        }
+
+        .form-row-double {
+            display: flex;
+            margin-bottom: 8px;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            margin-right: 20px;
+        }
+
+        .form-group:last-child {
+            margin-right: 0;
+        }
+
+        .form-group .form-label {
+            width: 80px;
+        }
+
+        .form-group .form-input {
+            margin-right: 0;
+        }
+
+        .select-row {
+            display: flex;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .select-label {
+            font-size: 11px;
+            font-weight: normal;
+            color: #000;
+            margin-right: 10px;
+        }
+
+        .select-input {
+            border: none;
+            border-bottom: 1px solid #ccc;
+            padding: 2px 5px;
+            font-size: 11px;
+            background: transparent;
+            margin-right: 20px;
+            min-width: 120px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .status-ativo {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inativo {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .no-print {
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 15px;
+            margin-right: 10px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
         @media print {
             body {
-                margin: 0;
-                padding: 0;
-                font-size: 5px;
-                line-height: 1.0;
+                padding: 10px;
+                font-size: 10px;
             }
-            
+
             .container {
                 max-width: 100%;
-                margin: 0;
-                padding: 0;
-            }
-            
-            .card {
-                border: none;
-                box-shadow: none;
-                margin: 0;
-                padding: 0;
-            }
-            
-            .card-header {
-                padding: 1px;
-                margin-bottom: 1px;
-                font-size: 6px;
-            }
-            
-            .card-body {
-                padding: 0;
-            }
-            
-            .info-section {
-                margin-bottom: 1px;
-                padding: 0;
-            }
-            
-            .info-section h2 {
-                font-size: 5px;
-                margin-bottom: 0;
-                margin-top: 1px;
-            }
-            
-            .info-grid {
-                display: grid;
-                grid-template-columns: repeat(8, 1fr);
-                gap: 1px;
-            }
-            
-            .info-item {
-                padding: 0;
-            }
-            
-            .info-label {
-                font-size: 4px;
-                margin-bottom: 0;
-            }
-            
-            .info-value {
-                font-size: 4px;
-            }
-            
-            .student-photo {
-                width: 40px;
-                height: 50px;
-            }
-            
-            .student-photo img {
-                width: 40px;
-                height: 50px;
-            }
-            
-            .qr-code {
-                width: 40px;
-                height: 50px;
-            }
-            
-            .qr-code p {
-                font-size: 3px;
+                border: 1px solid #000;
+                padding: 15px;
                 margin: 0;
             }
-            
-            .qr-code div {
-                width: 40px !important;
-                height: 50px !important;
-                font-size: 3px !important;
-            }
-            
-            .page-info {
-                font-size: 4px;
-                margin: 0;
-            }
-            
-            .presence-table {
-                display: none;
-            }
-            
+
             .no-print {
                 display: none !important;
             }
-            
-            .observacoes {
-                margin: 0;
-                padding: 0;
+
+            .header {
+                margin-bottom: 15px;
+                padding-bottom: 10px;
             }
-            
-            .observacoes h4 {
-                font-size: 4px !important;
-                margin: 0 !important;
+
+            .organization-name {
+                font-size: 12px;
             }
-            
-            .observacoes p {
-                font-size: 3px !important;
-                margin: 0 !important;
-            }
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.4;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-            background: white;
-        }
-        
-        .header {
-            text-align: center;
-            border-bottom: 3px solid #007bff;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            color: #007bff;
-            margin: 0;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        
-        .header .subtitle {
-            color: #666;
-            font-size: 16px;
-            margin-top: 5px;
-        }
-        
-        .foto-aluno {
-            width: 120px;
-            height: 120px;
-            border: 3px solid #007bff;
-            border-radius: 50%;
-            object-fit: cover;
-            margin: 0 auto 20px;
-            display: block;
-        }
-        
-        .info-section {
-            margin-bottom: 30px;
-        }
-        
-        .info-section h2 {
-            color: #007bff;
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            font-size: 20px;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        
-        .info-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #007bff;
-        }
-        
-        .info-label {
-            font-weight: bold;
-            color: #495057;
-            font-size: 12px;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-        
-        .info-value {
-            color: #333;
-            font-size: 16px;
-        }
-        
-        .presenca-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-            font-size: 12px;
-        }
-        
-        .presenca-table th {
-            background: #007bff;
-            color: white;
-            padding: 10px 8px;
-            text-align: left;
-            font-weight: bold;
-            border: 1px solid #0056b3;
-        }
-        
-        .presenca-table td {
-            padding: 8px;
-            border: 1px solid #dee2e6;
-            vertical-align: top;
-        }
-        
-        .presenca-table tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-        
-        .status-presenca {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        
-        .status-presente { background: #d4edda; color: #155724; }
-        .status-ausente { background: #f8d7da; color: #721c24; }
-        .status-justificado { background: #fff3cd; color: #856404; }
-        
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #e9ecef;
-            text-align: center;
-            color: #666;
-            font-size: 12px;
-        }
-        
-        .page-info {
-            text-align: right;
-            font-size: 10px;
-            color: #999;
-            margin-bottom: 20px;
-        }
-        
-        .no-print {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        
-        .btn-print {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .btn-print:hover {
-            background: #0056b3;
-        }
-        
-        .btn-back {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-right: 10px;
-            text-decoration: none;
-            display: inline-block;
-        }
-        
-        .btn-back:hover {
-            background: #545b62;
-            color: white;
-            text-decoration: none;
-        }
-        
-        .observacoes {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 20px 0;
-        }
-        
-        .observacoes h4 {
-            color: #856404;
-            margin-bottom: 10px;
-        }
-        
-        .qr-code {
-            text-align: center;
-            margin: 20px 0;
-        }
-        
-        .qr-code img {
-            width: 100px;
-            height: 100px;
-            border: 1px solid #ddd;
-        }
-        
-        @media screen and (max-width: 768px) {
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .presenca-table {
+
+            .form-title {
                 font-size: 10px;
             }
-            
-            .presenca-table th, .presenca-table td {
-                padding: 6px 4px;
+
+            .photo-section {
+                width: 60px;
+                height: 80px;
+                font-size: 8px;
+            }
+
+            .section-title {
+                font-size: 10px;
+                margin: 10px 0 5px 0;
+            }
+
+            .form-label {
+                font-size: 9px;
+                width: 100px;
+            }
+
+            .form-input {
+                font-size: 9px;
+            }
+
+            .form-group .form-label {
+                width: 70px;
+            }
+
+            .select-label {
+                font-size: 9px;
+            }
+
+            .select-input {
+                font-size: 9px;
+                min-width: 100px;
             }
         }
     </style>
@@ -335,275 +308,182 @@
 <body>
     <!-- Botões de controle (não aparecem na impressão) -->
     <div class="no-print">
-        <a href="javascript:history.back()" class="btn-back">
-            <i class="fas fa-arrow-left"></i> Voltar
+        <a href="javascript:history.back()" class="btn btn-secondary">
+            ← Voltar
         </a>
-        <button onclick="window.print()" class="btn-print">
-            <i class="fas fa-print"></i> Imprimir
+        <button onclick="window.print()" class="btn">
+            🖨️ Imprimir
         </button>
     </div>
 
-    <!-- Informações da página -->
-    <div class="page-info">
-        Gerado em: {{ data_geracao }}
-    </div>
+    <div class="container">
+        <!-- Cabeçalho -->
+        <div class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <div class="logo-icon"></div>
+                    <div>
+                        <div class="organization-name">Associação Amigo do Povo</div>
+                    </div>
+                </div>
+                <div class="form-title">📋 Dados do Aluno</div>
+            </div>
+            <div class="photo-section">
+            {% if aluno.foto %}
+                <img src="{{ url_for('static', filename='fotos/' + aluno.foto) }}" alt="Foto do aluno" class="photo-image">
+            {% else %}
+                <div class="photo-placeholder">
+                    <span>FOTO 3x4</span>
+                </div>
+            {% endif %}
+        </div>
+        </div>
 
-    <!-- Cabeçalho -->
-    <div class="header" style="padding-bottom: 5px; margin-bottom: 10px;">
-        <h1 style="font-size: 18px; margin: 0;">ASSOCIAÇÃO AMIGO DO POVO</h1>
-        <div class="subtitle" style="font-size: 12px; margin-top: 2px;">Ficha de Cadastro Individual</div>
-    </div>
-
-    <!-- Foto do Aluno -->
-    <div class="qr-code">
-        {% if aluno.foto %}
-            <img src="/static/fotos/{{ aluno.foto }}" alt="Foto de {{ aluno.nome }}" title="Foto do Aluno" style="width: 80px; height: 100px; object-fit: cover; border: 1px solid #007bff; border-radius: 4px; display: block; margin: 0 auto;">
-        {% else %}
-            <div style="width: 80px; height: 100px; border: 1px solid #dee2e6; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; margin: 0 auto; font-size: 10px; color: #6c757d; text-align: center;">Espaço para<br>Foto 3x4</div>
-        {% endif %}
-        <p style="margin: 2px 0; font-size: 8px;"><small>Foto 3x4</small></p>
-    </div>
-
-    <!-- Informações Pessoais -->
-    <div class="info-section" style="margin-bottom: 0;">
-        <h2 style="font-size: 6px; margin: 0;"><i class="fas fa-user me-2"></i>Dados Pessoais</h2>
-        <div class="info-grid" style="gap: 0;">
-            <div class="info-item">
-                <div class="info-label">Nome</div>
-                <div class="info-value">{{ aluno.nome or 'Não informado' }}</div>
+        <!-- Informações Pessoais -->
+        <div class="section-title">
+            <span class="icon">👤</span> Informações Pessoais
+        </div>
+        
+        <div class="form-row">
+            <label class="form-label">Nome Completo *</label>
+            <input type="text" class="form-input" value="{{ aluno.nome or '' }}" readonly>
+        </div>
+        
+        <div class="form-row-double">
+            <div class="form-group">
+                <label class="form-label">Data de Nascimento *</label>
+                <input type="text" class="form-input" value="{{ aluno.data_nascimento or '' }}" readonly>
             </div>
-            <div class="info-item">
-                <div class="info-label">Nascimento</div>
-                <div class="info-value">{{ aluno.data_nascimento or 'Não informado' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">CPF</div>
-                <div class="info-value">{{ aluno.cpf or '-' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">RG</div>
-                <div class="info-value">{{ aluno.rg or '-' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Sexo</div>
-                <div class="info-value">{{ aluno.sexo or '-' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Telefone</div>
-                <div class="info-value">{{ aluno.telefone or '-' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Email</div>
-                <div class="info-value">{{ aluno.email or '-' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Est. Civil</div>
-                <div class="info-value">{{ aluno.estado_civil or '-' }}</div>
+            <div class="form-group">
+                <label class="form-label">CPF</label>
+                <input type="text" class="form-input" value="{{ aluno.cpf or '' }}" readonly>
             </div>
         </div>
-    </div>
-
-    <!-- Informações de Endereço -->
-    <div class="info-section" style="margin-bottom: 0;">
-        <h2 style="font-size: 6px; margin: 0;"><i class="fas fa-map-marker-alt me-2"></i>Endereço</h2>
-        <div class="info-grid" style="gap: 0;">
-            <div class="info-item">
-                <div class="info-label">Rua/Av</div>
-                <div class="info-value">{{ aluno.endereco or '-' }}</div>
+        
+        <div class="form-row-double">
+            <div class="form-group">
+                <label class="form-label">RG</label>
+                <input type="text" class="form-input" value="{{ aluno.rg or '' }}" readonly>
             </div>
-            <div class="info-item">
-                <div class="info-label">Bairro</div>
-                <div class="info-value">{{ aluno.bairro or '-' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Cidade</div>
-                <div class="info-value">{{ aluno.cidade or '-' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">CEP</div>
-                <div class="info-value">{{ aluno.cep or '-' }}</div>
+            <div class="form-group">
+                <label class="form-label">Título de Eleitor</label>
+                <input type="text" class="form-input" value="{{ aluno.titulo_eleitor or '' }}" readonly>
             </div>
         </div>
-    </div>
+        
+        <div class="select-row">
+            <label class="select-label">Sexo</label>
+            <select class="select-input" disabled>
+                <option>{{ aluno.sexo or 'Selecione' }}</option>
+            </select>
+            
+            <label class="select-label">Estado Civil</label>
+            <select class="select-input" disabled>
+                <option>{{ aluno.estado_civil or 'Selecione' }}</option>
+            </select>
+        </div>
 
-    <!-- Informações Acadêmicas -->
-    <div class="info-section">
-        <h2><i class="fas fa-graduation-cap me-2"></i>Informações Acadêmicas</h2>
-        <div class="info-grid">
-            <div class="info-item">
-                <div class="info-label">Atividade</div>
-                <div class="info-value">{{ aluno.atividade or 'Não informado' }}</div>
+        <!-- Informações de Contato -->
+        <div class="section-title">
+            <span class="icon">📞</span> Contato
+        </div>
+        
+        <div class="form-row-double">
+            <div class="form-group">
+                <label class="form-label">Telefone *</label>
+                <input type="text" class="form-input" value="{{ aluno.telefone or '' }}" readonly>
             </div>
-            <div class="info-item">
-                <div class="info-label">Turma</div>
-                <div class="info-value">{{ aluno.turma or 'Não informado' }}</div>
+            <div class="form-group">
+                <label class="form-label">Celular</label>
+                <input type="text" class="form-input" value="{{ aluno.celular or '' }}" readonly>
             </div>
-            <div class="info-item">
-                <div class="info-label">Data de Matrícula</div>
-                <div class="info-value">{{ aluno.data_cadastro or 'Não informado' }}</div>
+        </div>
+        
+        <div class="form-row-double">
+            <div class="form-group">
+                <label class="form-label">E-mail</label>
+                <input type="text" class="form-input" value="{{ aluno.email or '' }}" readonly>
             </div>
-            <div class="info-item">
-                <div class="info-label">Status de Frequência</div>
-                <div class="info-value">
-                    {% if aluno.status_frequencia %}
-                        <span class="status-presenca status-presente">{{ aluno.status_frequencia }}</span>
+            <div class="form-group">
+                <label class="form-label">WhatsApp</label>
+                <input type="text" class="form-input" value="{{ aluno.whatsapp or '' }}" readonly>
+            </div>
+        </div>
+
+        <!-- Endereço -->
+        <div class="section-title">
+            <span class="icon">🏠</span> Endereço
+        </div>
+        
+        <div class="form-row">
+            <label class="form-label">Endereço Completo</label>
+            <input type="text" class="form-input" value="{{ aluno.endereco or '' }}" readonly>
+        </div>
+        
+        <div class="form-row-double">
+            <div class="form-group">
+                <label class="form-label">Estado</label>
+                <select class="select-input" disabled>
+                    <option>{{ aluno.estado or 'Selecione' }}</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Informações Acadêmicas -->
+        <div class="section-title">
+            <span class="icon">🎓</span> Academia
+        </div>
+        
+        <div class="select-row">
+            <label class="select-label">Atividade *</label>
+            <select class="select-input" disabled>
+                <option>{{ aluno.atividade or 'Selecione uma atividade' }}</option>
+            </select>
+        </div>
+        
+        <div class="select-row">
+            <label class="select-label">Turma/Horário *</label>
+            <select class="select-input" disabled>
+                <option>{{ aluno.turma or 'Selecione uma turma' }}</option>
+            </select>
+        </div>
+        
+        <div class="form-row-double">
+            <div class="form-group">
+                <label class="form-label">Data de Início *</label>
+                <input type="text" class="form-input" value="{{ aluno.data_cadastro or '' }}" readonly>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status *</label>
+                <div class="form-input" style="border: none; padding: 0;">
+                    {% if aluno.status == 'Ativo' %}
+                        <span class="status-badge status-ativo">{{ aluno.status }}</span>
                     {% else %}
-                        <span class="status-presenca status-justificado">Pendente</span>
+                        <span class="status-badge status-inativo">{{ aluno.status or 'Inativo' }}</span>
                     {% endif %}
                 </div>
             </div>
-            <div class="info-item">
-                <div class="info-label">Responsável Legal</div>
-                <div class="info-value">{{ aluno.responsavel_legal or 'Não informado' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Telefone do Responsável</div>
-                <div class="info-value">{{ aluno.telefone_responsavel or 'Não informado' }}</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Informações Médicas -->
-    <div class="info-section">
-        <h2><i class="fas fa-heartbeat me-2"></i>Informações Médicas</h2>
-        <div class="info-grid">
-            <div class="info-item">
-                <div class="info-label">Tipo Sanguíneo</div>
-                <div class="info-value">{{ aluno.tipo_sanguineo or 'Não informado' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Alergias</div>
-                <div class="info-value">{{ aluno.alergias or 'Nenhuma' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Medicamentos</div>
-                <div class="info-value">{{ aluno.medicamentos or 'Nenhum' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Condições Médicas</div>
-                <div class="info-value">{{ aluno.condicoes_medicas or 'Nenhuma' }}</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Observações -->
-    {% if aluno.observacoes %}
-    <div class="observacoes">
-        <h4 style="font-size: 8px; margin: 0;"><i class="fas fa-sticky-note me-2"></i>Obs:</h4>
-        <p style="font-size: 6px; margin: 2px 0;">{{ aluno.observacoes }}</p>
-    </div>
-    {% endif %}
-
-    <!-- Histórico de Presenças -->
-    {% if dados_presenca and dados_presenca.registros %}
-    <div class="info-section no-print">
-        <h2><i class="fas fa-calendar-check me-2"></i>Histórico de Presenças</h2>
-        <div class="table-responsive">
-            <table class="presenca-table">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Horário</th>
-                        <th>Status</th>
-                        <th>Observações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for registro in dados_presenca.registros[:10] %}
-                    <tr>
-                        <td>{{ registro.data or 'N/A' }}</td>
-                        <td>{{ registro.horario or 'N/A' }}</td>
-                        <td>
-                            {% if registro.status == 'P' %}
-                                <span class="status-presenca status-presente">Presente</span>
-                            {% elif registro.status == 'A' %}
-                                <span class="status-presenca status-ausente">Ausente</span>
-                            {% elif registro.status == 'J' %}
-                                <span class="status-presenca status-justificado">Justificado</span>
-                            {% else %}
-                                <span class="status-presenca status-justificado">{{ registro.status or 'N/A' }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ registro.observacoes or 'N/A' }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
         </div>
         
-        {% if dados_presenca.registros|length > 10 %}
-        <div class="text-center text-muted mt-3">
-            <small>Mostrando os últimos 10 registros de {{ dados_presenca.registros|length }} total</small>
+        <div class="form-row">
+            <label class="form-label">Nome do Responsável</label>
+            <input type="text" class="form-input" value="{{ aluno.responsavel or '' }}" readonly>
         </div>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- Estatísticas -->
-    <div class="info-section">
-        <h2 style="font-size: 8px; margin-bottom: 2px;"><i class="fas fa-chart-bar me-2"></i>Estatísticas</h2>
-        <div style="display: flex; gap: 10px; font-size: 6px;">
-            <span><strong>Aulas:</strong> 
-                {% if dados_presenca and dados_presenca.registros %}{{ dados_presenca.registros|length }}{% else %}0{% endif %}
-            </span>
-            <span><strong>Presenças:</strong> 
-                {% if dados_presenca and dados_presenca.registros %}{{ dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length }}{% else %}0{% endif %}
-            </span>
-            <span><strong>Faltas:</strong> 
-                {% if dados_presenca and dados_presenca.registros %}{{ dados_presenca.registros|selectattr('status', 'equalto', 'A')|list|length }}{% else %}0{% endif %}
-            </span>
-            <span><strong>Freq:</strong> 
-                {% if dados_presenca and dados_presenca.registros %}
-                    {% set total = dados_presenca.registros|length %}
-                    {% set presentes = dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length %}
-                    {% if total > 0 %}{{ "%.1f"|format((presentes / total) * 100) }}%{% else %}0%{% endif %}
-                {% else %}0%{% endif %}
-            </span>
+        
+        <div class="form-row">
+            <label class="form-label">Telefone do Responsável</label>
+            <input type="text" class="form-input" value="{{ aluno.telefone_responsavel or '' }}" readonly>
+        </div>
+        
+        <div class="form-row">
+            <label class="form-label">Indicação</label>
+            <input type="text" class="form-input" value="{{ aluno.indicacao or '' }}" readonly>
+        </div>
+        
+        <div class="form-row">
+            <label class="form-label">Observações</label>
+            <input type="text" class="form-input" value="{{ aluno.observacoes or '' }}" readonly>
         </div>
     </div>
-
-    <!-- Rodapé -->
-    <div class="footer">
-        <p><strong>Associação Amigo do Povo</strong></p>
-        <p>Sistema de Gestão de Atividades e Alunos</p>
-        <p>Esta ficha foi gerada automaticamente pelo sistema</p>
-        <p><strong>ID do Aluno:</strong> {{ aluno.id_unico or 'N/A' }}</p>
-    </div>
-
-    <!-- Scripts -->
-    <script>
-        // Função para imprimir
-        function imprimirFicha() {
-            window.print();
-        }
-        
-        // Atalho de teclado para impressão (Ctrl+P)
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'p') {
-                e.preventDefault();
-                window.print();
-            }
-        });
-        
-        // Função para voltar
-        function voltar() {
-            history.back();
-        }
-        
-        // Função para gerar QR Code (simulação)
-        function gerarQRCode() {
-            const qrImg = document.querySelector('.qr-code img');
-            const alunoNome = '{{ aluno.nome or "Aluno" }}';
-            const alunoId = '{{ aluno.id_unico or "N/A" }}';
-            
-            // Aqui você pode implementar a geração real de QR Code
-            console.log('QR Code para: ' + alunoNome + ' (ID: ' + alunoId + ')');
-        }
-        
-        // Inicializar
-        document.addEventListener('DOMContentLoaded', function() {
-            gerarQRCode();
-        });
-    </script>
 </body>
 </html>

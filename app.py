@@ -129,15 +129,25 @@ USUARIOS = {
 
 # Configuração para upload
 UPLOAD_FOLDER = 'uploads'
+FOTOS_FOLDER = 'static/fotos'
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['FOTOS_FOLDER'] = FOTOS_FOLDER
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+if not os.path.exists(FOTOS_FOLDER):
+    os.makedirs(FOTOS_FOLDER)
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_image_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 class SistemaAcademia:
     def __init__(self):
@@ -3138,47 +3148,12 @@ def cadastrar_aluno():
         endereco = request.form.get('endereco', '').strip()
         data_nascimento = request.form.get('data_nascimento', '').strip()
         titulo_eleitor = request.form.get('titulo_eleitor', '').strip()
-        zona_eleitoral = request.form.get('zona_eleitoral', '').strip()
-        municipio_eleitor = request.form.get('municipio_eleitor', '').strip()
         atividade = request.form.get('atividade', '').strip()
         turma = request.form.get('turma', '').strip()
         status_frequencia = request.form.get('status', '').strip()  # Campo 'status' do formulário
         observacoes = request.form.get('observacoes', '').strip()
         
-        # Processar upload da foto
-        foto_filename = None
-        if 'foto' in request.files:
-            foto = request.files['foto']
-            if foto and foto.filename != '':
-                # Validar tipo de arquivo
-                allowed_extensions = {'jpg', 'jpeg', 'png', 'gif'}
-                if '.' in foto.filename and foto.filename.rsplit('.', 1)[1].lower() in allowed_extensions:
-                    # Validar tamanho do arquivo (máx 5MB)
-                    foto.seek(0, os.SEEK_END)
-                    file_size = foto.tell()
-                    foto.seek(0)
-                    
-                    if file_size > 5 * 1024 * 1024:  # 5MB
-                        return jsonify({'success': False, 'message': 'Arquivo de foto muito grande. Máximo 5MB.'})
-                    
-                    # Criar diretório de fotos se não existir
-                    fotos_dir = os.path.join('static', 'fotos')
-                    if not os.path.exists(fotos_dir):
-                        os.makedirs(fotos_dir)
-                    
-                    # Gerar nome único para o arquivo
-                    import uuid
-                    file_extension = foto.filename.rsplit('.', 1)[1].lower()
-                    foto_filename = f"{uuid.uuid4().hex}.{file_extension}"
-                    foto_path = os.path.join(fotos_dir, foto_filename)
-                    
-                    # Salvar arquivo
-                    foto.save(foto_path)
-                    print(f"[DEBUG] Foto salva: {foto_path}")
-                else:
-                    return jsonify({'success': False, 'message': 'Formato de foto inválido. Use JPG, PNG ou GIF.'})
-        
-        print(f"[DEBUG] Dados recebidos: nome={nome}, telefone={telefone}, atividade={atividade}, turma={turma}, status={status_frequencia}, titulo_eleitor={titulo_eleitor}, zona_eleitoral={zona_eleitoral}, municipio_eleitor={municipio_eleitor}")
+        print(f"[DEBUG] Dados recebidos: nome={nome}, telefone={telefone}, atividade={atividade}, turma={turma}, status={status_frequencia}")
 
         
         # Validações
@@ -3217,6 +3192,25 @@ def cadastrar_aluno():
             except:
                 data_nasc_formatada = data_nascimento
         
+        # Processar upload de foto 3x4
+        foto_filename = None
+        if 'foto' in request.files:
+            foto = request.files['foto']
+            if foto and foto.filename != '' and allowed_image_file(foto.filename):
+                # Gerar nome único para o arquivo
+                import uuid
+                extensao = foto.filename.rsplit('.', 1)[1].lower()
+                foto_filename = f"{uuid.uuid4().hex}.{extensao}"
+                
+                # Salvar arquivo na pasta de fotos
+                foto_path = os.path.join(app.config['FOTOS_FOLDER'], foto_filename)
+                try:
+                    foto.save(foto_path)
+                    print(f"[DEBUG] Foto salva: {foto_path}")
+                except Exception as e:
+                    print(f"[DEBUG] Erro ao salvar foto: {e}")
+                    foto_filename = None
+        
         # Criar novo aluno
         novo_aluno = {
             'nome': nome,
@@ -3226,13 +3220,11 @@ def cadastrar_aluno():
             'data_nascimento': data_nasc_formatada if data_nasc_formatada else 'A definir',
             'data_cadastro': datetime.now().strftime('%Y-%m-%d'),
             'titulo_eleitor': titulo_eleitor if titulo_eleitor else '',
-            'zona_eleitoral': zona_eleitoral if zona_eleitoral else '',
-            'municipio_eleitor': municipio_eleitor if municipio_eleitor else '',
-            'foto': foto_filename if foto_filename else '',
             'atividade': atividade if atividade else 'A definir',
             'turma': turma if turma else 'A definir',
             'status_frequencia': 'Novo cadastro',
             'observacoes': observacoes,
+            'foto': foto_filename,
             'ativo': True
         }
         
@@ -3288,55 +3280,9 @@ def editar_aluno(aluno_id):
         endereco = request.form.get('endereco', '').strip()
         data_nascimento = request.form.get('data_nascimento', '').strip()
         titulo_eleitor = request.form.get('titulo_eleitor', '').strip()
-        zona_eleitoral = request.form.get('zona_eleitoral', '').strip()
-        municipio_eleitor = request.form.get('municipio_eleitor', '').strip()
         atividade = request.form.get('atividade', '').strip()
         turma = request.form.get('turma', '').strip()
         observacoes = request.form.get('observacoes', '').strip()
-        
-        # Processar upload de foto
-        foto_filename = None
-        if 'foto' in request.files:
-            foto = request.files['foto']
-            if foto and foto.filename != '':
-                # Validar formato da foto
-                if not foto.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    return jsonify({'success': False, 'message': 'Formato de foto inválido. Use PNG, JPG ou JPEG.'})
-                
-                # Validar tamanho (máximo 5MB)
-                foto.seek(0, 2)  # Ir para o final do arquivo
-                tamanho = foto.tell()
-                foto.seek(0)  # Voltar ao início
-                
-                if tamanho > 5 * 1024 * 1024:  # 5MB
-                    return jsonify({'success': False, 'message': 'Foto muito grande. Máximo 5MB.'})
-                
-                # Criar diretório se não existir
-                fotos_dir = os.path.join(os.getcwd(), 'static', 'fotos_alunos')
-                if not os.path.exists(fotos_dir):
-                    os.makedirs(fotos_dir)
-                
-                # Gerar nome único para a foto
-                import uuid
-                extensao = foto.filename.rsplit('.', 1)[1].lower()
-                foto_filename = f"{uuid.uuid4().hex}.{extensao}"
-                
-                # Salvar foto
-                foto_path = os.path.join(fotos_dir, foto_filename)
-                foto.save(foto_path)
-                
-                # Remover foto antiga se existir
-                foto_antiga = aluno_db.get('foto', '')
-                if foto_antiga:
-                    foto_antiga_path = os.path.join(fotos_dir, foto_antiga)
-                    if os.path.exists(foto_antiga_path):
-                        try:
-                            os.remove(foto_antiga_path)
-                        except:
-                            pass  # Ignorar erro se não conseguir remover
-            else:
-                # Manter foto atual se não foi enviada nova foto
-                foto_filename = aluno_db.get('foto', '')
         
         # Validações
         if not nome or len(nome) < 3:
@@ -3376,10 +3322,7 @@ def editar_aluno(aluno_id):
             'atividade': atividade if atividade else 'A definir',
             'turma': turma if turma else 'A definir',
             'observacoes': observacoes if observacoes else '',
-            'titulo_eleitor': titulo_eleitor if titulo_eleitor else '',
-            'zona_eleitoral': zona_eleitoral if zona_eleitoral else '',
-            'municipio_eleitor': municipio_eleitor if municipio_eleitor else '',
-            'foto': foto_filename if foto_filename else ''
+            'titulo_eleitor': titulo_eleitor if titulo_eleitor else ''
         }
         
         # Atualizar no MongoDB
@@ -3401,10 +3344,7 @@ def editar_aluno(aluno_id):
             'atividade': aluno_atualizado_db.get('atividade', ''),
             'turma': aluno_atualizado_db.get('turma', ''),
             'observacoes': aluno_atualizado_db.get('observacoes', ''),
-            'titulo_eleitor': aluno_atualizado_db.get('titulo_eleitor', ''),
-            'zona_eleitoral': aluno_atualizado_db.get('zona_eleitoral', ''),
-            'municipio_eleitor': aluno_atualizado_db.get('municipio_eleitor', ''),
-            'foto': aluno_atualizado_db.get('foto', '')
+            'titulo_eleitor': aluno_atualizado_db.get('titulo_eleitor', '')
         }
         
         return jsonify({
@@ -3486,10 +3426,7 @@ def obter_aluno(aluno_id):
             'observacoes': aluno_db.get('observacoes', ''),
             'data_cadastro': str(aluno_db.get('data_cadastro', '')) if aluno_db.get('data_cadastro') else '',
             'status_frequencia': aluno_db.get('status_frequencia', 'Sem dados'),
-            'titulo_eleitor': aluno_db.get('titulo_eleitor', ''),
-            'zona_eleitoral': aluno_db.get('zona_eleitoral', ''),
-            'municipio_eleitor': aluno_db.get('municipio_eleitor', ''),
-            'foto': aluno_db.get('foto', '')
+            'titulo_eleitor': aluno_db.get('titulo_eleitor', '')
         }
         
         # Buscar nome da atividade separadamente se houver atividade_id
@@ -4815,95 +4752,6 @@ def debug_stats():
     
     return jsonify(debug_info)
 
-@app.route('/api/dashboard/atualizar')
-@login_obrigatorio
-def api_dashboard_atualizar():
-    """API endpoint para atualizar dados do dashboard sem recarregar a página"""
-    try:
-        nivel_usuario = session.get('usuario_nivel')
-        usuario_logado = session.get('usuario_logado')
-        
-        # Redirecionar usuários de nível 'usuario' para dashboard adaptado
-        if nivel_usuario == 'usuario':
-            return jsonify({'redirect': '/dashboard_adaptado'})
-        
-        # IMPORTANTE: Recarregar dados do banco antes de calcular estatísticas
-        try:
-            academia.alunos_reais = academia.carregar_dados_reais()
-            print(f"🔄 Dados recarregados: {len(academia.alunos_reais)} alunos")
-        except Exception as e:
-            print(f"❌ Erro ao recarregar dados: {e}")
-        
-        # Coletar dados atualizados do dashboard
-        dados_atualizados = {}
-        
-        # Estatísticas gerais
-        try:
-            stats = academia.get_estatisticas()
-            dados_atualizados['estatisticas'] = {
-                'total_alunos': stats.get('total_alunos', 0),
-                'presencas_hoje': stats.get('presencas_hoje', 0),
-                'presencas_semana': stats.get('presencas_semana', 0),
-                'alunos_ativos': stats.get('alunos_ativos', 0),
-                'uploads_mes': stats.get('uploads_mes', 0),
-                'novos_alunos_planilha': stats.get('novos_alunos_planilha', 0),
-                'atualizacoes_planilha': stats.get('atualizacoes_planilha', 0)
-            }
-        except Exception as e:
-            print(f"Erro ao obter estatísticas: {e}")
-            dados_atualizados['estatisticas'] = {}
-        
-        # Presenças de hoje
-        try:
-            presencas_hoje = []
-            for aluno in academia.alunos_reais:
-                presencas = aluno.get('presencas', [])
-                hoje = datetime.now().strftime('%d/%m/%Y')
-                presenca_hoje = next((p for p in presencas if p.get('data') == hoje), None)
-                if presenca_hoje:
-                    presencas_hoje.append({
-                        'nome': aluno.get('nome', 'N/A'),
-                        'atividade': aluno.get('atividade', 'N/A'),
-                        'horario': presenca_hoje.get('horario', 'N/A')
-                    })
-            dados_atualizados['presencas_hoje'] = presencas_hoje[:10]  # Limitar a 10
-        except Exception as e:
-            print(f"Erro ao obter presenças de hoje: {e}")
-            dados_atualizados['presencas_hoje'] = []
-        
-        # Últimos uploads
-        try:
-            uploads_recentes = []
-            log_file = 'logs/upload_log.json'
-            if os.path.exists(log_file):
-                with open(log_file, 'r', encoding='utf-8') as f:
-                    logs = json.load(f)
-                    # Pegar os 5 uploads mais recentes
-                    uploads_recentes = sorted(logs, key=lambda x: x.get('timestamp', ''), reverse=True)[:5]
-            dados_atualizados['uploads_recentes'] = uploads_recentes
-        except Exception as e:
-            print(f"Erro ao obter uploads recentes: {e}")
-            dados_atualizados['uploads_recentes'] = []
-        
-        # Informações do sistema
-        dados_atualizados['sistema'] = {
-            'usuario_nome': USUARIOS.get(usuario_logado, {}).get('nome', 'Usuário'),
-            'data_hora_atual': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-        }
-        
-        return jsonify({
-            'success': True,
-            'dados': dados_atualizados,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        print(f"Erro na API de atualização do dashboard: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
 # === ROTAS PARA GERENCIAMENTO DE ATIVIDADES ===
 
 @app.route('/gerenciar_atividades')
@@ -6207,15 +6055,6 @@ def gerar_relatorio_turma():
 @app.route('/service-worker.js')
 def service_worker():
     return app.send_static_file('js/service-worker.js'), 200, {'Content-Type': 'application/javascript'}
-
-@app.route('/static/fotos/<filename>')
-def foto_aluno(filename):
-    """Serve fotos dos alunos"""
-    try:
-        return send_file(os.path.join('static', 'fotos', filename))
-    except FileNotFoundError:
-        # Retorna uma imagem padrão se a foto não for encontrada
-        return '', 404
 
 # Para produção
 
