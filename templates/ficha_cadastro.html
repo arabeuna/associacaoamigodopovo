@@ -6,32 +6,103 @@
     <title>Ficha de Cadastro - {{ aluno.nome }} - Associação Amigo do Povo</title>
     <style>
         @media print {
-            .no-print { display: none !important; }
-            body { 
-                margin: 0; 
-                padding: 5px; 
-                font-size: 9px;
+            body {
+                margin: 0;
+                padding: 2px;
+                font-size: 6px;
                 line-height: 1.1;
             }
-            .page-break { page-break-before: always; }
-            .header { margin-bottom: 8px; padding-bottom: 5px; }
-            .header h1 { font-size: 16px; margin: 0; }
-            .header .subtitle { font-size: 10px; }
-            .info-section { margin-bottom: 8px; }
-            .info-section h2 { font-size: 11px; margin-bottom: 5px; }
-            .info-grid { gap: 4px; grid-template-columns: repeat(4, 1fr); }
-            .info-item { padding: 4px; }
-            .info-label { font-size: 7px; }
-            .info-value { font-size: 9px; }
-            .presenca-table { font-size: 7px; margin-bottom: 8px; }
-            .presenca-table th, .presenca-table td { padding: 2px 3px; }
-            .footer { margin-top: 10px; padding-top: 5px; font-size: 7px; }
-            .qr-code { margin: 5px 0; }
-            .qr-code img { width: 50px; height: 60px; }
-            .qr-code div { width: 50px !important; height: 60px !important; font-size: 6px !important; }
-            .qr-code p { margin: 2px 0; font-size: 7px; }
-            .observacoes { padding: 4px; margin: 5px 0; }
-            .page-info { margin-bottom: 5px; font-size: 7px; }
+            
+            .container {
+                max-width: 100%;
+                margin: 0;
+                padding: 2px;
+            }
+            
+            .card {
+                border: none;
+                box-shadow: none;
+                margin: 0;
+                padding: 2px;
+            }
+            
+            .card-header {
+                padding: 2px;
+                margin-bottom: 2px;
+                font-size: 8px;
+            }
+            
+            .card-body {
+                padding: 2px;
+            }
+            
+            .info-section {
+                margin-bottom: 3px;
+                padding: 1px;
+            }
+            
+            .info-section h2 {
+                font-size: 7px;
+                margin-bottom: 1px;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                gap: 2px;
+            }
+            
+            .info-item {
+                padding: 1px;
+            }
+            
+            .info-label {
+                font-size: 5px;
+                margin-bottom: 1px;
+            }
+            
+            .info-value {
+                font-size: 6px;
+            }
+            
+            .student-photo {
+                width: 60px;
+                height: 75px;
+            }
+            
+            .student-photo img {
+                width: 60px;
+                height: 75px;
+            }
+            
+            .qr-code {
+                width: 60px;
+                height: 75px;
+            }
+            
+            .qr-code p {
+                font-size: 4px;
+                margin: 1px;
+            }
+            
+            .qr-code div {
+                width: 60px !important;
+                height: 75px !important;
+                font-size: 4px !important;
+            }
+            
+            .page-info {
+                font-size: 5px;
+                margin: 1px 0;
+            }
+            
+            .presence-table {
+                display: none;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
         }
         
         body {
@@ -426,14 +497,14 @@
     <!-- Observações -->
     {% if aluno.observacoes %}
     <div class="observacoes">
-        <h4><i class="fas fa-sticky-note me-2"></i>Observações</h4>
-        <p>{{ aluno.observacoes }}</p>
+        <h4 style="font-size: 8px; margin: 0;"><i class="fas fa-sticky-note me-2"></i>Obs:</h4>
+        <p style="font-size: 6px; margin: 2px 0;">{{ aluno.observacoes }}</p>
     </div>
     {% endif %}
 
     <!-- Histórico de Presenças -->
     {% if dados_presenca and dados_presenca.registros %}
-    <div class="info-section">
+    <div class="info-section no-print">
         <h2><i class="fas fa-calendar-check me-2"></i>Histórico de Presenças</h2>
         <div class="table-responsive">
             <table class="presenca-table">
@@ -478,54 +549,24 @@
 
     <!-- Estatísticas -->
     <div class="info-section">
-        <h2><i class="fas fa-chart-bar me-2"></i>Estatísticas</h2>
-        <div class="info-grid">
-            <div class="info-item">
-                <div class="info-label">Total de Aulas</div>
-                <div class="info-value">
-                    {% if dados_presenca and dados_presenca.registros %}
-                        {{ dados_presenca.registros|length }}
-                    {% else %}
-                        0
-                    {% endif %}
-                </div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Presenças</div>
-                <div class="info-value">
-                    {% if dados_presenca and dados_presenca.registros %}
-                        {{ dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length }}
-                    {% else %}
-                        0
-                    {% endif %}
-                </div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Faltas</div>
-                <div class="info-value">
-                    {% if dados_presenca and dados_presenca.registros %}
-                        {{ dados_presenca.registros|selectattr('status', 'equalto', 'A')|list|length }}
-                    {% else %}
-                        0
-                    {% endif %}
-                </div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Frequência</div>
-                <div class="info-value">
-                    {% if dados_presenca and dados_presenca.registros %}
-                        {% set total = dados_presenca.registros|length %}
-                        {% set presentes = dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length %}
-                        {% if total > 0 %}
-                            {{ "%.1f"|format((presentes / total) * 100) }}%
-                        {% else %}
-                            0%
-                        {% endif %}
-                    {% else %}
-                        0%
-                    {% endif %}
-                </div>
-            </div>
+        <h2 style="font-size: 8px; margin-bottom: 2px;"><i class="fas fa-chart-bar me-2"></i>Estatísticas</h2>
+        <div style="display: flex; gap: 10px; font-size: 6px;">
+            <span><strong>Aulas:</strong> 
+                {% if dados_presenca and dados_presenca.registros %}{{ dados_presenca.registros|length }}{% else %}0{% endif %}
+            </span>
+            <span><strong>Presenças:</strong> 
+                {% if dados_presenca and dados_presenca.registros %}{{ dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length }}{% else %}0{% endif %}
+            </span>
+            <span><strong>Faltas:</strong> 
+                {% if dados_presenca and dados_presenca.registros %}{{ dados_presenca.registros|selectattr('status', 'equalto', 'A')|list|length }}{% else %}0{% endif %}
+            </span>
+            <span><strong>Freq:</strong> 
+                {% if dados_presenca and dados_presenca.registros %}
+                    {% set total = dados_presenca.registros|length %}
+                    {% set presentes = dados_presenca.registros|selectattr('status', 'equalto', 'P')|list|length %}
+                    {% if total > 0 %}{{ "%.1f"|format((presentes / total) * 100) }}%{% else %}0%{% endif %}
+                {% else %}0%{% endif %}
+            </span>
         </div>
     </div>
 
