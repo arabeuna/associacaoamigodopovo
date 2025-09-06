@@ -74,6 +74,21 @@
                                 <label for="titulo_eleitor" class="form-label">Título de Eleitor</label>
                                 <input type="text" class="form-control" id="titulo_eleitor" name="titulo_eleitor" placeholder="0000.0000.0000" value="{% if editando %}{{ aluno.titulo_eleitor or '' }}{% endif %}">
                             </div>
+                            <div class="col-md-6">
+                                <label for="secao_eleitor" class="form-label">Seção</label>
+                                <input type="text" class="form-control" id="secao_eleitor" name="secao_eleitor" placeholder="0000" value="{% if editando %}{{ aluno.secao_eleitor or '' }}{% endif %}">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="zona_eleitor" class="form-label">Zona Eleitoral</label>
+                                <input type="text" class="form-control" id="zona_eleitor" name="zona_eleitor" placeholder="000" value="{% if editando %}{{ aluno.zona_eleitor or '' }}{% endif %}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="municipio_eleitor" class="form-label">Município Eleitoral</label>
+                                <input type="text" class="form-control" id="municipio_eleitor" name="municipio_eleitor" placeholder="Nome do município" value="{% if editando %}{{ aluno.municipio_eleitor or '' }}{% endif %}">
+                            </div>
                         </div>
 
                         <div class="row g-3 mb-3">

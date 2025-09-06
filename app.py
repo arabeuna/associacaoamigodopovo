@@ -3211,6 +3211,11 @@ def cadastrar_aluno():
                     print(f"[DEBUG] Erro ao salvar foto: {e}")
                     foto_filename = None
         
+        # Obter campos adicionais do título de eleitor
+        secao_eleitor = request.form.get('secao_eleitor', '').strip()
+        zona_eleitor = request.form.get('zona_eleitor', '').strip()
+        municipio_eleitor = request.form.get('municipio_eleitor', '').strip()
+        
         # Criar novo aluno
         novo_aluno = {
             'nome': nome,
@@ -3220,6 +3225,9 @@ def cadastrar_aluno():
             'data_nascimento': data_nasc_formatada if data_nasc_formatada else 'A definir',
             'data_cadastro': datetime.now().strftime('%Y-%m-%d'),
             'titulo_eleitor': titulo_eleitor if titulo_eleitor else '',
+            'secao_eleitor': secao_eleitor if secao_eleitor else '',
+            'zona_eleitor': zona_eleitor if zona_eleitor else '',
+            'municipio_eleitor': municipio_eleitor if municipio_eleitor else '',
             'atividade': atividade if atividade else 'A definir',
             'turma': turma if turma else 'A definir',
             'status_frequencia': 'Novo cadastro',
@@ -6252,7 +6260,9 @@ def processar_lote():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    debug_mode = os.environ.get('FLASK_ENV') == 'development'
     print("🚀 Iniciando Associação Amigo do Povo...")
     print(f"🌐 Sistema carregado: {len(academia.alunos_reais)} alunos")
     print(f"👥 Usuários carregados: {len(USUARIOS)} contas")
-    app.run(host='0.0.0.0', port=port, debug=True)
+    print(f"🔧 Modo debug: {debug_mode}")
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
