@@ -9,26 +9,29 @@
             .no-print { display: none !important; }
             body { 
                 margin: 0; 
-                padding: 10px; 
-                font-size: 11px;
-                line-height: 1.3;
+                padding: 5px; 
+                font-size: 9px;
+                line-height: 1.1;
             }
             .page-break { page-break-before: always; }
-            .header { margin-bottom: 15px; padding-bottom: 10px; }
-            .header h1 { font-size: 20px; margin: 0; }
-            .header .subtitle { font-size: 12px; }
-            .info-section { margin-bottom: 15px; }
-            .info-section h2 { font-size: 14px; margin-bottom: 10px; }
-            .info-grid { gap: 8px; }
-            .info-item { padding: 8px; }
-            .info-label { font-size: 9px; }
-            .info-value { font-size: 11px; }
-            .presenca-table { font-size: 9px; margin-bottom: 15px; }
-            .presenca-table th, .presenca-table td { padding: 4px 6px; }
-            .footer { margin-top: 20px; padding-top: 10px; font-size: 9px; }
-            .qr-code { margin: 10px 0; }
-            .qr-code img { width: 60px; height: 60px; }
-            .observacoes { padding: 8px; margin: 10px 0; }
+            .header { margin-bottom: 8px; padding-bottom: 5px; }
+            .header h1 { font-size: 16px; margin: 0; }
+            .header .subtitle { font-size: 10px; }
+            .info-section { margin-bottom: 8px; }
+            .info-section h2 { font-size: 11px; margin-bottom: 5px; }
+            .info-grid { gap: 4px; grid-template-columns: repeat(4, 1fr); }
+            .info-item { padding: 4px; }
+            .info-label { font-size: 7px; }
+            .info-value { font-size: 9px; }
+            .presenca-table { font-size: 7px; margin-bottom: 8px; }
+            .presenca-table th, .presenca-table td { padding: 2px 3px; }
+            .footer { margin-top: 10px; padding-top: 5px; font-size: 7px; }
+            .qr-code { margin: 5px 0; }
+            .qr-code img { width: 50px; height: 60px; }
+            .qr-code div { width: 50px !important; height: 60px !important; font-size: 6px !important; }
+            .qr-code p { margin: 2px 0; font-size: 7px; }
+            .observacoes { padding: 4px; margin: 5px 0; }
+            .page-info { margin-bottom: 5px; font-size: 7px; }
         }
         
         body {
@@ -267,11 +270,11 @@
     <!-- Foto do Aluno -->
     <div class="qr-code">
         {% if aluno.foto %}
-            <img src="/static/fotos/{{ aluno.foto }}" alt="Foto de {{ aluno.nome }}" title="Foto do Aluno" style="width: 100px; height: 120px; object-fit: cover; border: 2px solid #007bff; border-radius: 8px;">
+            <img src="/static/fotos/{{ aluno.foto }}" alt="Foto de {{ aluno.nome }}" title="Foto do Aluno" style="width: 80px; height: 100px; object-fit: cover; border: 1px solid #007bff; border-radius: 4px; display: block; margin: 0 auto;">
         {% else %}
-            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZjhmOWZhIiBzdHJva2U9IiNkZWUyZTYiLz4KPHN2ZyB4PSIzNSIgeT0iMzAiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjNmM3NTdkIj4KPHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPgo8L3N2Zz4KPHR5cGUgeD0iNTAiIHk9IjEwNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNmM3NTdkIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TZW0gZm90bzwvdGV4dD4KPC9zdmc+" alt="Sem foto" title="Foto não disponível" style="width: 100px; height: 120px; border: 2px solid #dee2e6; border-radius: 8px;">
+            <div style="width: 80px; height: 100px; border: 1px solid #dee2e6; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; margin: 0 auto; font-size: 10px; color: #6c757d; text-align: center;">Espaço para<br>Foto 3x4</div>
         {% endif %}
-        <p><small>Foto 3x4</small></p>
+        <p style="margin: 2px 0; font-size: 8px;"><small>Foto 3x4</small></p>
     </div>
 
     <!-- Informações Pessoais -->
@@ -443,7 +446,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for registro in dados_presenca.registros[:20] %}
+                    {% for registro in dados_presenca.registros[:10] %}
                     <tr>
                         <td>{{ registro.data or 'N/A' }}</td>
                         <td>{{ registro.horario or 'N/A' }}</td>
@@ -465,9 +468,9 @@
             </table>
         </div>
         
-        {% if dados_presenca.registros|length > 20 %}
+        {% if dados_presenca.registros|length > 10 %}
         <div class="text-center text-muted mt-3">
-            <small>Mostrando os últimos 20 registros de {{ dados_presenca.registros|length }} total</small>
+            <small>Mostrando os últimos 10 registros de {{ dados_presenca.registros|length }} total</small>
         </div>
         {% endif %}
     </div>
