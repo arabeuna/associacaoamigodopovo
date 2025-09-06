@@ -8,92 +8,93 @@
         @media print {
             body {
                 margin: 0;
-                padding: 2px;
-                font-size: 6px;
-                line-height: 1.1;
+                padding: 0;
+                font-size: 5px;
+                line-height: 1.0;
             }
             
             .container {
                 max-width: 100%;
                 margin: 0;
-                padding: 2px;
+                padding: 0;
             }
             
             .card {
                 border: none;
                 box-shadow: none;
                 margin: 0;
-                padding: 2px;
+                padding: 0;
             }
             
             .card-header {
-                padding: 2px;
-                margin-bottom: 2px;
-                font-size: 8px;
+                padding: 1px;
+                margin-bottom: 1px;
+                font-size: 6px;
             }
             
             .card-body {
-                padding: 2px;
+                padding: 0;
             }
             
             .info-section {
-                margin-bottom: 3px;
-                padding: 1px;
+                margin-bottom: 1px;
+                padding: 0;
             }
             
             .info-section h2 {
-                font-size: 7px;
-                margin-bottom: 1px;
+                font-size: 5px;
+                margin-bottom: 0;
+                margin-top: 1px;
             }
             
             .info-grid {
                 display: grid;
-                grid-template-columns: repeat(6, 1fr);
-                gap: 2px;
+                grid-template-columns: repeat(8, 1fr);
+                gap: 1px;
             }
             
             .info-item {
-                padding: 1px;
+                padding: 0;
             }
             
             .info-label {
-                font-size: 5px;
-                margin-bottom: 1px;
+                font-size: 4px;
+                margin-bottom: 0;
             }
             
             .info-value {
-                font-size: 6px;
+                font-size: 4px;
             }
             
             .student-photo {
-                width: 60px;
-                height: 75px;
+                width: 40px;
+                height: 50px;
             }
             
             .student-photo img {
-                width: 60px;
-                height: 75px;
+                width: 40px;
+                height: 50px;
             }
             
             .qr-code {
-                width: 60px;
-                height: 75px;
+                width: 40px;
+                height: 50px;
             }
             
             .qr-code p {
-                font-size: 4px;
-                margin: 1px;
+                font-size: 3px;
+                margin: 0;
             }
             
             .qr-code div {
-                width: 60px !important;
-                height: 75px !important;
-                font-size: 4px !important;
+                width: 40px !important;
+                height: 50px !important;
+                font-size: 3px !important;
             }
             
             .page-info {
-                font-size: 5px;
-                margin: 1px 0;
+                font-size: 4px;
+                margin: 0;
             }
             
             .presence-table {
@@ -102,6 +103,21 @@
             
             .no-print {
                 display: none !important;
+            }
+            
+            .observacoes {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .observacoes h4 {
+                font-size: 4px !important;
+                margin: 0 !important;
+            }
+            
+            .observacoes p {
+                font-size: 3px !important;
+                margin: 0 !important;
             }
         }
         
@@ -333,9 +349,9 @@
     </div>
 
     <!-- Cabeçalho -->
-    <div class="header">
-        <h1>ASSOCIAÇÃO AMIGO DO POVO</h1>
-        <div class="subtitle">Ficha de Cadastro Individual</div>
+    <div class="header" style="padding-bottom: 5px; margin-bottom: 10px;">
+        <h1 style="font-size: 18px; margin: 0;">ASSOCIAÇÃO AMIGO DO POVO</h1>
+        <div class="subtitle" style="font-size: 12px; margin-top: 2px;">Ficha de Cadastro Individual</div>
     </div>
 
     <!-- Foto do Aluno -->
@@ -349,87 +365,63 @@
     </div>
 
     <!-- Informações Pessoais -->
-    <div class="info-section">
-        <h2><i class="fas fa-user me-2"></i>Informações Pessoais</h2>
-        <div class="info-grid">
+    <div class="info-section" style="margin-bottom: 0;">
+        <h2 style="font-size: 6px; margin: 0;"><i class="fas fa-user me-2"></i>Dados Pessoais</h2>
+        <div class="info-grid" style="gap: 0;">
             <div class="info-item">
-                <div class="info-label">Nome Completo</div>
+                <div class="info-label">Nome</div>
                 <div class="info-value">{{ aluno.nome or 'Não informado' }}</div>
             </div>
             <div class="info-item">
-                <div class="info-label">Data de Nascimento</div>
+                <div class="info-label">Nascimento</div>
                 <div class="info-value">{{ aluno.data_nascimento or 'Não informado' }}</div>
             </div>
             <div class="info-item">
-                <div class="info-label">Idade</div>
-                <div class="info-value">
-                    {% if aluno.data_nascimento %}
-                        {% set nascimento = aluno.data_nascimento.split('/') %}
-                        {% set hoje = moment() %}
-                        {% set idade = hoje.year - nascimento[2]|int %}
-                        {% if hoje.month < nascimento[1]|int or (hoje.month == nascimento[1]|int and hoje.day < nascimento[0]|int) %}
-                            {% set idade = idade - 1 %}
-                        {% endif %}
-                        {{ idade }} anos
-                    {% else %}
-                        Não informado
-                    {% endif %}
-                </div>
-            </div>
-            <div class="info-item">
                 <div class="info-label">CPF</div>
-                <div class="info-value">{{ aluno.cpf or 'Não informado' }}</div>
+                <div class="info-value">{{ aluno.cpf or '-' }}</div>
             </div>
             <div class="info-item">
                 <div class="info-label">RG</div>
-                <div class="info-value">{{ aluno.rg or 'Não informado' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Título de Eleitor</div>
-                <div class="info-value">{{ aluno.titulo_eleitor or 'Não informado' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Zona Eleitoral</div>
-                <div class="info-value">{{ aluno.zona_eleitoral or 'Não informado' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Município Eleitor</div>
-                <div class="info-value">{{ aluno.municipio_eleitor or 'Não informado' }}</div>
+                <div class="info-value">{{ aluno.rg or '-' }}</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Sexo</div>
-                <div class="info-value">{{ aluno.sexo or 'Não informado' }}</div>
+                <div class="info-value">{{ aluno.sexo or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Telefone</div>
+                <div class="info-value">{{ aluno.telefone or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Email</div>
+                <div class="info-value">{{ aluno.email or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Est. Civil</div>
+                <div class="info-value">{{ aluno.estado_civil or '-' }}</div>
             </div>
         </div>
     </div>
 
-    <!-- Informações de Contato -->
-    <div class="info-section">
-        <h2><i class="fas fa-address-book me-2"></i>Informações de Contato</h2>
-        <div class="info-grid">
+    <!-- Informações de Endereço -->
+    <div class="info-section" style="margin-bottom: 0;">
+        <h2 style="font-size: 6px; margin: 0;"><i class="fas fa-map-marker-alt me-2"></i>Endereço</h2>
+        <div class="info-grid" style="gap: 0;">
             <div class="info-item">
-                <div class="info-label">Telefone</div>
-                <div class="info-value">{{ aluno.telefone or 'Não informado' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">E-mail</div>
-                <div class="info-value">{{ aluno.email or 'Não informado' }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Endereço</div>
-                <div class="info-value">{{ aluno.endereco or 'Não informado' }}</div>
+                <div class="info-label">Rua/Av</div>
+                <div class="info-value">{{ aluno.endereco or '-' }}</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Bairro</div>
-                <div class="info-value">{{ aluno.bairro or 'Não informado' }}</div>
+                <div class="info-value">{{ aluno.bairro or '-' }}</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Cidade</div>
-                <div class="info-value">{{ aluno.cidade or 'Não informado' }}</div>
+                <div class="info-value">{{ aluno.cidade or '-' }}</div>
             </div>
             <div class="info-item">
                 <div class="info-label">CEP</div>
-                <div class="info-value">{{ aluno.cep or 'Não informado' }}</div>
+                <div class="info-value">{{ aluno.cep or '-' }}</div>
             </div>
         </div>
     </div>
