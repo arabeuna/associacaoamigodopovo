@@ -7,13 +7,33 @@
     <style>
         @media print {
             .no-print { display: none !important; }
-            body { margin: 0; padding: 20px; }
+            body { 
+                margin: 0; 
+                padding: 10px; 
+                font-size: 11px;
+                line-height: 1.3;
+            }
             .page-break { page-break-before: always; }
+            .header { margin-bottom: 15px; padding-bottom: 10px; }
+            .header h1 { font-size: 20px; margin: 0; }
+            .header .subtitle { font-size: 12px; }
+            .info-section { margin-bottom: 15px; }
+            .info-section h2 { font-size: 14px; margin-bottom: 10px; }
+            .info-grid { gap: 8px; }
+            .info-item { padding: 8px; }
+            .info-label { font-size: 9px; }
+            .info-value { font-size: 11px; }
+            .presenca-table { font-size: 9px; margin-bottom: 15px; }
+            .presenca-table th, .presenca-table td { padding: 4px 6px; }
+            .footer { margin-top: 20px; padding-top: 10px; font-size: 9px; }
+            .qr-code { margin: 10px 0; }
+            .qr-code img { width: 60px; height: 60px; }
+            .observacoes { padding: 8px; margin: 10px 0; }
         }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
+            line-height: 1.4;
             color: #333;
             margin: 0;
             padding: 20px;
@@ -244,10 +264,14 @@
         <div class="subtitle">Ficha de Cadastro Individual</div>
     </div>
 
-    <!-- Foto do Aluno (placeholder) -->
+    <!-- Foto do Aluno -->
     <div class="qr-code">
-        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSJ3aGl0ZSIvPgo8dGV4dCB4PSI1MCIgeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q29kZSBRUjwvdGV4dD4KPC9zdmc+" alt="QR Code" title="QR Code do Aluno">
-        <p><small>QR Code para identificação</small></p>
+        {% if aluno.foto %}
+            <img src="/static/fotos/{{ aluno.foto }}" alt="Foto de {{ aluno.nome }}" title="Foto do Aluno" style="width: 100px; height: 120px; object-fit: cover; border: 2px solid #007bff; border-radius: 8px;">
+        {% else %}
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZjhmOWZhIiBzdHJva2U9IiNkZWUyZTYiLz4KPHN2ZyB4PSIzNSIgeT0iMzAiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjNmM3NTdkIj4KPHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPgo8L3N2Zz4KPHR5cGUgeD0iNTAiIHk9IjEwNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNmM3NTdkIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TZW0gZm90bzwvdGV4dD4KPC9zdmc+" alt="Sem foto" title="Foto não disponível" style="width: 100px; height: 120px; border: 2px solid #dee2e6; border-radius: 8px;">
+        {% endif %}
+        <p><small>Foto 3x4</small></p>
     </div>
 
     <!-- Informações Pessoais -->
@@ -285,6 +309,18 @@
             <div class="info-item">
                 <div class="info-label">RG</div>
                 <div class="info-value">{{ aluno.rg or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Título de Eleitor</div>
+                <div class="info-value">{{ aluno.titulo_eleitor or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Zona Eleitoral</div>
+                <div class="info-value">{{ aluno.zona_eleitoral or 'Não informado' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Município Eleitor</div>
+                <div class="info-value">{{ aluno.municipio_eleitor or 'Não informado' }}</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Sexo</div>
